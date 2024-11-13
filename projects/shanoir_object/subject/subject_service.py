@@ -1,7 +1,5 @@
-import string
-
-from py_noir.api_service import get, download_file, post
-from py_noir.security.shanoir_context import ShanoirContext
+from py_noir.src.API.api_service import get
+from py_noir.src.API.shanoir_context import ShanoirContext
 
 """
 Define methods for Shanoir studies MS subject API call

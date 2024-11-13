@@ -1,17 +1,16 @@
 import os
 import sys
-import zipfile
 
 sys.path.append( '../../')
-sys.path.append( '../../py_noir/dataset')
+sys.path.append('../shanoir_object/dataset')
 import pydicom
 from pydicom.uid import generate_uid
 import json
 import argparse
-from py_noir import api_service
-from py_noir.dataset import datasets_solr_service
-from py_noir.dataset.solr_query import SolrQuery
-from py_noir.dataset.datasets_dataset_service import get_dataset_dicom_metadata, download_dataset
+from py_noir.src.API import api_service
+from projects.shanoir_object.solr_query.model import SolrQuery
+from projects.shanoir_object.solr_query import service
+from projects.shanoir_object.dataset.dataset_service import get_dataset_dicom_metadata, download_dataset
 
 
 def create_arg_parser(description="""Shanoir downloader"""):
@@ -95,7 +94,7 @@ def getDatasets(config, subjects_entries):
                        .replace("]", ")"))
   query.search_text = query.search_text + " AND datasetName:(*tof* OR *angio* OR *flight* OR *mra* OR *arm*)"
 
-  result = datasets_solr_service.solr_search(config, query)
+  result = service.solr_search(config, query)
 
   jsonresult = json.loads(result.content)
 

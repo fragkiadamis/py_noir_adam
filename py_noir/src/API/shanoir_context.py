@@ -13,4 +13,7 @@ class ShanoirContext(object):
         self.clientId = "shanoir-uploader"
         self.access_token = None
         self.refresh_token = None
-        self.output_folder = "./"
+        self.output_folder = "./ressources/output"
+        self.entry_file = ""
+        self.project = ""
+

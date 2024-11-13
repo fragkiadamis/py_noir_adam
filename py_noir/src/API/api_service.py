@@ -8,8 +8,8 @@ import re
 
 import requests
 
-from py_noir.security.authentication_service import ask_access_token, refresh_access_token
-from py_noir.security.shanoir_context import ShanoirContext
+from py_noir.src.security.authentication_service import ask_access_token, refresh_access_token
+from py_noir.src.API.shanoir_context import ShanoirContext
 
 """
 Define methods for generic API call

@@ -1,47 +1,64 @@
 PyNoir
 ===
 
-PyNoir is a Python library aiming at facilitate the use of Shanoir APIs through Python scripts
+PyNoir is a Python library aiming at facilitate the use of Shanoir APIs through Python scripts.
+
+# Summary
+
+- Repository structure
+- Project file constructions
+- How to use PyNoir
 
 # Repository structure
-- `py_noir` directory contains the Shanoir API client methods
-  - `dataset` directory contains dataset microservice API methods
-  - `security` directory contains methods for managing authentication context
-  - `api_service.py` declare generic methods for HTTP queries
-- `projects` directory contains project specific scripts using PyNoir lib
+- `main.py` file contains parameters
+
+- `projects` directory contains files relative to all project specific scripts
+  - `project_switch.py` file contains switch that allows the choice of the project exection. It needs to be modified when a new project script is added to the directory
+  - `shanoir_project` directory contains tools that help manipulate shanoir objects
+  - `xxx` directory contains project specific scripts using PyNoir lib
+- `py_noir` directory contains all ressources and generic code for VIP executions
+  - `ressources` directory contains entry files for project VIP scripts (the entry file format must follow its respective specific script)
+    - `entry_files` generic directory for entry files deposit
+    - `output` generic directory for output files
+    - `WIP_files` directory contains working files, it allows the script interruption management
+  - `src` directory contains all generic code for VIP executions (as PyNoir user, you should not modify the methods in this directory)
+    - `API` directory contains API methods for communication with Shanoir
+    - `execution` directory contains queue script methods. Manage the queue, the exceptions and the user feedback
+    - `security` directory contains methods managing keycloack authentification
+    - `utils` directory contains tools used for generic code
+
+# Project file constructions
+
+Actually, execution management and user feedback are relative to examination, multiple acquisitions and datasets are considered as a unique ressource, regardless of the VIP script.
+To create a working project file, it needs to return a list of dictionnary (similar to a json file shap). Care, one of the dictionnary `key/value` pair must follows that shape :
+
+`examinationIdentifier: x`
+
+The key have to be "examinationIdentifier", and it must be the examination id related to the object describes by the dictionnary.
+
+Once project specific script is added to projects directory, it must be added to the projects/project_switch.py.
 
 # How to use PyNoir
 
-First, declare and configure a `ShanoirContext` object
+First, set up the ShanoirContext in the main.py file. Here is an example :
 
 ```python
-from py_noir.security.shanoir_context import ShanoirContext
 ...
 context = ShanoirContext()
 context.domain = 'shanoir-ofsep-qualif.irisa.fr'
 context.username = 'ymerel'
-context.output_folder = 'output'
+context.project = projects.CometeMoelle
+context.output_folder = 'ressources/output'
+context.entry_file = 'ressources/entry_files/input_file.txt' 
+...
 ```
 
-Then call the API method you need. The first argument is always the `ShanoirContext`.
-```python
-from py_noir.dataset.datasets_dataset_service import get_dataset
-...
-dataset = get_dataset(context, 1258)
-```
-When needed, authentication will be asked through console on runtime
+When needed, authentication will be asked through console on runtime.
 
 ```shell
-$ python main.py
+$ python3 main.py
 Password for Shanoir user ymerel:
 ```
-
-Response object is a dictionary following JSON structure (see API doc for details)
-
-```python
-...
-ds_id = dataset["id"]
-exam_id = dataset["datasetAcquisition"]["examination"]["id"]
-```
-
+If there are output, they might be found in the output_folder.
+If the script execution is interrupted, just start it again, it will resume where it stopped
 

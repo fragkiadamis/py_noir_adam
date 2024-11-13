@@ -1,8 +1,8 @@
 import json
 
-from py_noir.api_service import post
-from py_noir.dataset.solr_query import SolrQuery
-from py_noir.security.shanoir_context import ShanoirContext
+from py_noir.src.API.api_service import post
+from projects.shanoir_object.solr_query.model import SolrQuery
+from py_noir.src.API.shanoir_context import ShanoirContext
 
 """
 Define methods for Shanoir datasets MS Solr query API call

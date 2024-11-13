@@ -1,7 +1,7 @@
 import string
 
-from py_noir.api_service import get, download_file, post
-from py_noir.security.shanoir_context import ShanoirContext
+from py_noir.src.API.api_service import get, download_file, post
+from py_noir.src.API.shanoir_context import ShanoirContext
 
 """
 Define methods for Shanoir datasets MS datasets API call
@@ -91,14 +91,15 @@ def find_dataset_ids_by_subject_id(context: ShanoirContext, subject_id):
     return response.json()
 
 
-def find_dataset_ids_by_examination_id(context: ShanoirContext, examination_id):
+def find_datasets_by_examination_id(context: ShanoirContext, examination_id):
     """ Get all datasets from subject [subject_id]
     :param context:
     :param examination_id:
     :return:
     """
-    print('Getting datasets from examination', examination_id)
+    print('Getting acquisitions from examination', examination_id)
     path = ENDPOINT + '/examination/' + examination_id
+    response = ""
     try:
         response = get(context, path)
         return response.json()
@@ -120,12 +121,17 @@ def find_dataset_ids_by_subject_id_study_id(context: ShanoirContext, subject_id,
     return response.json()
 
 def get_dataset_dicom_metadata(context: ShanoirContext, dataset_id):
+    """ Get all dicom metadata from specific dataset [dataset_id]
+    :param context:
+    :param dataset_id:
+    :return:
+    """
     path = ENDPOINT + '/dicom-metadata/' + str(dataset_id)
     response = get(context, path)
     return response.json()
 
 
-def getDicomMetadataByDatasetId(context: ShanoirContext, dataset_id):
+def get_dicom_metadata_by_dataset_id(context: ShanoirContext, dataset_id):
     """ Get all dicom metadata from dataset [dataset_id]
     :param context:
     :param dataset_id:
