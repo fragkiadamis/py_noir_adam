@@ -42,13 +42,13 @@ def ask_access_token():
     logger.info('get keycloak token...')
     response = requests.post(url, data=payload, headers=headers, proxies=APIContext.proxies, verify=APIContext.verify,
                              timeout=APIContext.timeout)
-    if not hasattr(response, 'status_code') or response.status_code != 200:
-        logger.error('Failed to connect, make sur you have a certified IP or are connected on a valid VPN.')
-        raise ConnectionError(response.status_code)
 
     response_json = json.loads(response.text)
-    if 'error_description' in response_json and response_json['error_description'] == 'Invalid user credentials':
-        logger.error('bad username or password')
+    if not hasattr(response, 'status_code') or response.status_code != 200:
+        if 'error_description' in response_json and response_json.get("error_description") == "Invalid user credentials" :
+            logger.error(response_json.get("error_description"))
+        else :
+            logger.error('Failed to connect, make sure you have a certified IP or are connected on a valid VPN.')
         sys.exit(1)
 
     APIContext.refresh_token = response_json['refresh_token']

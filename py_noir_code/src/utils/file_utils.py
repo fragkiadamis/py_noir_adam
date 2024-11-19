@@ -1,6 +1,7 @@
 import os
 import string
 import sys
+from pathlib import Path
 
 
 def remove_file_extension(file_name: string):
@@ -34,3 +35,10 @@ def get_project_path():
     :return project_name:
     """
     return os.path.dirname(os.path.abspath(sys.argv[0]))
+
+def find_project_root(starting_path, folder_name="py_noir"):
+    current_path = Path(starting_path).resolve()
+    for parent in current_path.parents:
+        if parent.name == folder_name:
+            return str(parent)
+    raise FileNotFoundError(f"'{folder_name}' folder not found.")

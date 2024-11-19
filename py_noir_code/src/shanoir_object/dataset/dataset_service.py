@@ -1,4 +1,5 @@
 import string
+from datetime import datetime
 
 import requests
 
@@ -83,7 +84,7 @@ def find_dataset_ids_by_subject_id(subject_id):
     :param subject_id:
     :return:
     """
-    logger.info('Getting datasets from subject %s' % subject_id)
+    print(str(datetime.now().replace(microsecond=0)) + ' INFO : Getting datasets from subject %s' % subject_id)
     path = ENDPOINT + '/subject/' + subject_id
     response = get(path)
     return response.json()
@@ -94,7 +95,7 @@ def find_datasets_by_examination_id( examination_id):
     :param examination_id:
     :return:
     """
-    logger.info('Getting datasets from examination %s' % examination_id)
+    print(str(datetime.now().replace(microsecond=0)) + ' INFO : Getting datasets from examination %s' % examination_id)
     path = ENDPOINT + '/examination/' + examination_id
 
     try:
@@ -111,7 +112,7 @@ def find_dataset_ids_by_subject_id_study_id(subject_id, study_id):
     :param study_id:
     :return:
     """
-    logger.info('Getting datasets from subject %s and study %s' %(subject_id, study_id))
+    print(str(datetime.now().replace(microsecond=0)) + ' INFO : Getting datasets from subject %s and study %s' %(subject_id, study_id))
     path = ENDPOINT + '/subject/' + subject_id + '/study/' + study_id
     response = get(path)
     return response.json()
@@ -131,7 +132,7 @@ def get_dicom_metadata_by_dataset_id(dataset_id):
     :param dataset_id:
     :return:
     """
-    logger.info('Getting dicom metadata from dataset %s' % dataset_id)
+    print(str(datetime.now().replace(microsecond=0)) + ' INFO : Getting dicom metadata from dataset %s' % dataset_id)
     path = ENDPOINT + '/dicom-metadata/' + dataset_id
     response = get(path)
     return response.json()

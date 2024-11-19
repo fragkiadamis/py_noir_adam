@@ -64,7 +64,7 @@ def manage_threading_execution(working_file):
     logger.info("Executions ended.")
 
 
-def start_executions(json_file_name: string, resume: bool):
+def start_executions(json_file_name: string, resume: bool = False):
     global total_items_to_process
     global nb_processed_items
     global processed_item_ids
@@ -85,23 +85,11 @@ def read_items_from_json_file(json_file_name: string, resume: bool):
         return get_items_from_json_file(json_file_name)
     except:
         if resume:
-            logger.info("Resume script is impossible, monitoring file is corrupted.")
-            reset = input("Do you want to reset all executions ? (y/n)")
-
-            while reset not in ['n', 'y']:
-                reset = input("Please type 'y' or 'n'")
-            if reset == 'n':
-                sys.exit(1)
-
+            logger.info("Resume script is impossible, monitoring file is corrupted. Deleting monitoring file, please relaunch executions.")
+            os.remove(json_file_name)
         else:
             logger.error("Items to process are wrong. Please verify the json file shaping.")
-            sys.exit(1)
-
-    logger.info("Resetting executions ...")
-    from py_noir_code.src.execution.execution_init_service import create_json_file
-    create_json_file(json_file_name)
-    return read_items_from_json_file(json_file_name, False)
-
+        sys.exit(1)
 
 def manage_execution_succes(item: dict):
     global nb_processed_items

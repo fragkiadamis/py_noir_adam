@@ -39,6 +39,7 @@ Based on the project directory, it must contain :
   - *Optional* An entry file when needed, the open_project_file method makes the file management easier
 
 In py_noir_code/projects, you can see examples of both main.py and context.conf files.
+Please
 
 # How to use PyNoir
 
