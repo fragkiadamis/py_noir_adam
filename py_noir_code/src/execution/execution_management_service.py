@@ -6,8 +6,9 @@ import threading
 import time
 
 from concurrent.futures.thread import ThreadPoolExecutor
+
 from py_noir_code.src.execution.execution_context import ExecutionContext
-from py_noir_code.src.execution.execution_service import create_execution
+from py_noir_code.src.execution.execution_service import create_execution, get_execution_status
 from py_noir_code.src.utils.file_utils import get_project_name
 from py_noir_code.src.utils.log_utils import set_logger
 
@@ -49,12 +50,18 @@ def manage_threading_execution(working_file):
         check_pause_shedule(pause_message_event)
 
         try:
-            create_execution(item)
+            execution = create_execution(item)
+
+            status = '"Running"'
+            while status == '"Running"':
+                time.sleep(5)
+                status = get_execution_status(execution["id"])
+
             with monitoring_lock:
                 manage_execution_succes(item)
-        except Exception as e:
+        except :
             with monitoring_lock:
-                manage_execution_failure(e, item)
+                manage_execution_failure( item)
         with file_lock:
             manage_working_file(working_file)
 
@@ -102,20 +109,19 @@ def manage_execution_succes(item: dict):
 def store_failure_data(item: dict):
     error_file_name = os.path.dirname(os.path.abspath(__file__)) + "/../../resources/errors/" + get_project_name()
     error_file = open(error_file_name, "a")
-    error_file.write(json.dumps(item))
+    error_file.write(json.dumps(item, indent=4))
     error_file.close()
 
 
-def manage_execution_failure(e: Exception, item: dict):
+def manage_execution_failure(item: dict):
     global nb_processed_items
     global processed_item_ids
 
     item_processed_increment(item)
     store_failure_data(item)
     logger.error(
-        "item %s raised an exception. See item and traceback below. You can see item data in py_noir_code/resources/errors \n" + str(
-            item) + "\n" + repr(e.__traceback__) %
-        item["identifier"])
+        "item %s raised an exception. You can see the item data in py_noir_code/resources/errors." %
+        str(item["identifier"]))
 
 
 def item_processed_increment(item: dict):
