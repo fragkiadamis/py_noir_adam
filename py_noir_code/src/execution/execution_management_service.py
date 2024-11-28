@@ -7,8 +7,11 @@ import time
 
 from concurrent.futures.thread import ThreadPoolExecutor
 
+from tuned.profiles.functions.function_log import execute
+
 from py_noir_code.src.execution.execution_context import ExecutionContext
-from py_noir_code.src.execution.execution_service import create_execution, get_execution_status
+from py_noir_code.src.execution.execution_service import create_execution, get_execution_status, \
+    get_execution_monitoring
 from py_noir_code.src.utils.file_utils import get_project_name
 from py_noir_code.src.utils.log_utils import set_logger
 
@@ -51,17 +54,17 @@ def manage_threading_execution(working_file):
 
         try:
             execution = create_execution(item)
-
+            monitoring = get_execution_monitoring(execution["id"])
             status = '"Running"'
             while status == '"Running"':
                 time.sleep(5)
-                status = get_execution_status(execution["id"])
+                status = get_execution_status(monitoring['identifier'])
 
             with monitoring_lock:
                 manage_execution_succes(item)
         except :
             with monitoring_lock:
-                manage_execution_failure( item)
+                manage_execution_failure(item, execution["message"] + "\n" if execution != None and "message" in execution.keys() else "", execution["details"] + "\n" if execution != None and "details" in execution.keys() else "")
         with file_lock:
             manage_working_file(working_file)
 
@@ -106,19 +109,19 @@ def manage_execution_succes(item: dict):
     logger.info("%s out of %s items processed." % (nb_processed_items, total_items_to_process))
 
 
-def store_failure_data(item: dict):
+def store_failure_data(item: dict, message: str, detail: str):
     error_file_name = os.path.dirname(os.path.abspath(__file__)) + "/../../resources/errors/" + get_project_name()
     error_file = open(error_file_name, "a")
-    error_file.write(json.dumps(item, indent=4))
+    error_file.write("\n\n\n\n" + message + detail +json.dumps(item, indent=4))
     error_file.close()
 
 
-def manage_execution_failure(item: dict):
+def manage_execution_failure(item: dict, message: str, detail: str):
     global nb_processed_items
     global processed_item_ids
 
     item_processed_increment(item)
-    store_failure_data(item)
+    store_failure_data(item, message, detail)
     logger.error(
         "item %s raised an exception. You can see the item data in py_noir_code/resources/errors." %
         str(item["identifier"]))

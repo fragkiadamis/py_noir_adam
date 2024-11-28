@@ -21,7 +21,7 @@ class APIContext(object):
     def init(cls, config: CustomConfigParser):
         cls.scheme = config.get('API context', 'scheme')
         cls.domain = config.get('API context', 'domain')
-        cls.verify = bool(config.get('API context', 'verify'))
+        cls.verify = ("True" == config.get('API context', 'verify'))
         cls.timeout = config.get('API context', 'timeout')
         cls.proxies = json.loads(config.get('API context', 'proxies'))
         cls.username = config.get('API context', 'username')
@@ -32,8 +32,8 @@ class APIContext(object):
     def __init__(self, config: CustomConfigParser):
         self.scheme = config.get('API context', 'scheme')
         self.domain = config.get('API context', 'domain')
-        self.verify = bool(config.get('API context', 'verify'))
-        self.timeout = float(config.get('API context', 'timeout'))
+        self.verify = ("True" == config.get('API context', 'verify'))
+        self.timeout = config.get('API context', 'timeout')
         self.proxies = json.loads(config.get('API context', 'proxies'))
         self.username = config.get('API context', 'username')
         self.clientId = config.get('API context', 'clientId')

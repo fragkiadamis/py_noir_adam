@@ -16,13 +16,18 @@ def remove_file_extension(file_name: string):
     return file_name
 
 
-def open_project_file(file_name: string, option: string):
+def open_project_file(file_name: string, option: string = "r"):
     """ Open a file [file_name] stored at the same location as the executed main.py
     :param file_name:
     :param option:
     :return file_name_without_extension:
     """
     return open(get_project_path() + '/' + file_name, option)
+
+def get_ids_from_file(file_name: string, option: string = "r"):
+    file = open_project_file(file_name, option)
+    return file.read().split(",")
+
 
 def get_project_name():
     """ Return the project name (according to the main.py directory name)

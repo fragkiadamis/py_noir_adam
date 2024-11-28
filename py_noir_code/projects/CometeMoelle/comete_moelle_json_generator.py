@@ -5,7 +5,7 @@ sys.path.append('../../../')
 
 from py_noir_code.src.utils.log_utils import set_logger
 from datetime import datetime, timezone
-from py_noir_code.src.utils.file_utils import open_project_file
+from py_noir_code.src.utils.file_utils import open_project_file, get_ids_from_file
 from py_noir_code.src.API.api_context import APIContext
 from py_noir_code.src.shanoir_object.dataset.dataset_service import find_datasets_by_examination_id
 
@@ -16,8 +16,7 @@ def generate_comete_moelle_json():
     identifier = 0
     executions = []
 
-    exams_file = open_project_file("COMETE-M_exams_baseline.txt", "r")
-    exam_ids_to_exec = exams_file.read().split(",")
+    exam_ids_to_exec = get_ids_from_file("COMETE-M_exams_baseline.txt", "r")
 
     logger.info("Getting datasets, building json content... ")
 

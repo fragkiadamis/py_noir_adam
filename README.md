@@ -61,6 +61,8 @@ refresh_token = None
 [Execution context]
 
 max_thread = 3
+server_reboot_beginning_hour = 5
+server_reboot_ending_hour = 7
 
 ```
 
