@@ -5,7 +5,8 @@ from py_noir_code.src.utils.file_utils import get_ids_from_file
 
 
 def init_extraction(ids : [], resultOnly: bool):
-    response = get("/datasets/datasetProcessing/massiveDownloadByProcessing", {"processingIds":ids, "resultOnly":"true" if resultOnly else "false"})
+    #response = get("/datasets/datasetProcessing/massiveDownloadByProcessing", {"processingIds":ids, "resultOnly":"true" if resultOnly else "false"})
+    response = get("/datasets/datasetProcessing/massiveDownloadProcessingByExamination", {"examinationIds":ids, "resultOnly":"true" if resultOnly else "false"})
     if response.status_code == 200 :
         start_download(response)
     else :
