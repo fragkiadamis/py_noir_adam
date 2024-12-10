@@ -5,6 +5,7 @@ import getpass
 import zipfile
 from pathlib import Path
 import re
+from tqdm import tqdm
 
 import requests
 
@@ -124,38 +125,33 @@ def put(path: string, params=None, files=None, stream=None, json=None, data=None
                    data=data)
 
 
-try:
-    from tqdm import tqdm
-
-
-    def download_file(output_folder, response, unzip):
-        filename = get_filename_from_response(output_folder, response)
-        if not filename:
-            return
-        total = int(response.headers.get('content-length', 0))
-        with open(filename, 'wb') as file, tqdm(
-                desc=filename,
-                total=total,
-                unit='iB',
-                unit_scale=True,
-                unit_divisor=1024,
-        ) as bar:
-            for data in response.iter_content(chunk_size=1024):
-                size = file.write(data)
-                bar.update(size)
-        if unzip:
-            with zipfile.ZipFile(filename, 'r') as zip_ref:
-                zip_ref.extractall(output_folder)
-            os.remove(filename)
-
-except ImportError as e:
-
-    def download_file(output_folder, response):
-        filename = get_filename_from_response(output_folder, response)
-        if not filename:
-            return
-        open(filename, 'wb').write(response.content)
+def download_file(output_folder, response, unzip):
+    filename = get_filename_from_response(output_folder, response)
+    if not filename:
         return
+    total = int(response.headers.get('content-length', 0))
+    with open(filename, 'wb') as file, tqdm(
+            desc=filename,
+            total=total,
+            unit='iB',
+            unit_scale=True,
+            unit_divisor=1024,
+    ) as bar:
+        for data in response.iter_content(chunk_size=1024):
+            size = file.write(data)
+            bar.update(size)
+    if unzip:
+        with zipfile.ZipFile(filename, 'r') as zip_ref:
+            zip_ref.extractall(output_folder)
+        os.remove(filename)
+
+
+def download_files(output_folder, response):
+    filename = get_filename_from_response(output_folder, response)
+    if not filename:
+        return
+    open(filename, 'wb').write(response.content)
+    return
 
 
 def get_filename_from_response(output_folder, response):

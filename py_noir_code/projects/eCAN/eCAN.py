@@ -1,15 +1,19 @@
 import os
 import sys
-
-sys.path.append('../../../')
-sys.path.append('../../src/shanoir_object/dataset')
+import zipfile
 import pydicom
 from pydicom.uid import generate_uid
+from pydicom import dcmread
+from pynetdicom import AE
+from pynetdicom.sop_class import MRImageStorage, XRayAngiographicImageStorage
 import json
 import argparse
+
+sys.path.append( '../../')
+sys.path.append( '../../py_noir/dataset')
 from py_noir_code.src.API import api_service
+from py_noir_code.src.shanoir_object.solr_query.solr_query_service import solr_search
 from py_noir_code.src.shanoir_object.solr_query.solr_query_model import SolrQuery
-from py_noir_code.src.shanoir_object.solr_query import solr_query_service
 from py_noir_code.src.shanoir_object.dataset.dataset_service import get_dataset_dicom_metadata, download_dataset
 
 
@@ -54,7 +58,8 @@ def checkMetaData(metadata):
     if ('0008103E' in item and any(x in item['0008103E']["Value"][0].lower() for x in mri_types)) or ('00181030' in item and any(x in item['00181030']["Value"][0].lower() for x in mri_types)):
       is_tof = True
 
-    if "00180050" in item and item["00180050"]["Value"] != [] and float(item["00180050"]["Value"][0]) < slice_thickness:
+    # Check if SliceThickness is less than 0.5mm or between 100 and 500 (in case unity is not mm)
+    if "00180050" in item and item["00180050"]["Value"] != [] and (float(item["00180050"]["Value"][0]) < slice_thickness or (float(item["00180050"]["Value"][0]) > 100 and float(item["00180050"]["Value"][0]) < 500)):
       thin_enough = True
 
     # if ("20011018" in item and item["20011018"]["Value"] != [] and int(item["20011018"]["Value"][0]) > 50) or ("00280008" in item and item["00280008"]["Value"] != [] and int(item["00280008"]["Value"][0]) > 50) or ("07A11002" in item and item["07A11002"]["Value"] != [] and int(item["07A11002"]["Value"][0]) > 50):
@@ -78,7 +83,12 @@ def downloadDatasets(config, dataset_ids):
       outFolder = config.output_folder + "/" + subject + "/" + str(dataset_id)
       os.makedirs(outFolder, exist_ok=True)
       download_dataset(config, dataset_id, 'dcm', outFolder, True)
+      # Setting a common FrameOfReferenceUID metadata for all instances of a serie
       set_frame_of_reference_UID(outFolder)
+      # C-Store the dicom files to the PACS
+      for file_name in os.listdir(outFolder):
+        if file_name.endswith('.dcm'):
+          cStore_dataset(os.path.join(outFolder, file_name))
 
 def getDatasets(subjects_entries):
   f = open(str(subjects_entries), "r")
@@ -94,7 +104,7 @@ def getDatasets(subjects_entries):
                        .replace("]", ")"))
   query.search_text = query.search_text + " AND datasetName:(*tof* OR *angio* OR *flight* OR *mra* OR *arm*)"
 
-  result = solr_query_service.solr_search(query)
+  result = solr_search(query)
 
   jsonresult = json.loads(result.content)
 
@@ -111,6 +121,30 @@ def getDatasets(subjects_entries):
 
   downloadDatasets(config, dataset_ids)
 
+def cStore_dataset(dicom_file_path):
+  # Checking if dicom file is valid
+  try:
+    ds = dcmread(dicom_file_path)
+  except Exception as e:
+    print(f"Error reading the DICOM file {dicom_file_path} : {e}")
+    return
+
+  if assoc.is_established:
+    status = assoc.send_c_store(ds)
+
+    # Checking operation status
+    if status and status.Status == 0x0000:
+      return
+    else:
+      print(f"Sending the file {dicom_file_path} failed with status : {status.Status if status else 'Unknown'}")
+    
+  else:
+    print("Unable to establish a connection with PACS.")
+    try:
+      assoc = ae.associate(pacs_ip, pacs_port, ae_title=pacs_ae_title)
+    except Exception as e:
+      print(f"Error establishing a connection with PACS : {e}")
+
 if __name__ == '__main__':
   parser = create_arg_parser()
   add_common_arguments(parser)
@@ -118,8 +152,27 @@ if __name__ == '__main__':
   add_configuration_arguments(parser)
   args = parser.parse_args()
 
-  api_service.initialize(args)
+  config = api_service.initialize(args)
+
+  # Orthanc PACS parameters
+  pacs_ae_title = 'DCM4CHEE'
+  pacs_ip = '127.0.0.1'
+  pacs_port = 11112
+  client_ae_title = 'ECAN_SCRIPT_AE'
+
+  # Initialize PACS connexion
+  ae = AE(ae_title=client_ae_title)
+
+  # Add SOP class service for MR and X-Ray images
+  ae.add_requested_context(MRImageStorage)
+  ae.add_requested_context(XRayAngiographicImageStorage)
+
+  assoc = ae.associate(pacs_ip, pacs_port, ae_title=pacs_ae_title)
+
   getDatasets(config, args.subjects_json)
+
+  # Release the association with the PACS
+  assoc.release()
 
 ### Fonction pour déduire le nombre d'images d'un dicom
 
