@@ -6,8 +6,11 @@ from pydicom.uid import generate_uid
 from pydicom import dcmread
 from pynetdicom import AE
 from pynetdicom.sop_class import MRImageStorage, XRayAngiographicImageStorage
+import csv
 import json
 import argparse
+from tqdm import tqdm
+import shutil
 
 sys.path.append( '../../')
 sys.path.append( '../../py_noir/dataset')
@@ -58,8 +61,8 @@ def checkMetaData(metadata):
     if ('0008103E' in item and any(x in item['0008103E']["Value"][0].lower() for x in mri_types)) or ('00181030' in item and any(x in item['00181030']["Value"][0].lower() for x in mri_types)):
       is_tof = True
 
-    # Check if SliceThickness is less than 0.5mm or between 100 and 500 (in case unity is not mm)
-    if "00180050" in item and item["00180050"]["Value"] != [] and (float(item["00180050"]["Value"][0]) < slice_thickness or (float(item["00180050"]["Value"][0]) > 100 and float(item["00180050"]["Value"][0]) < 500)):
+    # Check if SliceThickness is less than 0.5mm or between 100 and 500 (in case unity is not mm but um)
+    if "00180050" in item and item["00180050"]["Value"] != [] and (float(item["00180050"]["Value"][0]) < slice_thickness or (float(item["00180050"]["Value"][0]) > 99 and float(item["00180050"]["Value"][0]) < slice_thickness*1000)):
       thin_enough = True
 
     # if ("20011018" in item and item["20011018"]["Value"] != [] and int(item["20011018"]["Value"][0]) > 50) or ("00280008" in item and item["00280008"]["Value"] != [] and int(item["00280008"]["Value"][0]) > 50) or ("07A11002" in item and item["07A11002"]["Value"] != [] and int(item["07A11002"]["Value"][0]) > 50):
@@ -77,25 +80,37 @@ def set_frame_of_reference_UID(workingFolder):
           dcm.FrameOfReferenceUID = frame_of_reference_uid
           dcm.save_as(dicom_file_path)
 
-def downloadDatasets(config, dataset_ids):
-  for subject in dataset_ids:
+def downloadDatasets(config, dataset_ids, assoc):
+  for subject in tqdm(dataset_ids, desc="Downloading datasets"):
+    subjFolder = config.output_folder + "/" + subject
     for dataset_id in dataset_ids[subject]:
       outFolder = config.output_folder + "/" + subject + "/" + str(dataset_id)
       os.makedirs(outFolder, exist_ok=True)
       download_dataset(config, dataset_id, 'dcm', outFolder, True)
-      # Setting a common FrameOfReferenceUID metadata for all instances of a serie
-      set_frame_of_reference_UID(outFolder)
-      # C-Store the dicom files to the PACS
-      for file_name in os.listdir(outFolder):
-        if file_name.endswith('.dcm'):
-          cStore_dataset(os.path.join(outFolder, file_name))
+      # We send the dicom files to the PACS if the number of slices is greater than 50
+      if count_slices(outFolder) > 50:
+        # Setting a common FrameOfReferenceUID metadata for all instances of a serie
+        set_frame_of_reference_UID(outFolder)
+        # C-Store the dicom files to the PACS
+      # for file_name in tqdm(os.listdir(outFolder), desc="Sending DICOM files to PACS"):
+      #   if file_name.endswith('.dcm'):
+      #     cStore_dataset(os.path.join(outFolder, file_name), assoc)
+        if not os.listdir(outFolder):
+          os.rmdir(outFolder)
+      else:
+        shutil.rmtree(outFolder)
+    # We remove the subject folder if it is empty
+    if not os.listdir(subjFolder):
+      os.rmdir(subjFolder)
+    # We store the subjects already done in a file
 
-def getDatasets(subjects_entries):
-  f = open(str(subjects_entries), "r")
-  done = f.read()
-  subjects = done.split("\n")
+def getDatasets(config, subjects_entries, assoc):
+  with open(str(subjects_entries), "r") as f:
+    reader = csv.reader(f)
+    subjects = [row[0].strip() for row in reader if row]
 
   query = SolrQuery()
+  query.size = 100000
   query.expert_mode = True
   query.search_text = ('subjectName:' + str(subjects)
                        .replace(',', ' OR ')
@@ -104,13 +119,12 @@ def getDatasets(subjects_entries):
                        .replace("]", ")"))
   query.search_text = query.search_text + " AND datasetName:(*tof* OR *angio* OR *flight* OR *mra* OR *arm*)"
 
-  result = solr_search(query)
-
+  result = datasets_solr_service.solr_search(config, query)
   jsonresult = json.loads(result.content)
 
   dataset_ids = {}
-  for dataset in jsonresult["content"]:
-    metadata = get_dataset_dicom_metadata(dataset["datasetId"])
+  for dataset in tqdm(jsonresult["content"], desc="Filtering datasets"):
+    metadata = get_dataset_dicom_metadata(config, dataset["datasetId"])
     if checkMetaData(metadata):
       subName = dataset["subjectName"]
       if (subName not in dataset_ids):
@@ -119,9 +133,20 @@ def getDatasets(subjects_entries):
 
   print("Datasets to download: " + str(dataset_ids))
 
-  downloadDatasets(config, dataset_ids)
+  downloadDatasets(config, dataset_ids, assoc)
 
-def cStore_dataset(dicom_file_path):
+### Fonction pour déduire le nombre d'images d'un dicom
+def count_slices(directory):
+    slices = []
+    for filename in os.listdir(directory):
+        if filename.endswith(".dcm"):
+            filepath = os.path.join(directory, filename)
+            ds = pydicom.dcmread(filepath)
+            if 'InstanceNumber' in ds:
+                slices.append(ds.InstanceNumber)
+    return len(set(slices))
+
+def cStore_dataset(dicom_file_path, assoc):
   # Checking if dicom file is valid
   try:
     ds = dcmread(dicom_file_path)
@@ -134,6 +159,7 @@ def cStore_dataset(dicom_file_path):
 
     # Checking operation status
     if status and status.Status == 0x0000:
+      os.remove(dicom_file_path)
       return
     else:
       print(f"Sending the file {dicom_file_path} failed with status : {status.Status if status else 'Unknown'}")
@@ -154,7 +180,7 @@ if __name__ == '__main__':
 
   config = api_service.initialize(args)
 
-  # Orthanc PACS parameters
+  # Distant PACS parameters
   pacs_ae_title = 'DCM4CHEE'
   pacs_ip = '127.0.0.1'
   pacs_port = 11112
@@ -167,25 +193,10 @@ if __name__ == '__main__':
   ae.add_requested_context(MRImageStorage)
   ae.add_requested_context(XRayAngiographicImageStorage)
 
+  # Request an association with the PACS
   assoc = ae.associate(pacs_ip, pacs_port, ae_title=pacs_ae_title)
 
-  getDatasets(config, args.subjects_json)
+  getDatasets(config, args.subjects_json, assoc)
 
   # Release the association with the PACS
   assoc.release()
-
-### Fonction pour déduire le nombre d'images d'un dicom
-
-# def count_slices(directory):
-#     slices = []
-#     for filename in os.listdir(directory):
-#         if filename.endswith(".dcm"):
-#             filepath = os.path.join(directory, filename)
-#             ds = pydicom.dcmread(filepath)
-#             if 'InstanceNumber' in ds:
-#                 slices.append(ds.InstanceNumber)
-#     return len(set(slices))
-
-# dicom_directory = "/path/to/dicom/files"
-# num_slices = count_slices(dicom_directory)
-# print(f"Number of slices: {num_slices}")
