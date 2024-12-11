@@ -104,6 +104,15 @@ def checkMetaData(metadata):
 
 
 def downloadDatasets(config, dataset_ids, assoc):
+  # We store the progress in a json file
+  progress = {}
+  progress_file = os.path.join(config.output_folder, "progress.json")
+
+  # Load existing progress if the file exists
+  if os.path.exists(progress_file):
+    with open(progress_file, 'r') as f:
+      progress = json.load(f)
+
   for subject in tqdm(dataset_ids, desc="Downloading datasets"):
     subjFolder = config.output_folder + "/" + subject
     for dataset_id in dataset_ids[subject]:
@@ -118,14 +127,19 @@ def downloadDatasets(config, dataset_ids, assoc):
         for file_name in tqdm(os.listdir(outFolder), desc="Sending DICOM files to PACS"):
           if file_name.endswith('.dcm'):
             cStore_dataset(os.path.join(outFolder, file_name), assoc)
+        # If the dataset folder is empty it means that all .dcm files have been sent to the PACS
         if not os.listdir(outFolder):
+          print("Dataset " + str(dataset_id) + " has been successfully sent to the PACS")
           os.rmdir(outFolder)
+        # Update progress
+        update_progress(progress, subject, dataset_id, progress_file)
       else:
         shutil.rmtree(outFolder)
+        # Update progress in case dataset not OK but still processed ???
+        # update_progress(progress, subject, dataset_id, progress_file)
     # We remove the subject folder if it is empty
     if not os.listdir(subjFolder):
       os.rmdir(subjFolder)
-    # We store the subjects already done in a file
 
 
 ### Function to retrieve the number of instances in a DICOM serie
@@ -176,6 +190,14 @@ def cStore_dataset(dicom_file_path, assoc):
       assoc = ae.associate(pacs_ip, pacs_port, ae_title=pacs_ae_title)
     except Exception as e:
       print(f"Error establishing a connection with PACS : {e}")
+
+def update_progress(progress, subject_id, dataset_id, progress_file):
+    if subject_id not in progress:
+        progress[subject_id] = []
+    if dataset_id not in progress[subject_id]:
+        progress[subject_id].append(dataset_id)
+    with open(progress_file, 'w') as f:
+      json.dump(progress, f, indent=2)
 
 if __name__ == '__main__':
   parser = create_arg_parser()
