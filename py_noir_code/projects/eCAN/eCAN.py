@@ -45,66 +45,12 @@ def add_configuration_arguments(parser):
   return parser
 
 def add_subject_entries_argument(parser):
-  parser.add_argument('-subjects', '--subjects_json', required=True, default='', help='path to the json structure of the subjects in a csv file')
+  parser.add_argument('-subjects', '--subjects_csv', required=True, default='', help='Path to the list of subjects in a csv file')
+  parser.add_argument('-study', '--shanoir_study', required=False, default='', help='Shanoir study to download')
   return parser
 
-def checkMetaData(metadata):
-  if metadata is None :
-    return False
-  mri_types = ["tof","angio","angiography","time of flight","mra"]
-  slice_thickness = 0.5
-  is_tof = False
-  thin_enough = False
-  #enough_frames = False
-  for item in metadata:
-    # Check if ProtocolName or SeriesDescription contains "tof" or "angio" or "flight"
-    if ('0008103E' in item and any(x in item['0008103E']["Value"][0].lower() for x in mri_types)) or ('00181030' in item and any(x in item['00181030']["Value"][0].lower() for x in mri_types)):
-      is_tof = True
-
-    # Check if SliceThickness is less than 0.5mm or between 100 and 500 (in case unity is not mm but um)
-    if "00180050" in item and item["00180050"]["Value"] != [] and (float(item["00180050"]["Value"][0]) < slice_thickness or (float(item["00180050"]["Value"][0]) > 99 and float(item["00180050"]["Value"][0]) < slice_thickness*1000)):
-      thin_enough = True
-
-    # if ("20011018" in item and item["20011018"]["Value"] != [] and int(item["20011018"]["Value"][0]) > 50) or ("00280008" in item and item["00280008"]["Value"] != [] and int(item["00280008"]["Value"][0]) > 50) or ("07A11002" in item and item["07A11002"]["Value"] != [] and int(item["07A11002"]["Value"][0]) > 50):
-    #   enough_frames = True
-  return is_tof and thin_enough #and enough_frames
-
-def set_frame_of_reference_UID(workingFolder):
-  for dirpath, dirnames, filenames in os.walk(workingFolder):
-    if filenames:
-      frame_of_reference_uid = generate_uid()
-      for dicom_file in os.listdir(dirpath):
-        dicom_file_path = os.path.join(dirpath, dicom_file)
-        if os.path.isfile(dicom_file_path) and dicom_file.endswith('.dcm'):
-          dcm = pydicom.dcmread(dicom_file_path)
-          dcm.FrameOfReferenceUID = frame_of_reference_uid
-          dcm.save_as(dicom_file_path)
-
-def downloadDatasets(config, dataset_ids, assoc):
-  for subject in tqdm(dataset_ids, desc="Downloading datasets"):
-    subjFolder = config.output_folder + "/" + subject
-    for dataset_id in dataset_ids[subject]:
-      outFolder = config.output_folder + "/" + subject + "/" + str(dataset_id)
-      os.makedirs(outFolder, exist_ok=True)
-      download_dataset(config, dataset_id, 'dcm', outFolder, True)
-      # We send the dicom files to the PACS if the number of slices is greater than 50
-      if count_slices(outFolder) > 50:
-        # Setting a common FrameOfReferenceUID metadata for all instances of a serie
-        set_frame_of_reference_UID(outFolder)
-        # C-Store the dicom files to the PACS
-      # for file_name in tqdm(os.listdir(outFolder), desc="Sending DICOM files to PACS"):
-      #   if file_name.endswith('.dcm'):
-      #     cStore_dataset(os.path.join(outFolder, file_name), assoc)
-        if not os.listdir(outFolder):
-          os.rmdir(outFolder)
-      else:
-        shutil.rmtree(outFolder)
-    # We remove the subject folder if it is empty
-    if not os.listdir(subjFolder):
-      os.rmdir(subjFolder)
-    # We store the subjects already done in a file
-
-def getDatasets(config, subjects_entries, assoc):
+def getDatasets(config, subjects_entries, shanoir_study, assoc):
+  # TODO : add the case of downloading a whole study
   with open(str(subjects_entries), "r") as f:
     reader = csv.reader(f)
     subjects = [row[0].strip() for row in reader if row]
@@ -135,7 +81,54 @@ def getDatasets(config, subjects_entries, assoc):
 
   downloadDatasets(config, dataset_ids, assoc)
 
-### Fonction pour déduire le nombre d'images d'un dicom
+def checkMetaData(metadata):
+  if metadata is None :
+    return False
+  mri_types = ["tof","angio","angiography","time of flight","mra"]
+  slice_thickness = 0.5
+  is_tof = False
+  thin_enough = False
+  #enough_frames = False
+  for item in metadata:
+    # Check if ProtocolName or SeriesDescription contains "tof" or "angio" or "flight"
+    if ('0008103E' in item and any(x in item['0008103E']["Value"][0].lower() for x in mri_types)) or ('00181030' in item and any(x in item['00181030']["Value"][0].lower() for x in mri_types)):
+      is_tof = True
+
+    # Check if SliceThickness is less than 0.5mm or between 100 and 500 (in case unity is not mm but um)
+    if "00180050" in item and item["00180050"]["Value"] != [] and (float(item["00180050"]["Value"][0]) < slice_thickness or (float(item["00180050"]["Value"][0]) > 99 and float(item["00180050"]["Value"][0]) < slice_thickness*1000)):
+      thin_enough = True
+
+    # if ("20011018" in item and item["20011018"]["Value"] != [] and int(item["20011018"]["Value"][0]) > 50) or ("00280008" in item and item["00280008"]["Value"] != [] and int(item["00280008"]["Value"][0]) > 50) or ("07A11002" in item and item["07A11002"]["Value"] != [] and int(item["07A11002"]["Value"][0]) > 50):
+    #   enough_frames = True
+  return is_tof and thin_enough #and enough_frames
+
+
+def downloadDatasets(config, dataset_ids, assoc):
+  for subject in tqdm(dataset_ids, desc="Downloading datasets"):
+    subjFolder = config.output_folder + "/" + subject
+    for dataset_id in dataset_ids[subject]:
+      outFolder = config.output_folder + "/" + subject + "/" + str(dataset_id)
+      os.makedirs(outFolder, exist_ok=True)
+      download_dataset(config, dataset_id, 'dcm', outFolder, True)
+      # We send the dicom files to the PACS if the number of slices is greater than 50
+      if count_slices(outFolder) > 50:
+        # Setting a common FrameOfReferenceUID metadata for all instances of a serie
+        set_frame_of_reference_UID(outFolder)
+        # C-Store the dicom files to the PACS
+        for file_name in tqdm(os.listdir(outFolder), desc="Sending DICOM files to PACS"):
+          if file_name.endswith('.dcm'):
+            cStore_dataset(os.path.join(outFolder, file_name), assoc)
+        if not os.listdir(outFolder):
+          os.rmdir(outFolder)
+      else:
+        shutil.rmtree(outFolder)
+    # We remove the subject folder if it is empty
+    if not os.listdir(subjFolder):
+      os.rmdir(subjFolder)
+    # We store the subjects already done in a file
+
+
+### Function to retrieve the number of instances in a DICOM serie
 def count_slices(directory):
     slices = []
     for filename in os.listdir(directory):
@@ -146,6 +139,19 @@ def count_slices(directory):
                 slices.append(ds.InstanceNumber)
     return len(set(slices))
 
+### Function to set a common FrameOfReferenceUID metadata for all instances of a serie
+def set_frame_of_reference_UID(workingFolder):
+  for dirpath, dirnames, filenames in os.walk(workingFolder):
+    if filenames:
+      frame_of_reference_uid = generate_uid()
+      for dicom_file in os.listdir(dirpath):
+        dicom_file_path = os.path.join(dirpath, dicom_file)
+        if os.path.isfile(dicom_file_path) and dicom_file.endswith('.dcm'):
+          dcm = pydicom.dcmread(dicom_file_path)
+          dcm.FrameOfReferenceUID = frame_of_reference_uid
+          dcm.save_as(dicom_file_path)
+
+### Function to send a DICOM file to a distant PACS
 def cStore_dataset(dicom_file_path, assoc):
   # Checking if dicom file is valid
   try:
@@ -196,7 +202,7 @@ if __name__ == '__main__':
   # Request an association with the PACS
   assoc = ae.associate(pacs_ip, pacs_port, ae_title=pacs_ae_title)
 
-  getDatasets(config, args.subjects_json, assoc)
+  getDatasets(config, args.subjects_csv, args.shanoir_study, assoc)
 
   # Release the association with the PACS
   assoc.release()
