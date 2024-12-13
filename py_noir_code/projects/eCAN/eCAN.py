@@ -95,7 +95,7 @@ def checkMetaData(metadata):
       is_tof = True
 
     # Check if SliceThickness is less than 0.5mm or between 100 and 500 (in case unity is not mm but um)
-    if "00180050" in item and item["00180050"]["Value"] != [] and (float(item["00180050"]["Value"][0]) < slice_thickness or (float(item["00180050"]["Value"][0]) > 99 and float(item["00180050"]["Value"][0]) < slice_thickness*1000)):
+    if '00180050' in item and "Value" in item['00180050'] and (float(item['00180050']["Value"][0]) < slice_thickness or (float(item['00180050']["Value"][0]) > 99 and float(item['00180050']["Value"][0]) < slice_thickness*1000)):
       thin_enough = True
 
     # if ("20011018" in item and item["20011018"]["Value"] != [] and int(item["20011018"]["Value"][0]) > 50) or ("00280008" in item and item["00280008"]["Value"] != [] and int(item["00280008"]["Value"][0]) > 50) or ("07A11002" in item and item["07A11002"]["Value"] != [] and int(item["07A11002"]["Value"][0]) > 50):
