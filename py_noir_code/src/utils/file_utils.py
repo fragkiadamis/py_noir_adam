@@ -47,3 +47,7 @@ def find_project_root(starting_path, folder_name="py_noir"):
         if parent.name == folder_name:
             return str(parent)
     raise FileNotFoundError(f"'{folder_name}' folder not found.")
+
+def create_file_path(file_path):
+        if not os.path.exists(file_path):
+           os.makedirs(file_path)

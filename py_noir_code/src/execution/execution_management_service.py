@@ -12,7 +12,7 @@ from tuned.profiles.functions.function_log import execute
 from py_noir_code.src.execution.execution_context import ExecutionContext
 from py_noir_code.src.execution.execution_service import create_execution, get_execution_status, \
     get_execution_monitoring
-from py_noir_code.src.utils.file_utils import get_project_name
+from py_noir_code.src.utils.file_utils import get_project_name, create_file_path
 from py_noir_code.src.utils.log_utils import set_logger
 
 sys.path.append('../../../')
@@ -110,8 +110,11 @@ def manage_execution_succes(item: dict):
 
 
 def store_failure_data(item: dict, message: str, detail: str):
-    error_file_name = os.path.dirname(os.path.abspath(__file__)) + "/../../resources/errors/" + get_project_name()
-    error_file = open(error_file_name, "a")
+    error_file_path = find_project_root(__file__) + "/py_noir_code/resources/WIP_files/"
+    error_file_name =  get_project_name() + ".json"
+    create_file_path(error_file_path)
+
+    error_file = open(error_file_path + error_file_name, "a")
     error_file.write("\n\n\n\n" + message + detail +json.dumps(item, indent=4))
     error_file.close()
 
