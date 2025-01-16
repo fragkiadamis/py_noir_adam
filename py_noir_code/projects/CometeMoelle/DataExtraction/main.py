@@ -24,5 +24,5 @@ def start_download(response : Response):
         print("No data to download !")
 
 if __name__ == '__main__':
-    load_context("extract_context.conf", False)
+    load_context("context.conf", False)
     init_extraction(get_ids_from_file("processing_ids_to_extract.txt"), False)
