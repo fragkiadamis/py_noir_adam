@@ -1,7 +1,7 @@
 import sys
 
-sys.path.append('./')
-sys.path.append('../../../')
+sys.path.append('../')
+sys.path.append('../../../../')
 
 from py_noir_code.src.utils.log_utils import set_logger
 from datetime import datetime, timezone
