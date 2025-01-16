@@ -1,17 +1,16 @@
 import os
 import sys
-import zipfile
 
-sys.path.append( '../../')
-sys.path.append( '../../py_noir/dataset')
+sys.path.append('../../../')
+sys.path.append('../../src/shanoir_object/dataset')
 import pydicom
 from pydicom.uid import generate_uid
 import json
 import argparse
-from py_noir import api_service
-from py_noir.dataset import datasets_solr_service
-from py_noir.dataset.solr_query import SolrQuery
-from py_noir.dataset.datasets_dataset_service import get_dataset_dicom_metadata, download_dataset
+from py_noir_code.src.API import api_service
+from py_noir_code.src.shanoir_object.solr_query.solr_query_model import SolrQuery
+from py_noir_code.src.shanoir_object.solr_query import solr_query_service
+from py_noir_code.src.shanoir_object.dataset.dataset_service import get_dataset_dicom_metadata, download_dataset
 
 
 def create_arg_parser(description="""Shanoir downloader"""):
@@ -81,7 +80,7 @@ def downloadDatasets(config, dataset_ids):
       download_dataset(config, dataset_id, 'dcm', outFolder, True)
       set_frame_of_reference_UID(outFolder)
 
-def getDatasets(config, subjects_entries):
+def getDatasets(subjects_entries):
   f = open(str(subjects_entries), "r")
   done = f.read()
   subjects = done.split("\n")
@@ -95,13 +94,13 @@ def getDatasets(config, subjects_entries):
                        .replace("]", ")"))
   query.search_text = query.search_text + " AND datasetName:(*tof* OR *angio* OR *flight* OR *mra* OR *arm*)"
 
-  result = datasets_solr_service.solr_search(config, query)
+  result = solr_query_service.solr_search(query)
 
   jsonresult = json.loads(result.content)
 
   dataset_ids = {}
   for dataset in jsonresult["content"]:
-    metadata = get_dataset_dicom_metadata(config, dataset["datasetId"])
+    metadata = get_dataset_dicom_metadata(dataset["datasetId"])
     if checkMetaData(metadata):
       subName = dataset["subjectName"]
       if (subName not in dataset_ids):
@@ -119,7 +118,7 @@ if __name__ == '__main__':
   add_configuration_arguments(parser)
   args = parser.parse_args()
 
-  config = api_service.initialize(args)
+  api_service.initialize(args)
   getDatasets(config, args.subjects_json)
 
 ### Fonction pour déduire le nombre d'images d'un dicom

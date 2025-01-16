@@ -1,8 +1,7 @@
 import json
 
-from py_noir.api_service import post
-from py_noir.dataset.solr_query import SolrQuery
-from py_noir.security.shanoir_context import ShanoirContext
+from py_noir_code.src.API.api_service import post
+from py_noir_code.src.shanoir_object.solr_query.solr_query_model import SolrQuery
 
 """
 Define methods for Shanoir datasets MS Solr query API call
@@ -10,9 +9,8 @@ Define methods for Shanoir datasets MS Solr query API call
 
 ENDPOINT = '/datasets/solr'
 
-def solr_search(context: ShanoirContext, query: SolrQuery):
+def solr_search(query: SolrQuery):
     """ Execute a Solr search query
-    :param context:
     :param query:
     :return:
     """
@@ -57,6 +55,6 @@ def solr_search(context: ShanoirContext, query: SolrQuery):
     }
 
     params = dict(page=query.page, size=query.size, sort=query.sort)
-    response = post(context, path, params=params, data=json.dumps(data))
+    response = post(path, params=params, data=json.dumps(data))
 
     return response

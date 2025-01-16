@@ -8,31 +8,33 @@ import re
 
 import requests
 
-from py_noir.security.authentication_service import ask_access_token, refresh_access_token
-from py_noir.security.shanoir_context import ShanoirContext
+from py_noir_code.src.API.api_context import APIContext
+from py_noir_code.src.security.authentication_service import ask_access_token, refresh_access_token
 
 """
 Define methods for generic API call
 """
 
 
-def rest_request(context: ShanoirContext, method: string, path, **kwargs):
+def rest_request(method: string, path, **kwargs):
     """ Execute a [method] HTTP query to [path] endpoint
-    :param context:
     :param method:
     :param path:
     :param kwargs:
     :return:
     """
-    url = context.scheme + "://" + context.domain + "/shanoir-ng" + path
+    url = APIContext.scheme + "://" + APIContext.domain + "/shanoir-ng" + path
 
     response = None
     if method == 'get':
-        response = requests.get(url, proxies=context.proxies, verify=context.verify, timeout=context.timeout, **kwargs)
+        response = requests.get(url, proxies=APIContext.proxies, verify=APIContext.verify, timeout=APIContext.timeout,
+                                **kwargs)
     elif method == 'post':
-        response = requests.post(url, proxies=context.proxies, verify=context.verify, timeout=context.timeout, **kwargs)
+        response = requests.post(url, proxies=APIContext.proxies, verify=APIContext.verify, timeout=APIContext.timeout,
+                                 **kwargs)
     elif method == 'put':
-        response = requests.put(url, proxies=context.proxies, verify=context.verify, timeout=context.timeout, **kwargs)
+        response = requests.put(url, proxies=APIContext.proxies, verify=APIContext.verify, timeout=APIContext.timeout,
+                                **kwargs)
     else:
         print('Error: unimplemented request type')
 
@@ -40,26 +42,26 @@ def rest_request(context: ShanoirContext, method: string, path, **kwargs):
 
 
 # perform a request on the given path, asks for a new access token if the current one is outdated
-def request(context: ShanoirContext, method, path, raise_for_status=True, **kwargs):
-    """ Authenticate / Re-authenticate user [context.username] and execute a [method] HTTP query to [path] endpoint
-    :param context:
+def request(method, path, raise_for_status=True, **kwargs):
+    """ Authenticate / Re-authenticate user [APIContext.username] and execute a [method] HTTP query to [path] endpoint
     :param method:
     :param path:
     :param raise_for_status:
     :param kwargs:
     :return:
     """
-    if context.access_token is None:
-        context = ask_access_token(context)
-    headers = get_http_headers(context)
+    if APIContext.access_token is None:
+        ask_access_token()
 
-    response = rest_request(context, method, path, headers=headers, **kwargs)
+    headers = get_http_headers()
+
+    response = rest_request(method, path, headers=headers, **kwargs)
 
     # if token is outdated, refresh it and try again
     if response.status_code == 401:
-        context = refresh_access_token(context)
-        headers = get_http_headers(context)
-        response = rest_request(context, method, path, headers=headers, **kwargs)
+        refresh_access_token()
+        headers = get_http_headers()
+        response = rest_request(method, path, headers=headers, **kwargs)
 
     if raise_for_status:
         response.raise_for_status()
@@ -67,13 +69,12 @@ def request(context: ShanoirContext, method, path, raise_for_status=True, **kwar
     return response
 
 
-def get_http_headers(context: ShanoirContext):
-    """ Set HTTP headers with [context.access_token]
-    :param context: ShanoirContext
+def get_http_headers():
+    """ Set HTTP headers with [APIcontext.access_token]
     :return:
     """
     headers = {
-        'Authorization': 'Bearer ' + context.access_token,
+        'Authorization': 'Bearer ' + APIContext.access_token,
         'content-type': 'application/json',
         'charset': 'utf-8'
     }
@@ -81,21 +82,19 @@ def get_http_headers(context: ShanoirContext):
 
 
 # perform a GET request on the given url, asks for a new access token if the current one is outdated
-def get(context: ShanoirContext, path: string, params=None, stream=None):
+def get(path: string, params=None, stream=None):
     """ Perform a GET HTTP request on [path] endpoint with given [params]
-    :param context: ShanoirContext
     :param path: string
     :param params:
     :param stream:
     :return:
     """
-    return request(context, 'get', path, params=params, stream=stream)
+    return request('get', path, params=params, stream=stream)
 
 
-def post(context: ShanoirContext, path: string, params=None, files=None, stream=None, json=None, data=None,
+def post(path: string, params=None, files=None, stream=None, json=None, data=None,
          raise_for_status=True):
     """ Perform a POST HTTP request on [path] endpoint with given [params]/[files]/[stream] /[data]
-    :param context:
     :param path:
     :param params:
     :param files:
@@ -105,14 +104,13 @@ def post(context: ShanoirContext, path: string, params=None, files=None, stream=
     :param raise_for_status:
     :return:
     """
-    return request(context, 'post', path, raise_for_status, params=params, files=files, stream=stream, json=json,
+    return request('post', path, raise_for_status, params=params, files=files, stream=stream, json=json,
                    data=data)
 
 
-def put(context: ShanoirContext, path: string, params=None, files=None, stream=None, json=None, data=None,
+def put(path: string, params=None, files=None, stream=None, json=None, data=None,
         raise_for_status=True):
     """ Perform a PUT HTTP request on [path] endpoint with given [params]/[files]/[stream] /[data]
-    :param context:
     :param path:
     :param params:
     :param files:
@@ -122,7 +120,7 @@ def put(context: ShanoirContext, path: string, params=None, files=None, stream=N
     :param raise_for_status:
     :return:
     """
-    return request(context, 'put', path, raise_for_status, params=params, files=files, stream=stream, json=json,
+    return request('put', path, raise_for_status, params=params, files=files, stream=stream, json=json,
                    data=data)
 
 
@@ -146,7 +144,7 @@ try:
                 size = file.write(data)
                 bar.update(size)
         if unzip:
-            with zipfile.ZipFile(filename,'r') as zip_ref:
+            with zipfile.ZipFile(filename, 'r') as zip_ref:
                 zip_ref.extractall(output_folder)
             os.remove(filename)
 
@@ -184,21 +182,21 @@ def log_response(e):
     logging.error(str(e))
     return
 
-def initialize(args):
 
-    context = ShanoirContext()
-    context.domain = args.domain
-    context.username = args.username
+def initialize(args):
+    APIContext.domain = args.domain
+    APIContext.username = args.username
 
     verify = args.certificate if hasattr(args, 'certificate') and args.certificate != '' else True
 
-    proxy_url = None # 'user:pass@host:port'
+    proxy_url = None  # 'user:pass@host:port'
 
     if hasattr(args, 'proxy_url') and args.proxy_url is not None:
         proxy_a = args.proxy_url.split('@')
         proxy_user = proxy_a[0]
         proxy_host = proxy_a[1]
-        proxy_password = getpass.getpass(prompt='Proxy password for user ' + proxy_user + ' and host ' + proxy_host + ': ', stream=None)
+        proxy_password = getpass.getpass(
+            prompt='Proxy password for user ' + proxy_user + ' and host ' + proxy_host + ': ', stream=None)
         proxy_url = proxy_user + ':' + proxy_password + '@' + proxy_host
 
     else:
@@ -226,7 +224,8 @@ def initialize(args):
                         proxy_config[proxy_key] = proxy_value
 
                 if 'enabled' not in proxy_config or proxy_config['enabled'] == 'true':
-                    if 'user' in proxy_config and len(proxy_config['user']) > 0 and 'password' in proxy_config and len(proxy_config['password']) > 0:
+                    if 'user' in proxy_config and len(proxy_config['user']) > 0 and 'password' in proxy_config and len(
+                            proxy_config['password']) > 0:
                         proxy_url = proxy_config['user'] + ':' + proxy_config['password']
                     proxy_url += '@' + proxy_config['host'] + ':' + proxy_config['port']
         else:
@@ -235,15 +234,12 @@ def initialize(args):
     proxies = None
 
     if proxy_url:
-
         proxies = {
             'http': 'http://' + proxy_url,
             # 'https': 'https://' + proxy_url,
         }
 
-    context.proxies = proxies
-    context.verify = verify
-    context.timeout = args.timeout
-    context.output_folder = args.output_folder
-
-    return context
+    APIContext.proxies = proxies
+    APIContext.verify = verify
+    APIContext.timeout = args.timeout
+    APIContext.output_folder = args.output_folder
