@@ -39,36 +39,37 @@ def generate_comete_moelle_json():
                 examinations[exam_id]["T2"].append(ds_id)
 
     for key, value in examinations.items():
-        for t2 in value["T2"]:
-            execution = {
-                "name": "comete_moelle_01_exam_{}_{}".format(key,
-                                                             datetime.now(timezone.utc).strftime('%F_%H%M%S%f')[:-3]),
-                "pipelineIdentifier": "comete_moelle/0.1",
-                "inputParameters": {},
-                "datasetParameters": [
-                    {
-                        "name": "t2_archive",
-                        "groupBy": "DATASET",
-                        "exportFormat": "nii",
-                        "datasetIds": [t2],
-                        "converterId": 2
-                    },
-                    {
-                        "name": "stir_archive",
-                        "groupBy": "EXAMINATION",
-                        "exportFormat": "nii",
-                        "datasetIds": value["STIR"],
-                        "converterId": 2
-                    }
-                ],
-                "studyIdentifier": value["studyId"],
-                "outputProcessing": "",
-                "processingType": "SEGMENTATION",
-                "refreshToken": APIContext.refresh_token,
-                "client": APIContext.clientId,
-                "converterId": 6
-            }
-            executions.append(execution)
-        identifier = identifier + 1
+        if value["T2"] and value["STIR"] :
+            for t2 in value["T2"]:
+                execution = {
+                    "name": "comete_moelle_01_exam_{}_{}".format(key,
+                                                                 datetime.now(timezone.utc).strftime('%F_%H%M%S%f')[:-3]),
+                    "pipelineIdentifier": "comete_moelle/0.1",
+                    "inputParameters": {},
+                    "datasetParameters": [
+                        {
+                            "name": "t2_archive",
+                            "groupBy": "DATASET",
+                            "exportFormat": "nii",
+                            "datasetIds": [t2],
+                            "converterId": 2
+                        },
+                        {
+                            "name": "stir_archive",
+                            "groupBy": "EXAMINATION",
+                            "exportFormat": "nii",
+                            "datasetIds": value["STIR"],
+                            "converterId": 2
+                        }
+                    ],
+                    "studyIdentifier": value["studyId"],
+                    "outputProcessing": "",
+                    "processingType": "SEGMENTATION",
+                    "refreshToken": APIContext.refresh_token,
+                    "client": APIContext.clientId,
+                    "converterId": 6
+                }
+                executions.append(execution)
+            identifier = identifier + 1
 
     return executions
