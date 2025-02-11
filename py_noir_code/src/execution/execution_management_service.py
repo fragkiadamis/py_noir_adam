@@ -108,8 +108,8 @@ def manage_execution_succes(item: dict):
 
 
 def store_failure_data(item: dict, message: str, detail: str):
-    error_file_path = find_project_root(__file__) + "/py_noir_code/resources/WIP_files/"
-    error_file_name =  get_project_name() + ".json"
+    error_file_path = find_project_root(__file__) + "/py_noir_code/resources/errors/"
+    error_file_name =  get_project_name() + ".txt"
     create_file_path(error_file_path)
 
     error_file = open(error_file_path + error_file_name, "a")
