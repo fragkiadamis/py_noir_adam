@@ -7,12 +7,10 @@ import time
 
 from concurrent.futures.thread import ThreadPoolExecutor
 
-from tuned.profiles.functions.function_log import execute
-
 from py_noir_code.src.execution.execution_context import ExecutionContext
 from py_noir_code.src.execution.execution_service import create_execution, get_execution_status, \
     get_execution_monitoring
-from py_noir_code.src.utils.file_utils import get_project_name, create_file_path
+from py_noir_code.src.utils.file_utils import get_project_name, create_file_path, find_project_root
 from py_noir_code.src.utils.log_utils import set_logger
 
 sys.path.append('../../../')
