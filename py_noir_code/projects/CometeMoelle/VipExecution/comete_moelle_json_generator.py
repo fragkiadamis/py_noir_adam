@@ -1,11 +1,11 @@
 import sys
+import os
 
-sys.path.append('../')
-sys.path.append('../../../../')
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../')))
 
 from py_noir_code.src.utils.log_utils import set_logger
 from datetime import datetime, timezone
-from py_noir_code.src.utils.file_utils import open_project_file, get_ids_from_file
+from py_noir_code.src.utils.file_utils import get_ids_from_file
 from py_noir_code.src.API.api_context import APIContext
 from py_noir_code.src.shanoir_object.dataset.dataset_service import find_datasets_by_examination_id
 
