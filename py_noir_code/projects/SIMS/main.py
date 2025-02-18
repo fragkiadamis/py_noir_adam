@@ -1,4 +1,7 @@
 import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 from projects.SIMS.sims_json_generator import generate_sims_json
 from py_noir_code.src.execution.execution_init_service import init_executions, resume_executions
