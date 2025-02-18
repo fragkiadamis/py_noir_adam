@@ -16,7 +16,7 @@ def generate_comete_moelle_json():
     identifier = 0
     executions = []
 
-    exam_ids_to_exec = get_ids_from_file("COMETE-M_exams_baseline.txt", "r")
+    exam_ids_to_exec = get_ids_from_file("ids_to_exec.txt", "r")
 
     logger.info("Getting datasets, building json content... ")
 
