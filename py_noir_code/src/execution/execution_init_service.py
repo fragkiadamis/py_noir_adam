@@ -3,9 +3,9 @@ import string
 import sys
 
 from py_noir_code.src.execution.execution_management_service import start_executions
-from py_noir_code.src.utils.log_utils import set_logger
+from py_noir_code.src.utils.log_utils import get_logger
 
-logger = set_logger()
+logger = get_logger()
 sys.path.append("../../")
 json_content: list[dict] = []
 

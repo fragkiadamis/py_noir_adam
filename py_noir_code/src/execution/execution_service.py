@@ -1,10 +1,13 @@
 import json
 
 from py_noir_code.src.API.api_service import post, get
+from src.utils.log_utils import get_logger
 
 """
 Define methods for Shanoir datasets MS execution API call
 """
+
+logger = get_logger()
 
 def create_execution(execution: dict):
     path = "/datasets/vip/execution/"
