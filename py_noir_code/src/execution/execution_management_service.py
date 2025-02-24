@@ -11,12 +11,12 @@ from py_noir_code.src.execution.execution_context import ExecutionContext
 from py_noir_code.src.execution.execution_service import create_execution, get_execution_status, \
     get_execution_monitoring
 from py_noir_code.src.utils.file_utils import get_project_name, create_file_path, find_project_root
-from py_noir_code.src.utils.log_utils import set_logger
+from py_noir_code.src.utils.log_utils import get_logger
 
 sys.path.append('../../../')
 sys.path.append('../shanoir_object/dataset')
 
-logger = set_logger()
+logger = get_logger()
 
 total_items_to_process = None
 items = []
@@ -54,13 +54,18 @@ def manage_threading_execution(working_file):
             execution = create_execution(item)
             monitoring = get_execution_monitoring(execution["id"])
             status = '"Running"'
+            countDown = 12
             while status == '"Running"':
                 time.sleep(5)
                 status = get_execution_status(monitoring['identifier'])
+                countDown -= 1
+                if countDown == 1 :
+                    logger.info("Status for execution " + str(execution["id"]) + " is " + status)
+                    countDown = 12
 
             with monitoring_lock:
                 manage_execution_succes(item)
-        except :
+        except:
             with monitoring_lock:
                 manage_execution_failure(item, execution["message"] + "\n" if execution != None and "message" in execution.keys() else "", execution["details"] + "\n" if execution != None and "details" in execution.keys() else "")
         with file_lock:

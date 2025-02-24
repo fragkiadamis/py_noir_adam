@@ -26,3 +26,6 @@ def set_logger():
         logger = logging.getLogger(__name__)
 
     return logger
+
+def get_logger():
+    return logger or set_logger()
