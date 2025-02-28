@@ -136,6 +136,15 @@ def downloadDatasets(dataset_ids, assoc, limit):
   if os.path.exists(progress_file):
     with open(progress_file, 'r') as f:
       progress = json.load(f)
+      # Remove already processed datasets
+      for subject in progress:
+        if subject in dataset_ids:
+          for dataset_id in progress[subject]:
+            if dataset_id in dataset_ids[subject]:
+              dataset_ids[subject].remove(dataset_id)
+              print(f"Dataset {dataset_id} from subject {subject} has already been processed. Skipping...")
+          if not dataset_ids[subject]:
+            del dataset_ids[subject]
   # TODO : track progress if limit is not set
   progress_bar = tqdm(total=limit, desc="Downloading and sending datasets")
 
