@@ -72,7 +72,10 @@ def manage_threading_execution(working_file):
             manage_working_file(working_file)
 
     with ThreadPoolExecutor(max_workers=ExecutionContext.max_thread) as executor:
-        [executor.submit(thread_execution, item) for item in items[1:]]
+        for item in items[1:]:
+            executor.submit(thread_execution, item)  # Start the thread
+            time.sleep(1)  # Wait 1 second before submitting the next one
+
 
     logger.info("Executions ended.")
 

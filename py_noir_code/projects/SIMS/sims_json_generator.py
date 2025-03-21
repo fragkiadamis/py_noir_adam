@@ -5,6 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.
 
 from py_noir_code.src.utils.log_utils import set_logger
 from datetime import datetime, timezone
+from py_noir_code.src.API.api_context import APIContext
 from py_noir_code.src.utils.file_utils import get_ids_from_file
 from py_noir_code.src.shanoir_object.dataset.dataset_service import find_datasets_by_examination_id
 
@@ -24,11 +25,13 @@ def generate_sims_json():
         execution = {
             "identifier":identifier,
             "name": "SIMS_03_exam_{}_{}".format(exam_id, datetime.now(timezone.utc).strftime('%F_%H%M%S%f')[:-3]),
-            "pipelineIdentifier": "ofsep_sequences_identification/0.2",
+            "pipelineIdentifier": "ofsep_sequences_identification/0.3",
             "studyIdentifier": datasets[0]["studyId"],
             "inputParameters": {},
             "outputProcessing": "",
             "processingType": "SEGMENTATION",
+            "refreshToken": APIContext.refresh_token,
+            "client": APIContext.clientId,
             "datasetParameters": [
                 {
                     "datasetIds": [dataset["id"] for dataset in datasets],
