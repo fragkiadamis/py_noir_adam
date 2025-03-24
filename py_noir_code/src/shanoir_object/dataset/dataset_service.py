@@ -4,7 +4,7 @@ from datetime import datetime
 import requests
 
 from py_noir_code.src.API.api_service import get, download_file, post
-from py_noir_code.src.utils.log_utils import set_logger
+from py_noir_code.src.utils.log_utils import get_logger
 
 """
 Define methods for Shanoir datasets MS datasets API call
@@ -12,7 +12,7 @@ Define methods for Shanoir datasets MS datasets API call
 
 ENDPOINT = '/datasets/datasets'
 
-logger = set_logger()
+logger = get_logger()
 
 def get_dataset(dataset_id: string):
     """ Get dataset [dataset_id]

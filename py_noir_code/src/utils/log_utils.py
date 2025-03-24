@@ -5,7 +5,6 @@ from py_noir_code.src.utils.file_utils import get_project_name, create_file_path
 
 logger = None
 
-
 def set_logger():
     global logger
     log_path = os.path.dirname(os.path.abspath(__file__)) + "/../../resources/logs/"
@@ -22,6 +21,7 @@ def set_logger():
         formatter = logging.Formatter(fmt='%(asctime)s %(levelname)s : %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
         stdout_handler = logging.StreamHandler()
         stdout_handler.setFormatter(formatter)
+        logging.getLogger().handlers.clear()
         logging.getLogger().addHandler(stdout_handler)
         logger = logging.getLogger(__name__)
 
