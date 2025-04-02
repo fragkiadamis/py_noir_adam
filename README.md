@@ -19,7 +19,9 @@ PyNoir is a Python library aiming at facilitate the use of Shanoir APIs through 
     - `context_example.conf` file example of a context.conf in the context of py_noir executions (configuration file for executions)
   - `ressources` directory contains various resources directories
     - `logs` generic directory for project logs
-    - `WIP_files` directory contains working files, it allows the script interruption management
+    - `errors` generic directory for project error logs
+    - `WIP_files` directory contains working files, it's used for script execution
+    - `save_files` directory contains save files, it allows the script interruption management. It's based on the WIP_files after each exec ending. It can be replaced, or copied-pasted, for avoiding the json generation.
   - `src` directory contains all generic code for projects executions
     - `API` directory contains API methods for communication with Shanoir
     - `execution` directory contains queue script methods. Manage the queue, the exceptions and the user feedback
