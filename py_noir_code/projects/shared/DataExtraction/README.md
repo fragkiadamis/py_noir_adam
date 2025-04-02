@@ -11,6 +11,8 @@ You have to choose between :
 - data = json.dumps(ids) : list of ids in the body of the HTTP request
 - "processingComment":"comete_moelle/0.1" : regex corresponding to the processing comment in the headers of the HTTP request
 
+Care, at least one among processingComment or examinationsIds needs to be defined, otherwise an HTTP error is returned
+
 ### Output filtering :
 
 You have to chose for the header "resultOnly" one of the choice below :
