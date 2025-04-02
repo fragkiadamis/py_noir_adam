@@ -44,7 +44,7 @@ def generate_comete_moelle_json():
                 execution = {
                     "name": "comete_moelle_01_exam_{}_{}".format(key,
                                                                  datetime.now(timezone.utc).strftime('%F_%H%M%S%f')[:-3]),
-                    "pipelineIdentifier": "comete_moelle/0.1",
+                    "pipelineIdentifier": "comete_moelle/0.2",
                     "inputParameters": {},
                     "datasetParameters": [
                         {
@@ -67,7 +67,7 @@ def generate_comete_moelle_json():
                     "processingType": "SEGMENTATION",
                     "refreshToken": APIContext.refresh_token,
                     "client": APIContext.clientId,
-                    "converterId": 6
+                    "converterId": 2
                 }
                 executions.append(execution)
             identifier = identifier + 1
