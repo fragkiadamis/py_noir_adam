@@ -10,7 +10,6 @@ from py_noir_code.src.utils.file_utils import get_ids_from_file
 
 
 def init_analysis(ids : [], dataType: str, pipelineIdentifier: str):
-    #response = post("/datasets/datasetProcessing/massiveDownloadByProcessingIds", params = {"resultOnly":"true" if resultOnly else "false"}, data = json.dumps(ids))
     response = post("/datasets/datasetProcessing/downloadPipelineDatas", params = {"pipelineIdentifier":pipelineIdentifier, "dataType":dataType}, data = json.dumps(ids))
 
     if response.status_code == 200 :
