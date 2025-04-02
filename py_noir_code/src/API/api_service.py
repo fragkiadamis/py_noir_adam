@@ -239,3 +239,7 @@ def initialize(args):
     APIContext.verify = verify
     APIContext.timeout = args.timeout
     APIContext.output_folder = args.output_folder
+
+def reset_token():
+    if APIContext.access_token is None:
+        refresh_access_token()

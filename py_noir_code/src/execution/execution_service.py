@@ -1,4 +1,5 @@
 import json
+import time
 
 from py_noir_code.src.API.api_service import post, get
 from src.utils.log_utils import get_logger
@@ -31,4 +32,15 @@ def get_execution_monitoring(execution_id: str) -> list:
 
     path = '/datasets/execution-monitoring/' + str(execution_id)
     response = get(path)
-    return response.json()
+
+    for attempt in range(3):
+        try:
+            response = get(path)
+            response.raise_for_status()
+            return response.json()
+        except response.RequestException as e:
+            logger.error("Attempt {attempt + 1} failed: {e}")
+            if attempt <  2:
+                time.sleep(2)
+            else:
+                raise
