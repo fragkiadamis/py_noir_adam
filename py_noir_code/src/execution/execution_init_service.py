@@ -6,8 +6,8 @@ import re
 
 from py_noir_code.src.execution.execution_management_service import start_executions
 from py_noir_code.src.utils.log_utils import get_logger
-from src.API.api_context import APIContext
-from src.API.api_service import reset_token
+from py_noir_code.src.API.api_context import APIContext
+from py_noir_code.src.API.api_service import reset_token
 
 logger = get_logger()
 sys.path.append("../../")

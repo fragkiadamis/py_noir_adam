@@ -2,7 +2,7 @@ import json
 import time
 
 from py_noir_code.src.API.api_service import post, get
-from src.utils.log_utils import get_logger
+from py_noir_code.src.utils.log_utils import get_logger
 
 """
 Define methods for Shanoir datasets MS execution API call
