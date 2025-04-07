@@ -3,7 +3,7 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
 
-from projects.CometeMoelle.VipExecution.comete_moelle_json_generator import generate_comete_moelle_json
+from py_noir_code.projects.CometeMoelle.comete_moelle_json_generator import generate_comete_moelle_json
 from py_noir_code.src.execution.execution_init_service import init_executions, resume_executions
 from py_noir_code.src.utils.context_utils import load_context
 from py_noir_code.src.utils.file_utils import get_project_name, find_project_root, create_file_path
