@@ -10,7 +10,7 @@ from py_noir_code.src.utils.file_utils import get_ids_from_file
 
 
 def init_post_processing():
-    get("/datasets/vip/postProcessing/", params = {"name":"SEGMENTATION", "comment":"testest"})
+    get("/datasets/vip/postProcessing/", params = {"name":"SEGMENTATION", "comment":"SIMS"})
 
 if __name__ == '__main__':
     load_context("context.conf", False)
