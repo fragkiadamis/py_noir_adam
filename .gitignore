@@ -5,3 +5,4 @@ output
 py_noir_code/resources
 py_noir_code/projects/CometeMoelle/ids_to_exec.txt
 py_noir_code/projects/SIMS/ids_to_rename.txt
+**/context.conf
