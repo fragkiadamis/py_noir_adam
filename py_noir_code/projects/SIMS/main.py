@@ -11,10 +11,13 @@ from py_noir_code.src.utils.file_utils import get_project_name, find_project_roo
 if __name__ == '__main__':
     load_context("context.conf")
     json_file_path = find_project_root(__file__) + "/py_noir_code/resources/WIP_files/"
+    json_save_path = find_project_root(__file__) + "/py_noir_code/resources/save_files/"
     json_file_name =  get_project_name() + ".json"
     create_file_path(json_file_path)
+    create_file_path(json_save_path)
 
-    if not os.path.exists(json_file_path + json_file_name):
+
+    if not os.path.exists(json_save_path + json_file_name):
         init_executions(json_file_path + json_file_name, generate_sims_json())
     else:
-        resume_executions(json_file_path + json_file_name)
+        resume_executions(json_file_path, json_save_path, json_file_name)

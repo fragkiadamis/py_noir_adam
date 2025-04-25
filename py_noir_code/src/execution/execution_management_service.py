@@ -1,4 +1,5 @@
 import os
+import shutil
 import string
 import sys
 import json
@@ -6,6 +7,7 @@ import threading
 import time
 
 from concurrent.futures.thread import ThreadPoolExecutor
+from pathlib import Path
 
 from py_noir_code.src.execution.execution_context import ExecutionContext
 from py_noir_code.src.execution.execution_service import create_execution, get_execution_status, \
@@ -22,7 +24,7 @@ total_items_to_process = None
 items = []
 nb_processed_items = 0
 processed_item_ids = []
-
+saveFile = ""
 
 def check_pause_shedule(pause_message_event):
     current_hour = time.localtime(time.time()).tm_hour
@@ -72,7 +74,9 @@ def manage_threading_execution(working_file):
             manage_working_file(working_file)
 
     with ThreadPoolExecutor(max_workers=ExecutionContext.max_thread) as executor:
-        [executor.submit(thread_execution, item) for item in items[1:]]
+        for item in items[1:]:
+            executor.submit(thread_execution, item)  # Start the thread
+            time.sleep(1)  # Wait 1 second before submitting the next one
 
     logger.info("Executions ended.")
 
@@ -82,15 +86,19 @@ def start_executions(json_file_name: string, resume: bool = False):
     global nb_processed_items
     global processed_item_ids
     global items
+    global saveFile
 
     items = read_items_from_json_file(json_file_name, resume)
     nb_processed_items = int(items[0]["nb_processed_items"])
     processed_item_ids = list(items[0]["processed_item_ids"])
     total_items_to_process = len(processed_item_ids) + len(items) - 1
 
+    saveFile = str(Path(json_file_name).parent.parent) + "/save_files/" + Path(json_file_name).name
+    shutil.copy(json_file_name, saveFile)
     with open(json_file_name, "w") as working_file:
         manage_threading_execution(working_file)
     os.remove(json_file_name)
+    os.remove(saveFile)
 
 
 def read_items_from_json_file(json_file_name: string, resume: bool):
@@ -147,11 +155,13 @@ def item_processed_increment(item: dict):
 
 def manage_working_file(working_file):
     global items
+    global saveFile
 
     working_file.truncate(0)
     working_file.seek(0)
     working_file.write(json.dumps(items))
     working_file.flush()
+    shutil.copy(working_file, saveFile)
 
 
 def get_items_from_json_file(json_file_name: str):

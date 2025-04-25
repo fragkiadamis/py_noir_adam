@@ -4,16 +4,15 @@ import requests
 import json
 import getpass
 import sys
-import logging
 
 from py_noir_code.src.API.api_context import APIContext
-from py_noir_code.src.utils.log_utils import set_logger
+from py_noir_code.src.utils.log_utils import get_logger
 
 """
 Define methods for Shanoir authentication
 """
 
-logger = set_logger()
+logger = get_logger()
 ENDPOINT = '/auth/realms/shanoir-ng/protocol/openid-connect/token'
 
 def ask_access_token():
@@ -69,8 +68,11 @@ def refresh_access_token():
     logger.info('Refreshing keycloak token...')
     response = requests.post(url, data=payload, headers=headers, proxies=APIContext.proxies, verify=APIContext.verify,
                              timeout=APIContext.timeout)
-    if response.status_code != 200:
-        logger.error('Response status : {response.status_code}, {responses[response.status_code]}')
-    response_json = response.json()
-    APIContext.access_token = response_json['access_token']
-    return APIContext
+    if response.text.find("No refresh token") != -1 :
+        ask_access_token()
+    else :
+        APIContext.access_token = response.json()['access_token']
+        APIContext.refresh_token = response.json()['refresh_token']
+    if response.status_code != 200 and APIContext.access_token == "":
+        logger.error('Response status :' + str(response.status_code) + "," + response.text)
+        exit(1)
