@@ -30,35 +30,28 @@ def generate_comete_moelle_json():
             if exam_id not in examinations:
                 examinations[exam_id] = {}
                 examinations[exam_id]["studyId"] = study_id
-                examinations[exam_id]["T2"] = []
-                examinations[exam_id]["STIR"] = []
+                examinations[exam_id]["FLAIR"] = []
 
-            if "T2DSAGSTIR" == dataset["updatedMetadata"]["name"]:
-                examinations[exam_id]["STIR"].append(ds_id)
-            elif "T2DSAGT2" == dataset["updatedMetadata"]["name"]:
-                examinations[exam_id]["T2"].append(ds_id)
+            if "T3DFLAIR" == dataset["updatedMetadata"]["name"]:
+                examinations[exam_id]["FLAIR"].append(ds_id)
+
 
     for key, value in examinations.items():
-        if value["T2"] and value["STIR"] :
-            for t2 in value["T2"]:
+        if value["FLAIR"] :
+            for flair in value["FLAIR"] :
                 execution = {
-                    "name": "comete_moelle_01_exam_{}_{}".format(key,
-                                                                 datetime.now(timezone.utc).strftime('%F_%H%M%S%f')[:-3]),
-                    "pipelineIdentifier": "comete_moelle/0.2",
+                    "identifier":identifier,
+
+                    "name": "FLAIR_1_exam_{}_{}".format(key,
+                                                        datetime.now(timezone.utc).strftime('%F_%H%M%S%f')[:-3]),
+                    "pipelineIdentifier": "comete_brain_flair/1.3",
                     "inputParameters": {},
                     "datasetParameters": [
                         {
-                            "name": "t2_archive",
-                            "groupBy": "DATASET",
-                            "exportFormat": "nii",
-                            "datasetIds": [t2],
-                            "converterId": 2
-                        },
-                        {
-                            "name": "stir_archive",
+                            "name": "flair_archive",
                             "groupBy": "EXAMINATION",
                             "exportFormat": "nii",
-                            "datasetIds": value["STIR"],
+                            "datasetIds": [flair],
                             "converterId": 2
                         }
                     ],
@@ -70,6 +63,6 @@ def generate_comete_moelle_json():
                     "converterId": 2
                 }
                 executions.append(execution)
-            identifier = identifier + 1
+                identifier = identifier + 1
 
     return executions

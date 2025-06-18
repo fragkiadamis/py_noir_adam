@@ -54,20 +54,37 @@ def manage_threading_execution(working_file):
 
         try:
             execution = create_execution(item)
-            monitoring = get_execution_monitoring(execution["id"])
-            status = '"Running"'
-            countDown = 12
-            while status == '"Running"':
-                time.sleep(5)
-                status = get_execution_status(monitoring['identifier'])
-                countDown -= 1
-                if countDown == 1 :
-                    logger.info("Status for execution " + str(execution["id"]) + " is " + status)
-                    countDown = 12
+            if(execution['id'] != None) :
+                logger.info(execution['id'])
+                monitoring = get_execution_monitoring(execution["id"])
+                logger.info("Execution " + str(execution['id']) + ", " + str(monitoring['identifier']) + " is created.")
+                status = '"Running"'
+                countDown = 12
 
-            with monitoring_lock:
-                manage_execution_succes(item)
+                while status == '"Running"':
+                    time.sleep(5)
+
+                    for attempt in range(5):
+                        try:
+                            status = get_execution_status(monitoring['identifier'])
+                            break  # success, exit retry loop
+                        except Exception as e:
+                            logger.warning(f"Attempt {attempt + 1}/5 failed to get status: {e}")
+                            if attempt == 4:
+                                raise  # re-raise after 3 failed attempts
+                            time.sleep(1)
+
+                    countDown -= 1
+                    if countDown == 1 and status == '"Running"':
+                        logger.info("Status for execution " + str(execution["id"]) + " is " + status)
+                        countDown = 12
+
+                with monitoring_lock:
+                    logger.debug("Succes for execution" + str(execution["id"]))
+                    manage_execution_succes(item)
+
         except:
+            logger.debug("Exception for execution " + str(execution["id"]))
             with monitoring_lock:
                 manage_execution_failure(item, execution["message"] + "\n" if execution != None and "message" in execution.keys() else "", execution["details"] + "\n" if execution != None and "details" in execution.keys() else "")
         with file_lock:
@@ -95,6 +112,9 @@ def start_executions(json_file_name: string, resume: bool = False):
 
     saveFile = str(Path(json_file_name).parent.parent) + "/save_files/" + Path(json_file_name).name
     shutil.copy(json_file_name, saveFile)
+    initialFile = str(Path(json_file_name).parent.parent) + "/save_files/initial_" + Path(json_file_name).name
+    shutil.copy(json_file_name, initialFile)
+
     with open(json_file_name, "w") as working_file:
         manage_threading_execution(working_file)
     os.remove(json_file_name)

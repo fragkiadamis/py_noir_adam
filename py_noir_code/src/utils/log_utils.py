@@ -21,7 +21,6 @@ def set_logger():
         formatter = logging.Formatter(fmt='%(asctime)s %(levelname)s : %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
         stdout_handler = logging.StreamHandler()
         stdout_handler.setFormatter(formatter)
-        logging.getLogger().handlers.clear()
         logging.getLogger().addHandler(stdout_handler)
         logger = logging.getLogger(__name__)
 

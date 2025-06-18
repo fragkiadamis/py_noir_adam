@@ -26,7 +26,7 @@ def open_project_file(file_name: string, option: string = "r"):
 
 def get_ids_from_file(file_name: string, option: string = "r"):
     file = open_project_file(file_name, option)
-    return file.read().split(",")
+    return file.read().replace("\n","").split(",")
 
 
 def get_project_name():
