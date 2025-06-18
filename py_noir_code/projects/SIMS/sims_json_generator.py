@@ -24,8 +24,8 @@ def generate_sims_json():
 
         execution = {
             "identifier":identifier,
-            "name": "SIMS_03_exam_{}_{}post_processing".format(exam_id, datetime.now(timezone.utc).strftime('%F)')[:-3]),
-            "pipelineIdentifier": "ofsep_sequences_identification/3",
+            "name": "SIMS_3_exam_{}_{}_post_processing".format(exam_id, datetime.now(timezone.utc).strftime('%F')),
+            "pipelineIdentifier": "SIMS/2",
             "studyIdentifier": datasets[0]["studyId"],
             "inputParameters": {},
             "outputProcessing": "",

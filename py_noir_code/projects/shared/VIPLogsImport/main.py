@@ -10,7 +10,6 @@ from py_noir_code.src.utils.file_utils import get_ids_from_file, find_project_ro
 
 def init_import(ids : []):
     for id in ids:
-
         response = get("/datasets/vip/execution/" + id + "/stdout")
 
         if response.status_code == 200 :
@@ -29,5 +28,4 @@ def log_response(response : Response):
 
 if __name__ == '__main__':
     load_context("context.conf", False)
-    #dataType in {"study","subject","examination","acquisition","dataset"}
     init_import(get_ids_from_file("workflow_identifier_to_get.txt"))
