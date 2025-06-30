@@ -90,7 +90,7 @@ def find_dataset_ids_by_subject_id(subject_id):
     return response.json()
 
 
-def find_datasets_by_examination_id( examination_id):
+def find_datasets_by_examination_id( examination_id, output : bool = False):
     """ Get all datasets from subjet [subject_id]
     :param examination_id:
     :return:
@@ -99,7 +99,7 @@ def find_datasets_by_examination_id( examination_id):
     path = ENDPOINT + '/examination/' + examination_id
 
     try:
-        response = get(path)
+        response = get(path, params = {"output":output})
         return response.json()
     except requests.exceptions.RequestException as e:
         logger.error("Error for exam %s : %s" %(examination_id, str(e.response.json().get("message"))))
