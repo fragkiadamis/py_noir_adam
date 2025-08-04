@@ -6,7 +6,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.
 from py_noir_code.src.utils.log_utils import get_logger
 from datetime import datetime, timezone
 from py_noir_code.src.utils.file_utils import get_ids_from_file
-from py_noir_code.src.utils.json_utils import deduplicate_executions
 from py_noir_code.src.API.api_context import APIContext
 from py_noir_code.src.shanoir_object.dataset.dataset_service import find_datasets_by_examination_id
 
@@ -38,6 +37,7 @@ def generate_comete_moelle_json():
             elif "T2DSAGT2" == dataset["updatedMetadata"]["name"]:
                 examinations[exam_id]["T2"].append(ds_id)
 
+
     for key, value in examinations.items():
         if value["T2"] and value["PMAP"] :
             execution = {
@@ -45,7 +45,7 @@ def generate_comete_moelle_json():
 
                 "name": "comete_pmap_01_exam_{}_{}".format(key,
                                                              datetime.now(timezone.utc).strftime('%F_%H%M%S%f')[:-3]),
-                "pipelineIdentifier": "comete_sc_pmap_fusion/1.1",
+                "pipelineIdentifier": "comete_sc_pmap_fusion/1.3",
                 "inputParameters": {},
                 "datasetParameters": [
                     {

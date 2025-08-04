@@ -1,0 +1,30 @@
+{
+  "comments":  "Feel free to let the comments in your real file, as they won't bother the extraction",
+  "sorting_comment": "Extracted outputs can be sorted as wanted according to one or multiple relative elements which are: study, subject, examination.",
+  "sorting": [
+  "subject",
+  "examination"
+  ],
+  "converter_comment":"Converter from Dicom to Nifti in {DCM2NII_2008_03_31, MCVERTER_2_0_7, DCM2NII_2014_08_04, MCVERTER_2_1_0, DCM2NIIX, DICOMIFIER, MRICONVERTER}. It will be used for every downloaded Dicom.",
+  "converter":"MRICONVERTER",
+  "data_to_extract_comment": "You can select the data you want to extract here. One element per type of extraction, all the outputs of every extraction will be merged and sorted as defined above.",
+  "data_to_extract": [
+    {
+      "extraction_identifier_comment": "Only for clarity (mandatory anyway)",
+      "extraction_identifier": "1",
+      "input_comment":"it allows to get inputs of the processing or not",
+      "input": true,
+      "filter_comment": "it allows to extract data from a specific context. You can make any combination of filters, only data which respect all of them will be extracted. A filter is composed of a type {study,subject,examination,acquisition,dataset,processing}.{id,name} and a value. In case of name filter, name has to contain the value, not to be equal to. A processing_name/id filter is mandatory for each filter, and the filters are only relative to processing outputs, not inputs. See examples belows.",
+      "filter": [
+        {
+          "type": "dataset.id",
+          "value": "1418154"
+        },
+        {
+          "type": "processing.name",
+          "value": "SIMS"
+        }
+      ]
+    }
+  ]
+}
