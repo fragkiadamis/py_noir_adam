@@ -172,7 +172,6 @@ def item_processed_increment(item: dict):
     processed_item_ids.append(item_id)
     items[0] = dict(nb_processed_items=nb_processed_items, processed_item_ids=processed_item_ids)
 
-
 def manage_working_file(working_file):
     global items
     global saveFile
@@ -181,8 +180,7 @@ def manage_working_file(working_file):
     working_file.seek(0)
     working_file.write(json.dumps(items))
     working_file.flush()
-    shutil.copy(working_file, saveFile)
-
+    shutil.copy(working_file.name, saveFile)
 
 def get_items_from_json_file(json_file_name: str):
     items_to_processed_file = open(json_file_name, "r")

@@ -25,7 +25,7 @@ def generate_sims_json():
         execution = {
             "identifier":identifier,
             "name": "SIMS_3_exam_{}_{}_post_processing".format(exam_id, datetime.now(timezone.utc).strftime('%F')),
-            "pipelineIdentifier": "SIMS/2",
+            "pipelineIdentifier": "SIMS/3",
             "studyIdentifier": datasets[0]["studyId"],
             "inputParameters": {},
             "outputProcessing": "",

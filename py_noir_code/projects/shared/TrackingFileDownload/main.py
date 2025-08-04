@@ -28,4 +28,4 @@ def start_download(response : Response, pipelineName: str):
 
 if __name__ == '__main__':
     load_context("context.conf", False)
-    init_extraction( "SIzzzMS_3")
+    init_extraction("comete_brain_flair_1_3")
