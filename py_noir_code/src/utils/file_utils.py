@@ -2,6 +2,7 @@ import os
 import string
 import sys
 from pathlib import Path
+import csv
 
 
 def remove_file_extension(file_name: string):
@@ -27,6 +28,15 @@ def open_project_file(file_name: string, option: string = "r"):
 def get_ids_from_file(file_name: string, option: string = "r"):
     file = open_project_file(file_name, option)
     return file.read().replace("\n","").split(",")
+
+
+def get_values_from_csv(file_name: str, column: str) -> list[str]:
+    values = []
+    with open(file_name, "r", newline="") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            values.append(row[column])
+    return values
 
 
 def get_project_name():
