@@ -11,6 +11,9 @@ import requests
 
 from py_noir_code.src.API.api_context import APIContext
 from py_noir_code.src.security.authentication_service import ask_access_token, refresh_access_token
+from py_noir_code.src.utils.log_utils import get_logger
+
+logger = get_logger()
 
 """
 Define methods for generic API call
@@ -37,7 +40,7 @@ def rest_request(method: string, path, **kwargs):
         response = requests.put(url, proxies=APIContext.proxies, verify=APIContext.verify, timeout=APIContext.timeout,
                                 **kwargs)
     else:
-        print('Error: unimplemented request type')
+        logger.error('Error: unimplemented request type')
 
     return response
 
@@ -225,7 +228,7 @@ def initialize(args):
                         proxy_url = proxy_config['user'] + ':' + proxy_config['password']
                     proxy_url += '@' + proxy_config['host'] + ':' + proxy_config['port']
         else:
-            print("Proxy configuration file not found. Proxy will be ignored.")
+            logger.info("Proxy configuration file not found. Proxy will be ignored.")
 
     proxies = None
 

@@ -14,7 +14,6 @@ from py_noir_code.src.API.api_context import APIContext
 from py_noir_code.src.shanoir_object.solr_query.solr_query_model import SolrQuery
 from py_noir_code.src.shanoir_object.solr_query.solr_query_service import solr_search
 from py_noir_code.src.utils.file_utils import get_values_from_csv
-
 from py_noir_code.src.utils.log_utils import get_logger
 
 logger = get_logger()

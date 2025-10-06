@@ -3,10 +3,11 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
 
-from py_noir_code.projects.RHU_eCAN.rhu_ecan_json_generator import generate_rhu_ecan_json
+from py_noir_code.projects.RHU_eCAN.ecan_json_generator import generate_rhu_ecan_json
 from py_noir_code.src.execution.execution_init_service import init_executions, resume_executions
 from py_noir_code.src.utils.context_utils import load_context
 from py_noir_code.src.utils.file_utils import get_project_name, find_project_root, create_file_path
+from py_noir_code.projects.RHU_eCAN.download_ecan_data import fetch_datasets_from_json
 
 if __name__ == '__main__':
     load_context("context.conf")
@@ -20,3 +21,5 @@ if __name__ == '__main__':
         init_executions(json_file_path + json_file_name, generate_rhu_ecan_json())
     else:
         resume_executions(json_file_path, json_save_path, json_file_name)
+
+    fetch_datasets_from_json(f"{json_save_path}initial_{json_file_name}")
