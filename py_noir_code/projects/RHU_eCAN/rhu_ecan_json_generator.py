@@ -1,3 +1,4 @@
+import logging
 import sys
 import os
 from typing import List, Dict, Any
@@ -186,10 +187,11 @@ def generate_rhu_ecan_json() -> List[Any]:
     List[Any]
         A list of execution configurations (dictionaries).
     """
-    csv_paths = (
-        "py_noir_code/projects/RHU_eCAN/ican_subset_subject_ids.csv",
-        "py_noir_code/projects/RHU_eCAN/angptl6_subset_subject_ids.csv"
-    )
+    csv_paths = [
+        # "py_noir_code/projects/RHU_eCAN/ican_subset_subject_ids.csv",
+        # "py_noir_code/projects/RHU_eCAN/angptl6_subset_subject_ids.csv",
+        "py_noir_code/projects/RHU_eCAN/test.csv"
+    ]
 
     executions, identifier = [], 0
     for csv_path in csv_paths:
@@ -200,7 +202,7 @@ def generate_rhu_ecan_json() -> List[Any]:
             dt = datetime.now().strftime('%F_%H%M%S%f')[:-3]
             executions.append({
                 "identifier": identifier,
-                "name": f"landmarkDetection_04_exam_{exam_id}_{dt}",
+                "name": f"landmarkDetection_0_4_exam_{exam_id}_{dt}",
                 "pipelineIdentifier": "landmarkDetection/0.4",
                 "studyIdentifier": dataset["studyId"],
                 "inputParameters": {},
@@ -217,4 +219,5 @@ def generate_rhu_ecan_json() -> List[Any]:
             })
 
             identifier += 1
+        logging.info(f"Finished processing {csv_path}.")
     return executions
