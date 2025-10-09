@@ -187,8 +187,8 @@ def generate_rhu_ecan_json() -> List[Any]:
         A list of execution configurations (dictionaries).
     """
     csv_paths = [
-        # "py_noir_code/projects/RHU_eCAN/ican_subset_subject_ids.csv",
-        # "py_noir_code/projects/RHU_eCAN/angptl6_subset_subject_ids.csv",
+        # "py_noir_code/projects/RHU_eCAN/ican_subset.csv",
+        # "py_noir_code/projects/RHU_eCAN/angptl6_subset.csv",
         "py_noir_code/projects/RHU_eCAN/test.csv"
     ]
 

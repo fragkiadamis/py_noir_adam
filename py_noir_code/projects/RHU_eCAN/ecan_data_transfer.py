@@ -1,6 +1,9 @@
 import os
 import json
-from typing import List, Any
+import base64
+import httplib2
+from pathlib import Path
+from typing import Dict
 
 from py_noir_code.src.shanoir_object.dataset.dataset_service import download_dataset_processing, \
     find_processed_dataset_ids_by_input_dataset_id, get_dataset
@@ -9,7 +12,18 @@ from py_noir_code.src.utils.log_utils import get_logger
 logger = get_logger()
 
 
-def fetch_datasets_from_json(ecan_json_path) -> List[Any]:
+def get_headers(username: str, password: str) -> Dict[str, str]:
+    auth_str = f"{username}:{password}"
+    auth_bytes = auth_str.encode("utf-8")  # Convert to bytes
+    auth_encoded = base64.b64encode(auth_bytes).decode("utf-8")  # Encode and decode back to string
+
+    return {
+        'content-type': 'application/dicom',
+        'Authorization': f"Basic {auth_encoded}"
+    }
+
+
+def fetch_datasets_from_json(ecan_json_path: Path) -> Path:
     """
     Fetch and download processed datasets from an ECAN JSON export.
 
@@ -50,7 +64,38 @@ def fetch_datasets_from_json(ecan_json_path) -> List[Any]:
         subject_datasets[dataset['subjectId']] = [proc["id"] for proc in processing_list]
 
     # Download all processed datasets grouped by subject
+    output_dir = Path(f"py_noir_code/resources/downloads")
     for (subject_id, dataset_processing) in subject_datasets.items():
-        output_dir = f"py_noir_code/resources/downloads/{subject_id}"
-        os.makedirs(output_dir, exist_ok=True)
-        download_dataset_processing(dataset_processing, output_dir, unzip=True)
+        subject_dir = output_dir.joinpath(str(subject_id))
+        os.makedirs(subject_dir, exist_ok=True)
+        download_dataset_processing(dataset_processing, str(subject_dir), unzip=True)
+
+    return output_dir
+
+
+def upload_to_orthanc_pacs(dataset_path: Path) -> None:
+    total_file_count, dicom_count = 0, 0
+
+    URL = "http://localhost:8042/instances"
+    logger.info(f"PACS URL: {URL}\n")
+
+    # Recursively upload a directory
+    dcm_files = sorted(dataset_path.rglob("*.dcm"), key=lambda p: str(p).lower())
+    for dcm_file in dcm_files:
+        logger.info(f"Importing {dcm_file}")
+        with open(dcm_file, "rb") as dcm:
+            dcm_content = dcm.read()
+        dcm.close()
+        total_file_count += 1
+
+        h = httplib2.Http()
+        headers = get_headers("orthanc", "orthanc")
+        resp, content = h.request(URL, 'POST', body=dcm_content, headers=headers)
+        if resp.status == 200:
+            logger.info(" => success\n")
+            dicom_count += 1
+
+    if dicom_count == total_file_count:
+        logger.info(f"SUCCESS: {dicom_count} DICOM file(s) have been successfully imported\n")
+    else:
+        logger.info(f"WARNING: Only {dicom_count} out of {total_file_count} file(s) have been successfully imported as DICOM instance(s)")

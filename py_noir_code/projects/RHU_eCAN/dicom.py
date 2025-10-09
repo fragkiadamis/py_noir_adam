@@ -1,6 +1,5 @@
-import os
 from pathlib import Path
-from typing import List, Tuple, Set
+from typing import Set
 
 import pydicom
 from pydicom.dataset import Dataset
@@ -36,7 +35,60 @@ def load_first_dicom(dir_path: Path) -> Dataset:
     return pydicom.dcmread(files[0])
 
 
-def compare_tags(ds_mr: Dataset, ds_seg: Dataset) -> Tuple[bool, List[str]]:
+def check_series_tag_consistency(series_dir: Path, fix_files: bool = False) -> bool:
+    """
+    Check that all DICOM tags in TAGS_TO_CHECK are consistent across all instances in the series.
+    If inconsistencies are found, fix them by assigning the reference value to the inconsistent files.
+
+    Args:
+        series_dir (Path): Path to the DICOM series directory.
+        fix_files (bool): Fix inconsistent files with the value of the reference file.
+
+    Returns:
+        bool: True if all tags were initially consistent, False otherwise.
+    """
+    logger.info(f"Checking tag consistency for image series: {series_dir}")
+    files = sorted(series_dir.glob("*.dcm"))
+    if not files:
+        logger.info("⚠️ No DICOM files found in the series.")
+        return False
+
+    # Load first file as reference
+    ref_ds = pydicom.dcmread(files[0], stop_before_pixels=False)
+    all_consistent = True
+
+    for name, tag in TAGS_TO_CHECK.items():
+        ref_val = getattr(ref_ds, name, None)
+        inconsistent_files = []
+
+        for f in files[1:]:
+            ds = pydicom.dcmread(f, stop_before_pixels=False)
+            val = getattr(ds, name, None)
+            if val != ref_val:
+                inconsistent_files.append(f)
+                setattr(ds, name, ref_val)
+                if fix_files:
+                    ds.save_as(f)  # overwrite with corrected value
+
+        if inconsistent_files:
+            all_consistent = False
+            logger.info(
+                f"❌ Tag '{name}' ({tag}) not consistent across series.\n"
+                f"  Reference value: {ref_val}\n"
+                f"  Fixed files: {', '.join([f.name for f in inconsistent_files])}"
+            )
+        else:
+            logger.info(f"✅ Tag '{name}' consistent across all slices.")
+
+    if all_consistent:
+        logger.info("✅ All tags consistent across series.")
+    else:
+        logger.info("⚙️ Inconsistent tags were found and fixed using the reference values.")
+
+    return all_consistent
+
+
+def compare_tags(ds_mr: Dataset, ds_seg: Dataset) -> bool:
     """
     Compare specific DICOM tags between an MR and a SEG dataset.
 
@@ -45,21 +97,18 @@ def compare_tags(ds_mr: Dataset, ds_seg: Dataset) -> Tuple[bool, List[str]]:
         ds_seg (Dataset): DICOM dataset for the SEG series.
 
     Returns:
-        Tuple[bool, List[str]]:
-            - bool: True if all tags match, False otherwise.
-            - List[str]: List of formatted strings detailing the comparison for each tag.
+        bool: True if all tags match, False otherwise.
     """
     all_match = True
-    lines: List[str] = []
     for name, tag in TAGS_TO_CHECK.items():
         mr_val = getattr(ds_mr, name, None)
         seg_val = getattr(ds_seg, name, None)
         match = mr_val == seg_val
         if not match:
             all_match = False
-        lines.append(f"{name} {tag}:\n  MR : {mr_val}\n  SEG: {seg_val}\n  Match: {match}\n")
-    lines.append(f"All tags match: {all_match}\n")
-    return all_match, lines
+        logger.info(f"{name} {tag}:\n  MR : {mr_val}\n  SEG: {seg_val}\n  Match: {match}")
+    logger.info(f"All tags match: {all_match}")
+    return all_match
 
 
 def collect_mr_sop_uids(mr_dir: Path) -> Set[str]:
@@ -79,7 +128,7 @@ def collect_mr_sop_uids(mr_dir: Path) -> Set[str]:
     return sop_uids
 
 
-def check_referenced_sop(ds_seg: Dataset, mr_sop_uids: Set[str]) -> Tuple[List[str], bool]:
+def check_referenced_sop(ds_seg: Dataset, mr_sop_uids: Set[str]) -> bool:
     """
     Check that all referenced SOPInstanceUIDs in a SEG dataset exist in the MR dataset.
 
@@ -92,22 +141,20 @@ def check_referenced_sop(ds_seg: Dataset, mr_sop_uids: Set[str]) -> Tuple[List[s
         mr_sop_uids (Set[str]): Set of SOPInstanceUIDs from the MR dataset.
 
     Returns:
-        Tuple[List[str], bool]:
-            - List[str]: Log lines detailing the reference checks.
-            - bool: True if all referenced SOPInstanceUIDs exist in MR, False otherwise.
+        bool: True if all referenced SOPInstanceUIDs exist in MR, False otherwise.
     """
-    lines: List[str] = [f"SEG SOP Instance UID: {ds_seg.SOPInstanceUID}\n"]
+    logger.info(f"SEG SOP Instance UID: {ds_seg.SOPInstanceUID}")
     if "ReferencedSeriesSequence" not in ds_seg:
-        lines.append("⚠️ No ReferencedSeriesSequence found in SEG.\n")
-        return lines, False
+        logger.info("⚠️ No ReferencedSeriesSequence found in SEG.")
+        return False
 
     all_matched = True
     for ref_series in ds_seg.ReferencedSeriesSequence:
         ref_series_uid = ref_series.SeriesInstanceUID
-        lines.append(f"Referenced MR SeriesInstanceUID in SEG: {ref_series_uid}\n")
+        logger.info(f"Referenced MR SeriesInstanceUID in SEG: {ref_series_uid}")
 
         if "ReferencedInstanceSequence" not in ref_series:
-            lines.append("  ⚠️ No ReferencedInstanceSequence found!\n")
+            logger.info("⚠️ No ReferencedInstanceSequence found!")
             all_matched = False
             continue
 
@@ -116,29 +163,12 @@ def check_referenced_sop(ds_seg: Dataset, mr_sop_uids: Set[str]) -> Tuple[List[s
             status = sop_uid in mr_sop_uids
             if not status:
                 all_matched = False
-            lines.append(f"  Referenced SOPInstanceUID: {sop_uid} -> Match MR slice: {status}\n")
-    lines.append(f"All referenced instances in SEG found in MR folder: {all_matched}\n")
-    return lines, all_matched
+            logger.info(f"Referenced SOPInstanceUID: {sop_uid} -> Match MR slice: {status}")
+    logger.info(f"All referenced instances in SEG found in MR folder: {all_matched}")
+    return all_matched
 
 
-def write_log(log_file: Path, log_lines: List[str]) -> None:
-    """
-    Write log lines to a specified log file.
-
-    Args:
-        log_file (Path): Path to the log file.
-        log_lines (List[str]): List of log lines to write.
-
-    Returns:
-        None
-    """
-    os.makedirs(log_file.parent, exist_ok=True)
-    with open(log_file, "w") as f:
-        f.writelines("\n".join(log_lines))
-    logger.info(f"Log written to {log_file}")
-
-
-def inspect_study_tags() -> None:
+def inspect_study_tags(input_dir: Path) -> None:
     """
     Inspect spatial and reference DICOM tags for all studies in the downloads folder.
 
@@ -151,10 +181,12 @@ def inspect_study_tags() -> None:
       4. Writes a detailed log for each study to
          `py_noir_code/resources/dicom_logs/{subject_id}/{processing_id}/log.txt`.
 
+    Args:
+        input_dir (Path): Path to the root folder containing patient subfolders with study data.
+
     Returns:
         None
     """
-    input_dir = Path("py_noir_code/resources/downloads/")
     for subject_dir in input_dir.iterdir():
         for study_dir in subject_dir.iterdir():
             mr_dir = next(d for d in study_dir.iterdir() if d.is_dir() and d.name != "output")
@@ -165,21 +197,24 @@ def inspect_study_tags() -> None:
 
             processing_id = mr_dir.parent.name.split("_")[1]
             subject_id = mr_dir.parent.parent.name
-            log_file = Path(f"py_noir_code/resources/dicom_logs/{subject_id}/{processing_id}/log.txt")
 
-            log_lines: List[str] = [
-                f"Checking spatial and reference DICOM tags between MR and SEG for patient {subject_id}, exam {processing_id}...\n"
-            ]
+            logger.info(f"Checking DICOM tags consistency across the series")
+
+            series_ok = check_series_tag_consistency(mr_dir, fix_files=True)
+            if not series_ok:
+                logger.warning(f"Series tag consistency check failed for {study_dir}")
+
+            # Not really necessary for now
+            logger.info(
+                f"Checking spatial and reference DICOM tags between MR and SEG for patient {subject_id}, exam {processing_id}..."
+            )
 
             # Compare tags
-            all_match, tag_lines = compare_tags(ds_mr, ds_seg)
-            log_lines.extend(tag_lines)
+            all_match = compare_tags(ds_mr, ds_seg)
 
             # Only check SOPs if tags don't all match
             if not all_match:
+                logger.warning(f"DICOM tag consistency check between image series and SEG failed for {study_dir}\n"
+                               f"Performing further inspections...")
                 mr_sop_uids = collect_mr_sop_uids(mr_dir)
-                log_lines.append(f"Number of MR slices found: {len(mr_sop_uids)}\n")
-                ref_lines, _ = check_referenced_sop(ds_seg, mr_sop_uids)
-                log_lines.extend(ref_lines)
-
-            write_log(log_file, log_lines)
+                _ = check_referenced_sop(ds_seg, mr_sop_uids)
