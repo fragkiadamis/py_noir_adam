@@ -12,7 +12,7 @@ from py_noir_code.projects.RHU_eCAN.ecan_data_transfer import fetch_datasets_fro
 from py_noir_code.projects.RHU_eCAN.dicom import inspect_study_tags
 
 if __name__ == '__main__':
-    load_context("context.conf")
+    load_context("context.conf", with_orthanc=True)
     json_file_path = find_project_root(__file__) + "/py_noir_code/resources/WIP_files/"
     json_save_path = find_project_root(__file__) + "/py_noir_code/resources/save_files/"
     json_file_name =  get_project_name() + ".json"

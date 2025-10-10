@@ -143,7 +143,6 @@ def find_processed_dataset_ids_by_input_dataset_id(dataset_id):
     :param dataset_id:
     :return:
     """
-    logger.info(f"Getting processed datasets from dataset {dataset_id}")
     path = ENDPOINT_PROCESSING + '/inputDataset/' + dataset_id
     response = get(path)
     return response.json()
@@ -171,7 +170,7 @@ def get_dicom_metadata_by_dataset_id(dataset_id):
 
 
 def download_dataset_by_subject(subject_id, file_format, output_folder):
-    """ Download all datasets from subject [subject_id] as [file_format] into [output_folder]
+    """ Download all datasets from a subject [subject_id] as [file_format] into [output_folder]
     :param subject_id:
     :param file_format:
     :param output_folder:
@@ -183,7 +182,7 @@ def download_dataset_by_subject(subject_id, file_format, output_folder):
 
 
 def download_dataset_by_subject_id_study_id(subject_id, study_id, file_format, output_folder):
-    """ Download all datasets from subject [subject_id] and study [study_id] as [file_format] into [output_folder]
+    """ Download all datasets from a subject [subject_id] and study [study_id] as [file_format] into [output_folder]
     :param subject_id:
     :param study_id:
     :param file_format:

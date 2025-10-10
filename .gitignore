@@ -1,10 +1,7 @@
 /*venv*/
 __pycache__
 .idea
-output
 py_noir_code/resources
 py_noir_code/projects/CometeMoelle/ids_to_exec.txt
 py_noir_code/projects/SIMS/ids_to_rename.txt
-py_noir_code/projects/RHU_eCAN/angptl6_subset.csv
-py_noir_code/projects/RHU_eCAN/ican_subset.csv
 **/context.conf

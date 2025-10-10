@@ -98,15 +98,15 @@ def query_datasets(csv_path: str, csv_column: str) -> defaultdict[Any, List]:
     defaultdict[Any, List]
         A mapping of examinationId → list of dataset entries.
     """
-    subject_id_list = get_values_from_csv(csv_path, csv_column)
+    subject_name_list = get_values_from_csv(csv_path, csv_column)
     logger.info("Searching for subjects' datasets...")
 
     # Query the datasets for each subject using SOLR
     query = SolrQuery()
     query.size = 100000
     query.expert_mode = True
-    query.search_text = f"subjectName: ({subject_id_list[0]}"
-    for subject in subject_id_list[1:]:
+    query.search_text = f"subjectName: ({subject_name_list[0]}"
+    for subject in subject_name_list[1:]:
         query.search_text = query.search_text + " OR " + subject
     query.search_text = query.search_text + ") AND datasetName: *TOF*"
     result = solr_search(query).json()
@@ -187,14 +187,13 @@ def generate_rhu_ecan_json() -> List[Any]:
         A list of execution configurations (dictionaries).
     """
     csv_paths = [
-        # "py_noir_code/projects/RHU_eCAN/ican_subset.csv",
-        # "py_noir_code/projects/RHU_eCAN/angptl6_subset.csv",
-        "py_noir_code/projects/RHU_eCAN/test.csv"
+        "py_noir_code/projects/RHU_eCAN/ican_subset.csv",
+        "py_noir_code/projects/RHU_eCAN/angptl6_subset.csv",
     ]
 
     executions, identifier = [], 0
     for csv_path in csv_paths:
-        dataset_subset = query_datasets(csv_path, "Subject_ID")
+        dataset_subset = query_datasets(csv_path, "SubjectName")
         filtered_subset = filter_datasets(dataset_subset)
         logger.info("Building json content...")
         for exam_id, dataset in filtered_subset.items():

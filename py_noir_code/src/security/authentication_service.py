@@ -6,14 +6,16 @@ import getpass
 import sys
 
 from py_noir_code.src.API.api_context import APIContext
+from py_noir_code.src.orthanc.orthanc_context import OrthancContext
 from py_noir_code.src.utils.log_utils import get_logger
 
 """
-Define methods for Shanoir authentication
+Define methods for Shanoir authentication and Orthanc password
 """
 
 logger = get_logger()
 ENDPOINT = '/auth/realms/shanoir-ng/protocol/openid-connect/token'
+
 
 def ask_access_token():
     """ Prompt user [APIContext.username] for password
@@ -76,3 +78,17 @@ def refresh_access_token():
     if response.status_code != 200 and APIContext.access_token == "":
         logger.error('Response status :' + str(response.status_code) + "," + response.text)
         exit(1)
+
+
+def load_orthanc_password():
+    """ Prompt the user [OrthancContext.username] for password
+    and set [OrthancContext.password]
+    :return:
+    """
+    try:
+        password = os.environ['orthanc_password'] if 'orthanc_password' in os.environ else getpass.getpass(
+            prompt='Password for Orthanc user ' + OrthancContext.username + ': ', stream=None)
+    except Exception as e:
+        sys.exit(0)
+
+    OrthancContext.password = password
