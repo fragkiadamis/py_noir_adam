@@ -28,7 +28,7 @@ def get_study_label_for_subject(subject_name: str, csv_paths: List[str]) -> Opti
     for csv_path in csv_paths:
         subject_names = get_values_from_csv(csv_path, "SubjectName")
         if subject_name in subject_names:
-            return Path(csv_path).stem  # CSV filename (without extension) as label
+            return Path(csv_path).stem  # CSV filename (without extension) as a label
     return None
 
 
@@ -95,7 +95,7 @@ def upload_to_orthanc_pacs(dataset_path: Path) -> None:
     total_file_count, dicom_count = 0, 0
     load_orthanc_password()
 
-    endpoint = f"{OrthancContext.scheme}://{OrthancContext.domain}:{OrthancContext.port}"
+    endpoint = f"{OrthancContext.scheme}://{OrthancContext.domain}:{OrthancContext.rest_api_port}"
     headers = get_http_headers(OrthancContext.username, OrthancContext.password)
     logger.info(f"PACS Endpoint: {endpoint}\n")
 
@@ -110,7 +110,7 @@ def upload_to_orthanc_pacs(dataset_path: Path) -> None:
 
         patient = get_subject_by_id(patient_dir.name)
         if not patient:
-            logger.warning(f"⚠️ No subject found for folder {patient_dir.name}")
+            logger.warning(f"No subject found for folder {patient_dir.name}")
             continue
 
         label = get_study_label_for_subject(patient["name"], csv_paths)
@@ -123,7 +123,7 @@ def upload_to_orthanc_pacs(dataset_path: Path) -> None:
             if not study_dir.is_dir():
                 continue
 
-            logger.info(f"\n📂 Uploading study: {study_dir}")
+            logger.info(f"Uploading study: {study_dir}")
             study_orthanc_id = None
 
             for dcm_file in sorted(study_dir.rglob("*.dcm"), key=lambda p: str(p).lower()):
@@ -137,6 +137,6 @@ def upload_to_orthanc_pacs(dataset_path: Path) -> None:
                 assign_label_to_study(endpoint, headers, study_orthanc_id, label)
 
     if dicom_count == total_file_count:
-        logger.info(f"\n✅ SUCCESS: {dicom_count} DICOM file(s) successfully imported.\n")
+        logger.info(f"\nSUCCESS: {dicom_count} DICOM file(s) successfully imported.\n")
     else:
-        logger.warning(f"\n⚠️ WARNING: Only {dicom_count}/{total_file_count} files imported successfully.\n")
+        logger.warning(f"\nWARNING: Only {dicom_count}/{total_file_count} files imported successfully.\n")

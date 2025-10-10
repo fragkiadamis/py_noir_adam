@@ -9,7 +9,7 @@ from py_noir_code.src.execution.execution_init_service import init_executions, r
 from py_noir_code.src.utils.context_utils import load_context
 from py_noir_code.src.utils.file_utils import get_project_name, find_project_root, create_file_path
 from py_noir_code.projects.RHU_eCAN.ecan_data_transfer import fetch_datasets_from_json, upload_to_orthanc_pacs
-from py_noir_code.projects.RHU_eCAN.dicom import inspect_study_tags
+from py_noir_code.projects.RHU_eCAN.dicom import inspect_study_tags, c_store
 
 if __name__ == '__main__':
     load_context("context.conf", with_orthanc=True)
@@ -26,4 +26,5 @@ if __name__ == '__main__':
 
     download_dir = fetch_datasets_from_json(Path(f"{json_save_path}initial_{json_file_name}"))
     inspect_study_tags(download_dir)
-    upload_to_orthanc_pacs(download_dir)
+    c_store(download_dir)
+    # upload_to_orthanc_pacs(download_dir)

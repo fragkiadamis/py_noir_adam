@@ -42,14 +42,13 @@ def upload_dicom_file(file_path: Path, endpoint: str, headers: Dict[str, str]) -
             response = requests.post(f"{endpoint}/instances", headers=headers, data=dcm.read())
 
         if response.status_code == 200:
-            logger.info(f"✅ Uploaded {file_path.name}")
             return response.json().get("ParentStudy")
         else:
-            logger.warning(f"⚠️ Upload failed for {file_path.name} (status {response.status_code})")
+            logger.warning(f"Upload failed for {file_path.name} (status {response.status_code})")
             return None
 
     except Exception as e:
-        logger.error(f"❌ Error uploading {file_path}: {e}")
+        logger.error(f"Error uploading {file_path}: {e}")
         return None
 
 
@@ -68,11 +67,11 @@ def assign_label_to_study(endpoint: str, headers: Dict[str, str], study_id: str,
     try:
         response = requests.put(f"{endpoint}/studies/{study_id}/labels/{label}", headers=headers)
         if response.status_code == 200:
-            logger.info(f"🏷️ Assigned label '{label}' to study {study_id}")
+            logger.info(f"Assigned label '{label}' to study {study_id}")
             return True
         else:
-            logger.warning(f"⚠️ Failed to assign label '{label}' (status {response.status_code})")
+            logger.warning(f"Failed to assign label '{label}' (status {response.status_code})")
             return False
     except Exception as e:
-        logger.error(f"❌ Error assigning label '{label}' to study {study_id}: {e}")
+        logger.error(f"Error assigning label '{label}' to study {study_id}: {e}")
         return False
