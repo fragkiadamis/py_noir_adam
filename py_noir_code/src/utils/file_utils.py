@@ -3,6 +3,7 @@ import string
 import sys
 from pathlib import Path
 import csv
+from typing import List
 
 
 def remove_file_extension(file_name: string):
@@ -30,7 +31,16 @@ def get_ids_from_file(file_name: string, option: string = "r"):
     return file.read().replace("\n","").split(",")
 
 
-def get_values_from_csv(file_name: str, column: str) -> list[str]:
+def save_values_to_csv(values_list: List[str], column: str, csv_path: str) -> None:
+    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+    with open(csv_path, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([column])  # header
+        for dataset_id in values_list:
+            writer.writerow([dataset_id])
+
+
+def get_values_from_csv(file_name: str, column: str) -> List[str]:
     values = []
     with open(file_name, "r", newline="") as csvfile:
         reader = csv.DictReader(csvfile)

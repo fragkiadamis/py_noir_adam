@@ -17,6 +17,6 @@ if __name__ == '__main__':
     create_file_path(json_save_path)
 
     if not os.path.exists(json_save_path + json_file_name):
-        init_executions(json_file_path + json_file_name, generate_comete_moelle_json())
+        _ = init_executions(json_file_path + json_file_name, generate_comete_moelle_json())
     else:
-        resume_executions(json_file_path, json_save_path, json_file_name)
+        _ = resume_executions(json_file_path, json_save_path, json_file_name)

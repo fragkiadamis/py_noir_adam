@@ -1,7 +1,7 @@
 import logging
 import sys
 import os
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 from py_noir_code.src.shanoir_object.dataset.dataset_service import get_dataset_dicom_metadata
 
@@ -19,28 +19,7 @@ from py_noir_code.src.utils.log_utils import get_logger
 logger = get_logger()
 
 
-def get_acquisition_date(meta: Dict[str, Any]) -> datetime:
-    """
-    Extract the acquisition date from DICOM metadata.
-
-    Parameters
-    ----------
-    meta : Dict[str, Any]
-        DICOM metadata dictionary.
-
-    Returns
-    -------
-    datetime
-        Acquisition date parsed from tag (0008,0012) 'Acquisition Date'.
-        Returns datetime.max if missing or invalid.
-    """
-    tag = meta.get("00080012")
-    if tag and "Value" in tag and tag["Value"]:
-        return datetime.strptime(tag["Value"][0], "%Y%m%d")
-    return datetime.max
-
-
-def get_number_of_slices(meta: Dict[str, Any]) -> int:
+def get_number_of_slices(meta: Dict[str, Any]) -> int | None:
     """
     Extract the number of slices from DICOM metadata.
 
@@ -51,17 +30,25 @@ def get_number_of_slices(meta: Dict[str, Any]) -> int:
 
     Returns
     -------
-    int
-        Number of slices from tag (0054,0081) 'Number of Slices'.
-        Defaults to 1 if missing.
+    int | None
+        Number of slices derived from tag (0054,0081) 'Number of Slices'.
+        Falls back to tag (0020,0013) 'Instance Number' if unavailable.
+        Returns None if neither tag is present or valid.
     """
+    # Primary: Number of Slices
     tag = meta.get("00540081")
     if tag and "Value" in tag and tag["Value"]:
         return int(tag["Value"][0])
-    return 1
+
+    # Fallback: Instance Number
+    instance_tag = meta.get("00200013")
+    if instance_tag and "Value" in instance_tag and instance_tag["Value"]:
+        return int(instance_tag["Value"][0])
+
+    return None
 
 
-def get_slice_thickness(meta: Dict[str, Any]) -> float:
+def get_slice_thickness(meta: Dict[str, Any]) -> float | None:
     """
     Extract the slice thickness from DICOM metadata.
 
@@ -72,36 +59,33 @@ def get_slice_thickness(meta: Dict[str, Any]) -> float:
 
     Returns
     -------
-    float
+    float | None
         Slice thickness in millimeters from tag (0018,0050) 'Slice Thickness'.
-        Defaults to 1000.0 if missing.
+        Returns None if the tag is missing or invalid.
     """
     tag = meta.get("00180050")
     if tag and "Value" in tag and tag["Value"]:
         return float(tag["Value"][0])
-    return 1000.0
+
+    return None
 
 
-def query_datasets(csv_path: str, csv_column: str) -> defaultdict[Any, List]:
+def query_datasets(subject_name_list: List) -> defaultdict[Any, List]:
     """
     Query SOLR for datasets corresponding to subject IDs from a CSV file.
 
     Parameters
     ----------
-    csv_path : str
-        Path to the CSV file containing subject identifiers.
-    csv_column : str
-        Name of the column containing subject IDs.
+    subject_name_list : List
+        Name of the subjects
 
     Returns
     -------
     defaultdict[Any, List]
         A mapping of examinationId → list of dataset entries.
     """
-    subject_name_list = get_values_from_csv(csv_path, csv_column)
-    logger.info("Searching for subjects' datasets...")
-
     # Query the datasets for each subject using SOLR
+    logger.info("Searching for subjects' datasets...")
     query = SolrQuery()
     query.size = 100000
     query.expert_mode = True
@@ -120,59 +104,52 @@ def query_datasets(csv_path: str, csv_column: str) -> defaultdict[Any, List]:
 
 def filter_datasets(datasets_by_exam_id: defaultdict[Any, List]) -> Dict[Any, Any]:
     """
-    Filter datasets to select a single series per exam.
+    Filter datasets to select a single series per exam based on DICOM metadata.
 
-    Selection criteria
+    Selection Criteria
     ------------------
-    1. Oldest dataset acquisition (based on Acquisition Date).
-    2. Number of slices > 50 (tag 0054,0081).
-    3. Optionally, slice thickness < 10 mm (tag 0018,0050).
+    1. Select the oldest dataset (based on datasetCreationDate).
+    2. Number of slices ≥ 40 (from tag 0054,0081 or fallback 0020,0013).
+    3. Slice thickness ≤ 10 mm (from tag 0018,0050).
+
+    If multiple datasets are available for an exam, the oldest one that satisfies
+    the criteria is selected. Exams with no dataset meeting the criteria are excluded.
 
     Parameters
     ----------
     datasets_by_exam_id : defaultdict[Any, List]
-        A mapping of examinationId → list of dataset entries.
+        Mapping of examinationId → list of dataset entries.
 
     Returns
     -------
     Dict[Any, Any]
-        A mapping of examinationId → selected dataset ID.
+        Mapping of examinationId → list containing the selected dataset entry.
     """
-    filtered = {}
-    for exam_id, datasets in datasets_by_exam_id.items():
-        if len(datasets) == 1:
-            # Only one dataset, no filtering needed
-            filtered[exam_id] = datasets[0]
-            continue
+    filtered_datasets = {}
+    for exam_id, dataset_list in datasets_by_exam_id.items():
+        # Sort datasets by creation date (oldest first)
+        sorted_datasets = sorted(
+            dataset_list,
+            key=lambda d: datetime.fromisoformat(d['datasetCreationDate'].replace('Z', '').split('+')[0])
+        )
 
-        enriched = []
-        for dataset in datasets:
-            meta = get_dataset_dicom_metadata(dataset["id"])[0]
-            dataset["dicom_meta"] = meta
-            enriched.append(dataset)
+        selected_dataset = None
+        for ds in sorted_datasets:
+            ds["dicom_meta"] = get_dataset_dicom_metadata(ds["id"])[0]
+            num_slices = get_number_of_slices(ds["dicom_meta"])
+            slice_thickness = get_slice_thickness(ds["dicom_meta"])
 
-        # Sort by acquisition date (oldest first)
-        enriched.sort(key=lambda x: get_acquisition_date(x["dicom_meta"]))
+            if num_slices >= 40 and slice_thickness <= 10:
+                selected_dataset = ds
+                break  # found one that fits, stop searching
 
-        # Apply filters
-        valid = []
-        for d in enriched:
-            meta = d["dicom_meta"]
-            if get_number_of_slices(meta) <= 50:
-                continue
-            if get_slice_thickness(meta) >= 10:  # optional filter
-                continue
-            valid.append(d)
+        if selected_dataset:
+            filtered_datasets[exam_id] = selected_dataset
 
-        if valid:
-            filtered[exam_id] = valid[0]  # Oldest valid dataset
-        else:
-            filtered[exam_id] = enriched[0]  # Fallback: oldest dataset
-
-    return filtered
+    return filtered_datasets
 
 
-def generate_rhu_ecan_json() -> List[Any]:
+def generate_rhu_ecan_json() -> Tuple[List[Any], List[Any]]:
     """
     Generate JSON configurations for RHU eCAN executions.
 
@@ -183,18 +160,20 @@ def generate_rhu_ecan_json() -> List[Any]:
 
     Returns
     -------
-    List[Any]
-        A list of execution configurations (dictionaries).
+    Tuple[List[Any], List[Any]
+        A tuple containing: executions, dataset_ids_list
     """
     csv_paths = [
         "py_noir_code/projects/RHU_eCAN/ican_subset.csv",
-        "py_noir_code/projects/RHU_eCAN/angptl6_subset.csv",
+        "py_noir_code/projects/RHU_eCAN/angptl6_subset.csv"
     ]
 
-    executions, identifier = [], 0
+    executions, dataset_ids_list, identifier = [], [], 0
     for csv_path in csv_paths:
-        dataset_subset = query_datasets(csv_path, "SubjectName")
+        subject_name_list = get_values_from_csv(csv_path, "SubjectName")
+        dataset_subset = query_datasets(subject_name_list)
         filtered_subset = filter_datasets(dataset_subset)
+        dataset_ids_list.extend(ds["id"] for ds in filtered_subset.values())
         logger.info("Building json content...")
         for exam_id, dataset in filtered_subset.items():
             dt = datetime.now().strftime('%F_%H%M%S%f')[:-3]
@@ -218,4 +197,4 @@ def generate_rhu_ecan_json() -> List[Any]:
 
             identifier += 1
         logging.info(f"Finished processing {csv_path}.")
-    return executions
+    return executions, dataset_ids_list

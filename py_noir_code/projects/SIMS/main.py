@@ -3,7 +3,7 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from projects.SIMS.sims_json_generator import generate_sims_json
+from py_noir_code.projects.SIMS.sims_json_generator import generate_sims_json
 from py_noir_code.src.execution.execution_init_service import init_executions, resume_executions
 from py_noir_code.src.utils.context_utils import load_context
 from py_noir_code.src.utils.file_utils import get_project_name, find_project_root, create_file_path
@@ -18,6 +18,6 @@ if __name__ == '__main__':
 
 
     if not os.path.exists(json_save_path + json_file_name):
-        init_executions(json_file_path + json_file_name, generate_sims_json())
+        _ = init_executions(json_file_path + json_file_name, generate_sims_json())
     else:
-        resume_executions(json_file_path, json_save_path, json_file_name)
+        _ = resume_executions(json_file_path, json_save_path, json_file_name)
