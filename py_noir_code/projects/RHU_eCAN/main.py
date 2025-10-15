@@ -31,7 +31,7 @@ if __name__ == '__main__':
         successful_executions = resume_executions(json_file_path, json_save_path, json_file_name)
 
     save_values_to_csv(successful_executions, "ExecutionId", executions_csv)
-    download_dir = fetch_datasets_from_json(filtered_datasets_csv)
+    download_dir = fetch_datasets_from_json(filtered_datasets_csv, executions_csv)
     inspect_study_tags(download_dir)
     send_dicom_to_pacs_cstore(download_dir)
     assign_label_to_study(download_dir)

@@ -28,12 +28,13 @@ TAGS_TO_CHECK = {
 }
 
 
-def fetch_datasets_from_json(ecan_json_path: str) -> str:
+def fetch_datasets_from_json(ecan_json_path: str, executions_csv: str) -> str:
     """
     Fetch and download processed datasets based on an ECAN JSON export file.
 
     Args:
         ecan_json_path (str): Path to the ECAN JSON file containing dataset IDs.
+        executions_csv (str): Path to the executions csv file containing the successful executions IDs.
 
     Returns:
         str: Path to the directory where the downloaded datasets are stored.
@@ -43,7 +44,7 @@ def fetch_datasets_from_json(ecan_json_path: str) -> str:
 
     # Map each subject ID to its related processed dataset IDs
     processing_ids_list = []
-    execution_ids = get_values_from_csv("py_noir_code/resources/datasets/execution_ids.csv", "ExecutionId")
+    execution_ids = get_values_from_csv(executions_csv, "ExecutionId")
     for dataset_id in dataset_ids_list:
         processing_list = find_processed_dataset_ids_by_input_dataset_id(dataset_id)
         processing_ids_list.extend([item["id"] for item in processing_list if str(item["parentId"]) in execution_ids])
