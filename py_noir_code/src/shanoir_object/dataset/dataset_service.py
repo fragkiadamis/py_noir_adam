@@ -7,7 +7,9 @@ from py_noir_code.src.utils.log_utils import get_logger
 Define methods for Shanoir datasets MS datasets API call
 """
 
-ENDPOINT = '/datasets/datasets'
+ENDPOINT_DATASET = '/datasets/datasets'
+ENDPOINT_EXAMINATION = '/datasets/examinations'
+ENDPOINT_DATASET_PROCESSING = '/datasets/datasetProcessing'
 
 logger = get_logger()
 
@@ -18,7 +20,7 @@ def get_dataset(dataset_id: str):
     :return: json
     """
 
-    path = ENDPOINT + '/' + dataset_id
+    path = ENDPOINT_DATASET + '/' + dataset_id
     response = get(path)
     return response.json()
 
@@ -35,7 +37,7 @@ def download_dataset(dataset_id, file_format, output_folder, unzip=False, silent
     if not silent:
         logger.info('Downloading dataset %s' % dataset_id)
     file_format = 'nii' if file_format == 'nifti' else 'dcm'
-    path = ENDPOINT + '/download/' + str(dataset_id)
+    path = ENDPOINT_DATASET + '/download/' + str(dataset_id)
     response = get(path, params={'format': file_format})
     download_file(output_folder, response, unzip)
     return
@@ -56,7 +58,7 @@ def download_datasets(dataset_ids, file_format, output_folder, unzip=False):
     logger.info('Downloading datasets %s' % dataset_ids)
     file_format = 'nii' if file_format == 'nifti' else 'dcm'
     dataset_ids = ','.join([str(dataset_id) for dataset_id in dataset_ids])
-    path = ENDPOINT + '/massiveDownload'
+    path = ENDPOINT_DATASET + '/massiveDownload'
     params = dict(datasetIds=dataset_ids, format=file_format)
     response = post(path, params=params, files=params, stream=True)
     download_file(output_folder, response, unzip=unzip)
@@ -72,7 +74,7 @@ def download_dataset_by_study(study_id, file_format, output_folder):
     """
     logger.info('Downloading datasets from study %s' % study_id)
     file_format = 'nii' if file_format == 'nifti' else 'dcm'
-    path = ENDPOINT + '/massiveDownloadByStudy'
+    path = ENDPOINT_DATASET + '/massiveDownloadByStudy'
     response = get(path, params={'studyId': study_id, 'format': file_format})
     download_file(output_folder, response)
     return
@@ -84,7 +86,7 @@ def find_dataset_ids_by_subject_id(subject_id):
     :return:
     """
     logger.info(f"Getting datasets from subject {subject_id}")
-    path = ENDPOINT + '/subject/' + subject_id
+    path = ENDPOINT_DATASET + '/subject/' + subject_id
     response = get(path)
     return response.json()
 
@@ -95,7 +97,7 @@ def find_datasets_by_examination_id(examination_id, output : bool = False):
     :return:
     """
     logger.info(f"Getting datasets from examination {examination_id}")
-    path = ENDPOINT + '/examination/' + examination_id
+    path = ENDPOINT_DATASET + '/examination/' + examination_id
 
     try:
         response = get(path, params = {"output":output})
@@ -112,7 +114,7 @@ def find_dataset_ids_by_subject_id_study_id(subject_id, study_id):
     :return:
     """
     logger.info(f"Getting datasets from subject {subject_id} and study {study_id}")
-    path = ENDPOINT + '/subject/' + subject_id + '/study/' + study_id
+    path = ENDPOINT_DATASET + '/subject/' + subject_id + '/study/' + study_id
     response = get(path)
     return response.json()
 
@@ -122,7 +124,7 @@ def get_dataset_dicom_metadata(dataset_id):
     :param dataset_id:
     :return:
     """
-    path = ENDPOINT + '/dicom-metadata/' + str(dataset_id)
+    path = ENDPOINT_DATASET + '/dicom-metadata/' + str(dataset_id)
     response = get(path)
     return response.json()
 
@@ -133,7 +135,7 @@ def get_dicom_metadata_by_dataset_id(dataset_id):
     :return:
     """
     logger.info(f"Getting dicom metadata from dataset {dataset_id}")
-    path = ENDPOINT + '/dicom-metadata/' + dataset_id
+    path = ENDPOINT_DATASET + '/dicom-metadata/' + dataset_id
     response = get(path)
     return response.json()
 
@@ -163,13 +165,23 @@ def download_dataset_by_subject_id_study_id(subject_id, study_id, file_format, o
     return
 
 
+def get_examination(examination_id: str):
+    """ Get examination [examination_id]
+    :param examination_id:
+    :return: json
+    """
+    path = ENDPOINT_EXAMINATION + '/' + examination_id
+    response = get(path)
+    return response.json()
+
+
 def get_dataset_processing(dataset_processing_id: str):
     """ Get dataset processing [dataset_processing_id]
     :param dataset_processing_id:
     :return: json
     """
 
-    path = ENDPOINT + '/datasetProcessing' + dataset_processing_id
+    path = ENDPOINT_DATASET_PROCESSING + '/' + dataset_processing_id
     response = get(path)
     return response.json()
 
@@ -187,7 +199,7 @@ def download_dataset_processing(dataset_processing_ids, output_folder, result_on
               'the datasets one by one.')
         return
     logger.info('Downloading dataset processing %s' % dataset_processing_ids)
-    path = ENDPOINT + '/datasetProcessing' + '/massiveDownloadByProcessingIds'
+    path = ENDPOINT_DATASET_PROCESSING + '/massiveDownloadByProcessingIds'
     params = dict(resultOnly=str(result_only).lower())
     response = post(path, params=params, json=dataset_processing_ids, stream=True)
     download_file(output_folder, response, unzip=unzip)
@@ -199,6 +211,6 @@ def find_processed_dataset_ids_by_input_dataset_id(dataset_id):
     :param dataset_id:
     :return:
     """
-    path = ENDPOINT + '/datasetProcessing' + '/inputDataset/' + dataset_id
+    path = ENDPOINT_DATASET_PROCESSING + '/inputDataset/' + dataset_id
     response = get(path)
     return response.json()

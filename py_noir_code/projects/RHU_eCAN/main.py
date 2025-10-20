@@ -8,7 +8,7 @@ from py_noir_code.src.execution.execution_init_service import init_executions, r
 from py_noir_code.src.utils.context_utils import load_context
 from py_noir_code.src.utils.file_utils import get_project_name, find_project_root, create_file_path, save_values_to_csv
 from py_noir_code.projects.RHU_eCAN.dicom_dataset_manager import inspect_study_tags, send_dicom_to_pacs_cstore, \
-    assign_label_to_study, fetch_datasets_from_json
+    assign_label_to_study, fetch_datasets_from_json, delete_studies
 
 if __name__ == '__main__':
     load_context("context.conf", with_orthanc=True)
@@ -29,9 +29,12 @@ if __name__ == '__main__':
         successful_executions = init_executions(json_file_path + json_file_name, executions_dict)
     else:
         successful_executions = resume_executions(json_file_path, json_save_path, json_file_name)
-
     save_values_to_csv(successful_executions, "ExecutionId", executions_csv)
-    download_dir = fetch_datasets_from_json(filtered_datasets_csv, executions_csv)
+
+    download_dir = find_project_root(__file__) + "/py_noir_code/resources/downloads"
+    fetch_datasets_from_json(filtered_datasets_csv, executions_csv, download_dir)
     inspect_study_tags(download_dir)
     send_dicom_to_pacs_cstore(download_dir)
     assign_label_to_study(download_dir)
+
+    # delete_studies(download_dir)

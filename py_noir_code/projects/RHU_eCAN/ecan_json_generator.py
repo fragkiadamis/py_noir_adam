@@ -1,9 +1,13 @@
 import logging
 import sys
 import os
-from typing import List, Dict, Any, Tuple
+import tempfile
+from typing import List, Any, Tuple
 
-from py_noir_code.src.shanoir_object.dataset.dataset_service import get_dataset_dicom_metadata
+import pydicom
+
+from py_noir_code.src.shanoir_object.dataset.dataset_service import get_dataset_dicom_metadata, download_dataset, \
+    get_examination
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
 
@@ -19,58 +23,7 @@ from py_noir_code.src.utils.log_utils import get_logger
 logger = get_logger()
 
 
-def get_number_of_slices(meta: Dict[str, Any]) -> int | None:
-    """
-    Extract the number of slices from DICOM metadata.
-
-    Parameters
-    ----------
-    meta : Dict[str, Any]
-        DICOM metadata dictionary.
-
-    Returns
-    -------
-    int | None
-        Number of slices derived from tag (0054,0081) 'Number of Slices'.
-        Falls back to tag (0020,0013) 'Instance Number' if unavailable.
-        Returns None if neither tag is present or valid.
-    """
-    # Primary: Number of Slices
-    tag = meta.get("00540081")
-    if tag and "Value" in tag and tag["Value"]:
-        return int(tag["Value"][0])
-
-    # Fallback: Instance Number
-    instance_tag = meta.get("00200013")
-    if instance_tag and "Value" in instance_tag and instance_tag["Value"]:
-        return int(instance_tag["Value"][0])
-
-    return None
-
-
-def get_slice_thickness(meta: Dict[str, Any]) -> float | None:
-    """
-    Extract the slice thickness from DICOM metadata.
-
-    Parameters
-    ----------
-    meta : Dict[str, Any]
-        DICOM metadata dictionary.
-
-    Returns
-    -------
-    float | None
-        Slice thickness in millimeters from tag (0018,0050) 'Slice Thickness'.
-        Returns None if the tag is missing or invalid.
-    """
-    tag = meta.get("00180050")
-    if tag and "Value" in tag and tag["Value"]:
-        return float(tag["Value"][0])
-
-    return None
-
-
-def query_datasets(subject_name_list: List) -> defaultdict[Any, List]:
+def query_datasets(subject_name_list: List) -> defaultdict[Any, defaultdict[Any, List]]:
     """
     Query SOLR for datasets corresponding to subject IDs from a CSV file.
 
@@ -95,56 +48,70 @@ def query_datasets(subject_name_list: List) -> defaultdict[Any, List]:
     query.search_text = query.search_text + ") AND datasetName: *TOF*"
     result = solr_search(query).json()
 
-    datasets_by_exam_id = defaultdict(list)
+    subjects_datasets = defaultdict(lambda: defaultdict(list))
     for item in result["content"]:
-        datasets_by_exam_id[item["examinationId"]].append(item)
+        subjects_datasets[item.get("subjectName")][str(item.get("examinationId"))].append(item)
 
-    return datasets_by_exam_id
+    return subjects_datasets
 
 
-def filter_datasets(datasets_by_exam_id: defaultdict[Any, List]) -> Dict[Any, Any]:
+def find_oldest_exams(subjects_datasets: defaultdict[Any, defaultdict[Any, List]]) -> None:
     """
-    Filter datasets to select a single series per exam based on DICOM metadata.
-
-    Selection Criteria
-    ------------------
-    1. Select the oldest dataset (based on datasetCreationDate).
-    2. Number of slices ≥ 40 (from tag 0054,0081 or fallback 0020,0013).
-    3. Slice thickness ≤ 10 mm (from tag 0018,0050).
-
-    If multiple datasets are available for an exam, the oldest one that satisfies
-    the criteria is selected. Exams with no dataset meeting the criteria are excluded.
+    Keep only the oldest examination for each subject.
 
     Parameters
     ----------
-    datasets_by_exam_id : defaultdict[Any, List]
-        Mapping of examinationId → list of dataset entries.
+    subjects_datasets : defaultdict[Any, defaultdict[Any, List]]
 
     Returns
     -------
-    Dict[Any, Any]
-        Mapping of examinationId → list containing the selected dataset entry.
+    None
     """
-    filtered_datasets = {}
-    for exam_id, dataset_list in datasets_by_exam_id.items():
-        # Sort datasets by creation date (oldest first)
-        sorted_datasets = sorted(
-            dataset_list,
-            key=lambda d: datetime.fromisoformat(d['datasetCreationDate'].replace('Z', '').split('+')[0])
-        )
+    for subject, exam_items in subjects_datasets.items():
+        if len(exam_items.keys()) > 1:
+            oldest_exam, oldest_date = None, None
+            for exam_id in exam_items.keys():
+                exam = get_examination(exam_id)
+                date_str = exam["examinationDate"].replace("Z", "").split("+")[0]
+                exam_date = datetime.fromisoformat(date_str)
 
-        selected_dataset = None
-        for ds in sorted_datasets:
-            ds["dicom_meta"] = get_dataset_dicom_metadata(ds["id"])[0]
-            num_slices = get_number_of_slices(ds["dicom_meta"])
-            slice_thickness = get_slice_thickness(ds["dicom_meta"])
+                if not oldest_exam or (exam_date < oldest_date):
+                    oldest_exam = exam
+                    oldest_date = exam_date
 
-            if num_slices >= 40 and slice_thickness <= 10:
-                selected_dataset = ds
-                break  # found one that fits, stop searching
+            for exam_id in list(exam_items.keys()):
+                if exam_id != str(oldest_exam["id"]):
+                    del exam_items[exam_id]
 
-        if selected_dataset:
-            filtered_datasets[exam_id] = selected_dataset
+
+def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict[Any, List]]) -> List:
+    """
+    Download datasets for all subjects and filter based on slice criteria.
+
+    Parameters
+    ----------
+    subjects_datasets : defaultdict[Any, defaultdict[Any, List]]
+
+    Returns
+    -------
+    List
+        A list of filtered dataset entries that meet the slice count and thickness criteria.
+    """
+    filtered_datasets = []
+    for idx, (subject, exam_items) in enumerate(subjects_datasets.items(), start=1):
+        for key in list(exam_items.keys()):
+            for ds in exam_items[key][:]:
+                download_dir = tempfile.mkdtemp(prefix=f"{subject}_{ds['id']}")
+                # download_dir = f"py_noir_code/resources/temp/{subject}/{ds['id']}" # for DEBUG
+                os.makedirs(download_dir, exist_ok=True)
+                download_dataset(ds["id"], "dcm", download_dir, unzip=True)
+
+                first_file = os.path.join(download_dir, os.listdir(download_dir)[0])
+                slice_thickness = pydicom.dcmread(first_file, stop_before_pixels=True)['SliceThickness'].value
+                num_of_slices = len(os.listdir(download_dir))
+                if num_of_slices > 50 and slice_thickness < 10:
+                    filtered_datasets.append(ds)
+                    break
 
     return filtered_datasets
 
@@ -171,15 +138,17 @@ def generate_rhu_ecan_json() -> Tuple[List[Any], List[Any]]:
     executions, dataset_ids_list, identifier = [], [], 0
     for csv_path in csv_paths:
         subject_name_list = get_values_from_csv(csv_path, "SubjectName")
-        dataset_subset = query_datasets(subject_name_list)
-        filtered_subset = filter_datasets(dataset_subset)
-        dataset_ids_list.extend(ds["id"] for ds in filtered_subset.values())
+        subjects_datasets = query_datasets(subject_name_list)
+        find_oldest_exams(subjects_datasets)
+        filtered_datasets = download_and_filter_datasets(subjects_datasets)
+
+        dataset_ids_list.extend(ds["id"] for ds in filtered_datasets)
         logger.info("Building json content...")
-        for exam_id, dataset in filtered_subset.items():
+        for dataset in filtered_datasets:
             dt = datetime.now().strftime('%F_%H%M%S%f')[:-3]
             executions.append({
                 "identifier": identifier,
-                "name": f"landmarkDetection_0_4_exam_{exam_id}_{dt}",
+                "name": f"landmarkDetection_0_4_exam_{dataset['examinationId']}_{dt}",
                 "pipelineIdentifier": "landmarkDetection/0.4",
                 "studyIdentifier": dataset["studyId"],
                 "inputParameters": {},

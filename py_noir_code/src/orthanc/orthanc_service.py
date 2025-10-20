@@ -123,3 +123,27 @@ def set_study_label(endpoint: str, headers: Dict[str, str], study_id: str, label
     except Exception as e:
         logger.error(f"Error assigning label '{label}' to study {study_id}: {e}")
         return False
+
+
+def delete_orthanc_study(endpoint: str, headers: Dict[str, str], study_id: str) -> bool:
+    """
+    Delete a study from Orthanc.
+    Args:
+        endpoint (str): Orthanc base URL.
+        headers (Dict[str, str]): HTTP authentication headers.
+        study_id (str): Orthanc Study ID.
+
+    Returns:
+        bool: True if the study was successfully deleted, False otherwise.
+    """
+    try:
+        response = requests.delete(f"{endpoint}/studies/{study_id}/", headers=headers)
+        if response.status_code == 200:
+            logger.info(f"Deleted study {study_id}")
+            return True
+        else:
+            logger.warning(f"Failed to delete study '{study_id}' (status {response.status_code})")
+            return False
+    except Exception as e:
+        logger.error(f"Error deleting label 'study {study_id}: {e}")
+        return False

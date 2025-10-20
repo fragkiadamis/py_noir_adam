@@ -8,9 +8,9 @@ from pynetdicom import AE, StoragePresentationContexts
 from py_noir_code.src.security.authentication_service import load_orthanc_password
 from py_noir_code.src.orthanc.orthanc_context import OrthancContext
 from py_noir_code.src.orthanc.orthanc_service import get_study_orthanc_id_by_uid, get_http_headers, get_study_metadata, \
-    set_study_label, upload_dicom_file
-from py_noir_code.src.shanoir_object.dataset_processing.dataset_processing_service import \
-    find_processed_dataset_ids_by_input_dataset_id, download_dataset_processing
+    set_study_label, upload_dicom_file, delete_orthanc_study
+from py_noir_code.src.shanoir_object.dataset.dataset_service import find_processed_dataset_ids_by_input_dataset_id, download_dataset_processing
+
 from py_noir_code.src.utils.file_utils import get_values_from_csv
 from py_noir_code.src.utils.log_utils import get_logger
 
@@ -28,13 +28,14 @@ TAGS_TO_CHECK = {
 }
 
 
-def fetch_datasets_from_json(ecan_json_path: str, executions_csv: str) -> str:
+def fetch_datasets_from_json(ecan_json_path: str, executions_csv: str, output_dir: str) -> None:
     """
     Fetch and download processed datasets based on an ECAN JSON export file.
 
     Args:
         ecan_json_path (str): Path to the ECAN JSON file containing dataset IDs.
         executions_csv (str): Path to the executions csv file containing the successful executions IDs.
+        output_dir (str): Output directory path for the downloaded datasets.
 
     Returns:
         str: Path to the directory where the downloaded datasets are stored.
@@ -50,11 +51,8 @@ def fetch_datasets_from_json(ecan_json_path: str, executions_csv: str) -> str:
         processing_ids_list.extend([item["id"] for item in processing_list if str(item["parentId"]) in execution_ids])
 
     # Download all processed datasets grouped by subject
-    output_dir = "py_noir_code/resources/downloads"
     os.makedirs(output_dir, exist_ok=True)
     download_dataset_processing(processing_ids_list, output_dir, unzip=True)
-
-    return output_dir
 
 
 def load_first_dicom(dir_path: Path) -> Dataset:
@@ -238,6 +236,17 @@ def send_dicom_to_pacs_cstore(dataset_dir: str) -> None:
 
 
 def assign_label_to_study(dataset_path: str) -> None:
+    """
+    Assign a label to each study in a dataset based on predefined subject subsets.
+
+    Parameters
+    ----------
+    dataset_path : str
+
+    Returns
+    -------
+    None
+    """
     ican_ids = get_values_from_csv("py_noir_code/projects/RHU_eCAN/ican_subset.csv", "SubjectName")
     angptl6_ids = get_values_from_csv("py_noir_code/projects/RHU_eCAN/angptl6_subset.csv", "SubjectName")
 
@@ -263,4 +272,36 @@ def assign_label_to_study(dataset_path: str) -> None:
                 set_study_label(endpoint, headers, orthanc_study_id, "ICAN_SUBSET")
             elif study_meta["PatientMainDicomTags"]["PatientName"] in angptl6_ids:
                 set_study_label(endpoint, headers, orthanc_study_id, "ANGPTL6_SUBSET")
+            break
+
+
+def delete_studies(dataset_path: str) -> None:
+    """
+    Delete all studies in a dataset from the Orthanc PACS server.
+
+    Parameters
+    ----------
+    dataset_path : str
+
+    Returns
+    -------
+    None
+    """
+    load_orthanc_password()
+    endpoint = f"{OrthancContext.scheme}://{OrthancContext.domain}:{OrthancContext.rest_api_port}"
+    headers = get_http_headers(OrthancContext.username, OrthancContext.password)
+    logger.info(f"PACS Endpoint: {endpoint}\n")
+
+    for idx, process in enumerate(os.listdir(dataset_path), start=1):
+        process_dir = os.path.join(dataset_path, process)
+        for item in os.listdir(process_dir):
+            if item == "output":
+                continue
+
+            item_dir = os.path.join(process_dir, item)
+            dcm_file = os.path.join(item_dir, os.listdir(item_dir)[0])
+            ds = pydicom.dcmread(dcm_file)
+
+            orthanc_study_id = get_study_orthanc_id_by_uid(endpoint, headers, ds.StudyInstanceUID)
+            delete_orthanc_study(endpoint, headers, orthanc_study_id)
             break
