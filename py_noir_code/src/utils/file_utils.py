@@ -1,12 +1,11 @@
 import os
-import string
 import sys
 from pathlib import Path
 import csv
 from typing import List
 
 
-def remove_file_extension(file_name: string):
+def remove_file_extension(file_name: str):
     """ Get a file name without its extension [file_full_name]
     :param file_name:
     :return file_name_without_extension:
@@ -18,7 +17,7 @@ def remove_file_extension(file_name: string):
     return file_name
 
 
-def open_project_file(file_name: string, option: string = "r"):
+def open_project_file(file_name: str, option: str = "r"):
     """ Open a file [file_name] stored at the same location as the executed main.py
     :param file_name:
     :param option:
@@ -26,7 +25,7 @@ def open_project_file(file_name: string, option: string = "r"):
     """
     return open(get_project_path() + '/' + file_name, option)
 
-def get_ids_from_file(file_name: string, option: string = "r"):
+def get_ids_from_file(file_name: str, option: str = "r"):
     file = open_project_file(file_name, option)
     return file.read().replace("\n","").split(",")
 
@@ -40,7 +39,10 @@ def save_values_to_csv(values_list: List[str], column: str, csv_path: str) -> No
             writer.writerow([dataset_id])
 
 
-def get_values_from_csv(file_name: str, column: str) -> List[str]:
+def get_values_from_csv(file_name: str, column: str) -> List[str] | None:
+    if not os.path.exists(file_name):
+        return None
+
     values = []
     with open(file_name, "r", newline="") as csvfile:
         reader = csv.DictReader(csvfile)

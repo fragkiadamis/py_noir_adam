@@ -1,6 +1,6 @@
 import base64
 import os.path
-from typing import Dict
+from typing import Dict, List
 
 import requests
 
@@ -26,7 +26,7 @@ def get_http_headers(username: str, password: str) -> Dict[str, str]:
     }
 
 
-def upload_dicom_file(file_path: str, endpoint: str, headers: Dict[str, str]) -> bool:
+def upload_dicom_file_to_orthanc(file_path: str, endpoint: str, headers: Dict[str, str]) -> Dict[str, str] | None:
     """
     Upload a single DICOM file to Orthanc and return its parent Study ID.
     Args:
@@ -42,14 +42,35 @@ def upload_dicom_file(file_path: str, endpoint: str, headers: Dict[str, str]) ->
             response = requests.post(f"{endpoint}/instances", headers=headers, data=dcm.read())
 
         if response.status_code == 200:
-            return True
+            return response.json()
         else:
             logger.warning(f"Upload failed for {os.path.basename(file_path)} (status {response.status_code})")
-            return False
 
     except Exception as e:
         logger.error(f"Error uploading {file_path}: {e}")
-        return False
+
+
+def get_all_orthanc_studies(endpoint: str, headers: Dict[str, str]) -> List | None:
+    """
+        Retrieve all Orthanc studies.
+
+        Args:
+            endpoint (str): Orthanc base URL.
+            headers (Dict[str, str]): HTTP authentication headers.
+
+        Returns:
+            List or None: the Orthanc study IDs if found, otherwise None.
+        """
+    try:
+        response = requests.get(f"{endpoint}/studies", headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logger.warning(f"Failed to get studies (status {response.status_code})")
+            return None
+    except Exception as e:
+        logger.error(f"Error getting Orthanc study IDs: {e}")
+        return None
 
 
 def get_study_orthanc_id_by_uid(endpoint: str, headers: Dict[str, str], study_uid: str) -> str | None:
@@ -70,13 +91,14 @@ def get_study_orthanc_id_by_uid(endpoint: str, headers: Dict[str, str], study_ui
         if response.status_code == 200:
             return response.json()[0]
         else:
+            logger.warning(f"Failed to get study with StudyInstanceUID '{study_uid}' (status {response.status_code})")
             return None
     except Exception as e:
-        logger.error(f"Error getting Orthanc study ID with StudyInstanceUID '{study_uid}'")
+        logger.error(f"Error getting Orthanc study ID with StudyInstanceUID '{study_uid}': {e}")
         return None
 
 
-def get_study_metadata(endpoint: str, headers: dict, orthanc_study_id: str) -> Dict[str, str] | None:
+def get_orthanc_study_metadata(endpoint: str, headers: dict, orthanc_study_id: str) -> Dict[str, str] | None:
     """
     Retrieve metadata (patient info, series, modalities, UIDs, etc.)
     for a study from Orthanc.
@@ -94,13 +116,14 @@ def get_study_metadata(endpoint: str, headers: dict, orthanc_study_id: str) -> D
         if response.status_code == 200:
             return response.json()
         else:
+            logger.warning(f"Failed to get study metadata with studyID '{orthanc_study_id}' (status {response.status_code})")
             return None
     except Exception as e:
-        logger.error(f"Error getting study meta for study '{orthanc_study_id}'")
+        logger.error(f"Error getting study meta for study '{orthanc_study_id}': {e}")
         return None
 
 
-def set_study_label(endpoint: str, headers: Dict[str, str], study_id: str, label: str) -> bool:
+def set_orthanc_study_label(endpoint: str, headers: Dict[str, str], study_id: str, label: str) -> bool:
     """
     Assign a label to a study in Orthanc.
     Args:
@@ -147,3 +170,55 @@ def delete_orthanc_study(endpoint: str, headers: Dict[str, str], study_id: str) 
     except Exception as e:
         logger.error(f"Error deleting label 'study {study_id}: {e}")
         return False
+
+
+def get_orthanc_patients(endpoint: str, headers: Dict[str, str]) -> List | None:
+    """
+    Retrieve the list of all patients stored in an Orthanc PACS server.
+
+    Args:
+        endpoint (str): Base URL of the Orthanc REST API (e.g., "http://localhost:8042").
+        headers (Dict[str, str]): HTTP headers containing authorization or other metadata.
+
+    Returns:
+        list | None:
+            - A list of patient identifiers (UUIDs) if the request succeeds.
+            - None if the request fails or an error occurs.
+    """
+    try:
+        response = requests.get(f"{endpoint}/patients/", headers=headers)
+        if response.status_code == 200:
+            logger.info(f"Got patients")
+            return response.json()
+        else:
+            logger.warning(f"Failed to get patients (status {response.status_code})")
+            return None
+    except Exception as e:
+        logger.error(f"Error getting patients: {e}")
+        return None
+
+
+def get_orthanc_patient_meta(endpoint: str, headers: Dict[str, str], patient_id: str) -> Dict | None:
+    """
+    Retrieve metadata for a specific patient stored in Orthanc.
+
+    Args:
+        endpoint (str): Base URL of the Orthanc REST API (e.g., "http://localhost:8042").
+        headers (Dict[str, str]): HTTP headers containing authorization or other metadata.
+        patient_id (str): Orthanc internal patient identifier (UUID).
+
+    Returns:
+        dict | None:
+            - A dictionary containing the patient's metadata if the request succeeds.
+            - None if the request fails or an error occurs.
+    """
+    try:
+        response = requests.get(f"{endpoint}/patients/{patient_id}", headers=headers)
+        if response.status_code == 200:
+            logger.info(f"Got patient meta for {patient_id}")
+            return response.json()
+        else:
+            logger.warning(f"Failed to get patient meta for {patient_id} (status {response.status_code})")
+    except Exception as e:
+        logger.error(f"Error getting patient meta: {e}")
+        return None
