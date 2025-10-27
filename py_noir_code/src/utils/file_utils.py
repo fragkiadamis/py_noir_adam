@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 import csv
-from typing import List
+from typing import List, Dict
 
 
 def remove_file_extension(file_name: str):
@@ -39,6 +39,15 @@ def save_values_to_csv(values_list: List[str], column: str, csv_path: str) -> No
             writer.writerow([dataset_id])
 
 
+def save_dict_to_csv(dict_list: List[Dict[str, str]], csv_path: str) -> None:
+    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+    with open(csv_path, mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=dict_list[0].keys())
+        writer.writeheader()
+        for row in dict_list:
+            writer.writerow(row)
+
+
 def get_values_from_csv(file_name: str, column: str) -> List[str] | None:
     if not os.path.exists(file_name):
         return None
@@ -48,6 +57,18 @@ def get_values_from_csv(file_name: str, column: str) -> List[str] | None:
         reader = csv.DictReader(csvfile)
         for row in reader:
             values.append(row[column])
+    return values
+
+
+def get_dict_from_csv(file_name: str) -> List[Dict[str, str]] | None:
+    if not os.path.exists(file_name):
+        return None
+
+    values = []
+    with open(file_name, "r", newline="") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            values.append(row)
     return values
 
 

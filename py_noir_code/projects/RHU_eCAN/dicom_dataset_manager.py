@@ -4,17 +4,16 @@ from typing import Tuple, List
 import pydicom
 from pydicom.dataset import Dataset
 from pydicom.uid import generate_uid
-from pynetdicom import AE, StoragePresentationContexts
+from pynetdicom import AE, AllStoragePresentationContexts, StoragePresentationContexts, evt
 
-from py_noir_code.src.security.authentication_service import load_orthanc_password
 from py_noir_code.src.orthanc.orthanc_context import OrthancContext
-from py_noir_code.src.orthanc.orthanc_service import get_study_orthanc_id_by_uid, get_http_headers, \
-    get_orthanc_study_metadata, set_orthanc_study_label, upload_dicom_file_to_orthanc, delete_orthanc_study, \
-    get_orthanc_patients, get_orthanc_patient_meta, get_all_orthanc_studies
+from py_noir_code.src.orthanc.orthanc_service import set_orthanc_study_label, upload_study_to_orthanc, \
+    delete_orthanc_study, get_orthanc_patients, get_orthanc_patient_meta, get_all_orthanc_studies, \
+    get_study_orthanc_id_by_uid, download_orthanc_study
 from py_noir_code.src.shanoir_object.dataset.dataset_service import find_processed_dataset_ids_by_input_dataset_id, \
-    download_dataset_processing, get_dataset_processing, get_dataset
+    download_dataset_processing, get_dataset_processing, get_dataset, upload_dataset_processing
 
-from py_noir_code.src.utils.file_utils import get_values_from_csv, save_values_to_csv
+from py_noir_code.src.utils.file_utils import get_values_from_csv, save_dict_to_csv, get_dict_from_csv
 from py_noir_code.src.utils.log_utils import get_logger
 
 logger = get_logger()
@@ -34,6 +33,31 @@ SEQUENCE_TAG = (0x0040,0x0275)
 SEQUENCE_ITEM_TAG = (0x0040,0x0008)
 
 
+def update_studies_registry(studies, studies_csv):
+    """
+    Updates the studies CSV file with new study entries, avoiding duplicates.
+
+    Args:
+        studies (list[dict]): List of new study dictionaries to add.
+        studies_csv (str): Path to the CSV file.
+    """
+    if not studies:
+        return
+
+    existing_studies = get_dict_from_csv(studies_csv)
+
+    if existing_studies is None:
+        save_dict_to_csv(studies, studies_csv)
+        return
+
+    # Filter out duplicates
+    new_studies = [s for s in studies if s not in existing_studies]
+
+    if new_studies:
+        existing_studies.extend(new_studies)
+        save_dict_to_csv(existing_studies, studies_csv)
+
+
 def fetch_datasets_from_json(ecan_json_path: str, executions_csv: str, output_dir: str) -> None:
     """
     Fetch and download processed datasets based on an ECAN JSON export file.
@@ -42,9 +66,6 @@ def fetch_datasets_from_json(ecan_json_path: str, executions_csv: str, output_di
         ecan_json_path (str): Path to the ECAN JSON file containing dataset IDs.
         executions_csv (str): Path to the executions csv file containing the successful executions IDs.
         output_dir (str): Output directory path for the downloaded datasets.
-
-    Returns:
-        str: Path to the directory where the downloaded datasets are stored.
     """
     # Load JSON content safely
     dataset_ids_list = get_values_from_csv(ecan_json_path, "DatasetId")
@@ -59,25 +80,6 @@ def fetch_datasets_from_json(ecan_json_path: str, executions_csv: str, output_di
     # Download all processed datasets grouped by subject
     os.makedirs(output_dir, exist_ok=True)
     download_dataset_processing(processing_ids_list, output_dir, unzip=True)
-
-
-def load_first_dicom(dir_path: str) -> Dataset:
-    """
-    Load the first DICOM file found in the specified directory.
-
-    Args:
-        dir_path (str): Path to the directory containing DICOM files.
-
-    Returns:
-        Dataset: The first pydicom Dataset object loaded from the directory.
-    """
-    files = sorted(
-        os.path.join(root, f)
-        for root, _, files_in_dir in os.walk(dir_path)
-        for f in files_in_dir
-        if f.endswith(".dcm")
-    )
-    return pydicom.dcmread(files[0])
 
 
 def check_series_tag_consistency(series_dir: str) -> Tuple[List, List] | None:
@@ -124,9 +126,6 @@ def remove_sequence(mr_dir: str) -> None:
 
     Args:
         mr_dir (str): Path to the directory containing DICOM instances.
-
-    Returns:
-        None
     """
     for filename in os.listdir(mr_dir):
         path = os.path.join(mr_dir, filename)
@@ -161,9 +160,6 @@ def fix_inconsistent_tags(mr_dir: str, inconsistent_tags, inconsistent_files) ->
         mr_dir (str): Path to the directory containing DICOM instances.
         inconsistent_tags (list): List of (tag_name, tag) pairs found inconsistent.
         inconsistent_files (list): List of file paths that have inconsistent tags.
-
-    Returns:
-        None
     """
     for tag_name, _ in inconsistent_tags:
         logger.info(f"Inconsistent tag: {tag_name}")
@@ -178,7 +174,13 @@ def fix_inconsistent_tags(mr_dir: str, inconsistent_tags, inconsistent_files) ->
             continue
 
         # Otherwise, copy the reference value from the first file
-        ref_ds = load_first_dicom(mr_dir)
+        dcm_files = sorted(
+            os.path.join(root, f)
+            for root, _, files_in_dir in os.walk(mr_dir)
+            for f in files_in_dir
+            if f.endswith(".dcm")
+        )
+        ref_ds = pydicom.dcmread(dcm_files[0], stop_before_pixels=False)
         ref_value = getattr(ref_ds, tag_name, None)
 
         for f in inconsistent_files:
@@ -193,9 +195,6 @@ def inspect_and_fix_study_tags(input_dir: str) -> None:
 
     Args:
         input_dir (str): Path to the root folder containing patient subfolders with study data.
-
-    Returns:
-        None
     """
     for processing in os.listdir(input_dir):
         processing_dir = os.path.join(input_dir, processing)
@@ -222,20 +221,10 @@ def upload_to_pacs_rest(dataset_path: str, studies_csv: str) -> None:
     Args:
         dataset_path (str): Path to the root dataset directory containing processing subfolders.
         studies_csv (str): Path to the csv file to save the uploaded study IDs.
-
-    Returns:
-        None
     """
     total_file_count, dicom_count = 0, 0
-    ican_ids = get_values_from_csv("py_noir_code/projects/RHU_eCAN/ican_subset.csv", "SubjectName")
-    angptl6_ids = get_values_from_csv("py_noir_code/projects/RHU_eCAN/angptl6_subset.csv", "SubjectName")
 
-    load_orthanc_password()
-    endpoint = f"{OrthancContext.scheme}://{OrthancContext.domain}:{OrthancContext.rest_api_port}"
-    headers = get_http_headers(OrthancContext.username, OrthancContext.password)
-    logger.info(f"PACS Endpoint: {endpoint}")
-
-    study_ids = []
+    studies = []
     for study in os.listdir(dataset_path):
         parent_study_orthanc_id = None
         study_dir = os.path.join(dataset_path, study)
@@ -247,35 +236,23 @@ def upload_to_pacs_rest(dataset_path: str, studies_csv: str) -> None:
             if f.endswith(".dcm")
         ]
 
-        for dcm in dcm_files:
-            total_file_count += 1
-            response = upload_dicom_file_to_orthanc(dcm, endpoint, headers)
-            if response["Status"] == "Success" or response["Status"] == "AlreadyStored":
-                dicom_count += 1
-                parent_study_orthanc_id = response["ParentStudy"]
+        response = upload_study_to_orthanc(dcm_files)
+        if response["Status"] == "Success" or response["Status"] == "AlreadyStored":
+            dicom_count += 1
+            parent_study_orthanc_id = response["ParentStudy"]
 
-        study_ids.append(parent_study_orthanc_id)
         processing_id = study.split("_")[1]
         processing = get_dataset_processing(processing_id)
         dataset = get_dataset(str(processing["inputDatasets"][0]))
         subject_name = dataset["datasetAcquisition"]["examination"]["subject"]["name"]
+        study_instance_uid = pydicom.dcmread(dcm_files[0]).StudyInstanceUID
+        studies.append({
+            "PatientName": subject_name,
+            "StudyID": parent_study_orthanc_id,
+            "StudyInstanceUID": study_instance_uid
+        })
 
-        if subject_name in ican_ids:
-            set_orthanc_study_label(endpoint, headers, parent_study_orthanc_id, "ICAN_SUBSET")
-        elif subject_name in angptl6_ids:
-            set_orthanc_study_label(endpoint, headers, parent_study_orthanc_id, "ANGPTL6_SUBSET")
-
-    if len(study_ids) > 0:
-        existing_study_ids = get_values_from_csv(studies_csv, "StudyID")
-        if existing_study_ids is None:
-            save_values_to_csv(study_ids, "StudyID", studies_csv)
-        else:
-            for study_id in study_ids.copy():
-                if study_id in existing_study_ids:
-                    study_ids.remove(study_id)
-            existing_study_ids.extend(study_ids)
-            save_values_to_csv(existing_study_ids, "StudyID", studies_csv)
-
+    update_studies_registry(studies, studies_csv)
 
     if dicom_count == total_file_count:
         logger.info(f"SUCCESS: {dicom_count} DICOM file(s) successfully imported.")
@@ -283,17 +260,14 @@ def upload_to_pacs_rest(dataset_path: str, studies_csv: str) -> None:
         logger.warning(f"WARNING: Only {dicom_count}/{total_file_count} files imported successfully.")
 
 
-def upload_to_pacs_dicom(dataset_dir: str) -> None:
+def upload_to_pacs_dicom(dataset_path: str, studies_csv: str) -> None:
     """
     Sends all DICOM files found recursively in a given directory to a PACS server
     using the DICOM C-STORE service (DICOM network storage).
 
     Args:
-        dataset_dir (str): Path to the root directory containing DICOM files
-            to be uploaded. All subdirectories are searched recursively.
-
-    Returns:
-        None
+        dataset_path (str): Path to the root dataset directory containing processing subfolders.
+        studies_csv (str): Path to the csv file to save the uploaded study IDs.
     """
     # Initialize AE
     ae = AE(ae_title=OrthancContext.client_ae_title)
@@ -315,99 +289,184 @@ def upload_to_pacs_dicom(dataset_dir: str) -> None:
         logger.error("Failed to associate with PACS server.")
         return
 
-    dcm_files = [
-        os.path.join(root, f)
-        for root, dirs, files in os.walk(dataset_dir)
-        for f in files
-        if f.endswith(".dcm")
-    ]
+    studies = []
+    for study in os.listdir(dataset_path):
+        study_dir = os.path.join(dataset_path, study)
+        logger.info(f"Uploading orthanc study: {study}")
+        dcm_files = [
+            os.path.join(root, f)
+            for root, dirs, files in os.walk(study_dir)
+            for f in files
+            if f.endswith(".dcm")
+        ]
 
-    logger.info(f"Found {len(dcm_files)} DICOM file(s) to upload.")
-    for dcm_file in dcm_files:
-        try:
-            ds = pydicom.dcmread(str(dcm_file))
-            status = assoc.send_c_store(ds)
-            if status and status.Status == 0x0000:
-                logger.info(f"Successfully sent {dcm_file}")
-            else:
-                logger.warning(f"Failed to send {dcm_file}, status: {status}")
-        except Exception as e:
-            logger.error(f"Error sending {dcm_file}: {e}")
+        logger.info(f"Found {len(dcm_files)} DICOM file(s) to upload.")
+        for dcm_file in dcm_files:
+            try:
+                ds = pydicom.dcmread(str(dcm_file))
+                status = assoc.send_c_store(ds)
+                if status and status.Status == 0x0000:
+                    logger.info(f"Successfully sent {dcm_file}")
+                else:
+                    logger.warning(f"Failed to send {dcm_file}, status: {status}")
+            except Exception as e:
+                logger.error(f"Error sending {dcm_file}: {e}")
+
+        processing_id = study.split("_")[1]
+        processing = get_dataset_processing(processing_id)
+        dataset = get_dataset(str(processing["inputDatasets"][0]))
+        subject_name = dataset["datasetAcquisition"]["examination"]["subject"]["name"]
+        study_instance_uid = pydicom.dcmread(dcm_files[0]).StudyInstanceUID
+        parent_study_orthanc_id = get_study_orthanc_id_by_uid(study_instance_uid)
+        studies.append({
+            "StudyID": parent_study_orthanc_id,
+            "PatientName": subject_name,
+            "StudyInstanceUID": study_instance_uid
+        })
+
+    update_studies_registry(studies, studies_csv)
 
     # Release the association
     assoc.release()
     logger.info("C-STORE upload completed.")
 
 
-def assign_label_to_pacs_study(dataset_path: str) -> None:
+def assign_label_to_pacs_study(studies_csv: str) -> None:
     """
     Assign a label to each study in a dataset based on predefined subject subsets.
 
-    Parameters
-    ----------
-    dataset_path : str
-
-    Returns
-    -------
-    None
+    Args:
+        studies_csv : str
     """
     ican_ids = get_values_from_csv("py_noir_code/projects/RHU_eCAN/ican_subset.csv", "SubjectName")
     angptl6_ids = get_values_from_csv("py_noir_code/projects/RHU_eCAN/angptl6_subset.csv", "SubjectName")
 
-    load_orthanc_password()
-    endpoint = f"{OrthancContext.scheme}://{OrthancContext.domain}:{OrthancContext.rest_api_port}"
-    headers = get_http_headers(OrthancContext.username, OrthancContext.password)
-    logger.info(f"PACS Endpoint: {endpoint}")
+    uploaded_studies = get_dict_from_csv(studies_csv)
+    for study in uploaded_studies:
+        subject_name = study["PatientName"]
+        if subject_name in ican_ids:
+            set_orthanc_study_label(study["StudyID"], "ICAN_SUBSET")
+        elif subject_name in angptl6_ids:
+            set_orthanc_study_label(study["StudyID"], "ANGPTL6_SUBSET")
 
-    for idx, process in enumerate(os.listdir(dataset_path), start=1):
-        process_dir = os.path.join(dataset_path, process)
-        for item in os.listdir(process_dir):
-            if item == "output":
-                continue
 
-            item_dir = os.path.join(process_dir, item)
-            dcm_file = os.path.join(item_dir, os.listdir(item_dir)[0])
-            ds = pydicom.dcmread(dcm_file)
+def download_from_pacs_rest(studies_csv: str, download_dir: str) -> None:
+    """
+    Download all instances of a study via REST API.
 
-            orthanc_study_id = get_study_orthanc_id_by_uid(endpoint, headers, ds.StudyInstanceUID)
-            study_meta = get_orthanc_study_metadata(endpoint, headers, orthanc_study_id)
+    Args:
+        studies_csv (str): Path to the studies_csv file.
+        download_dir: Path to the directory where the downloaded files will be saved.
+    """
+    studies = get_dict_from_csv(studies_csv)
+    os.makedirs(download_dir, exist_ok=True)
+    for study in studies:
+        download_orthanc_study(study["StudyID"], download_dir)
 
-            if study_meta["PatientMainDicomTags"]["PatientName"] in ican_ids:
-                set_orthanc_study_label(endpoint, headers, orthanc_study_id, "ICAN_SUBSET")
-            elif study_meta["PatientMainDicomTags"]["PatientName"] in angptl6_ids:
-                set_orthanc_study_label(endpoint, headers, orthanc_study_id, "ANGPTL6_SUBSET")
-            break
+
+def start_storage_scp(storage_dir: str) -> None:
+    """
+    Start a Storage SCP to receive DICOM files sent via C-MOVE.
+
+    Args:
+        storage_dir (str): Path to the directory where the received files will be saved.
+    """
+    os.makedirs(storage_dir, exist_ok=True)
+
+    def handle_store(event):
+        ds = event.dataset
+        ds.file_meta = event.file_meta
+        file_path = os.path.join(storage_dir, f"{ds.SOPInstanceUID}.dcm")
+        ds.save_as(file_path)
+        logger.info(f"Received {ds.SOPInstanceUID}")
+        return 0x0000  # Success status
+
+    ae = AE(ae_title=OrthancContext.client_ae_title)
+    # Add all Storage SOP Classes
+    for context in AllStoragePresentationContexts:
+        ae.add_supported_context(context.abstract_syntax)
+
+    handlers = [(evt.EVT_C_STORE, handle_store)]
+    ae.start_server(("", int(OrthancContext.dicom_client_port)), block=False, evt_handlers=handlers)
+    return ae
+
+
+def download_from_pacs_dicom(studies_csv: str, download_dir: str) -> None:
+    """
+    Download all instances of a study via C-FIND + C-MOVE.
+
+    Args:
+        studies_csv (str): Path to the studies_csv file.
+        download_dir (str): Path to the directory where the downloaded files will be saved.
+
+    """
+    # Start Storage SCP
+    storage_ae = start_storage_scp(download_dir)
+
+    # Create the AE for PACS association
+    ae = AE(ae_title=OrthancContext.client_ae_title)
+    ae.acse_timeout = 30
+    ae.network_timeout = 30
+
+    # Request C-FIND and C-MOVE contexts
+    ae.add_requested_context("1.2.840.10008.5.1.4.1.2.2.1")
+    ae.add_requested_context("1.2.840.10008.5.1.4.1.2.2.2")
+
+    # Add Storage SOP Classes so PACS can push images via C-MOVE
+    for context in AllStoragePresentationContexts:
+        ae.add_supported_context(context.abstract_syntax)
+
+    # Associate with PACS
+    assoc = ae.associate(
+        OrthancContext.domain,
+        int(OrthancContext.dicom_server_port),
+        ae_title=OrthancContext.pacs_ae_title
+    )
+
+    if not assoc.is_established:
+        logger.error("Failed to associate with PACS.")
+        storage_ae.shutdown()
+        return
+
+    studies = get_dict_from_csv(studies_csv)
+    for study in studies:
+        # Create C-FIND dataset to locate the study
+        ds = Dataset()
+        ds.QueryRetrieveLevel = "STUDY"
+        ds.StudyInstanceUID = study["StudyInstanceUID"]
+
+        logger.info(f"Requesting C-MOVE for study: {study["StudyInstanceUID"]}")
+
+        # Send C-MOVE to the PACS, telling it to push images to our AE
+        for status, _ in assoc.send_c_move(
+            ds,
+            move_aet=OrthancContext.client_ae_title,  # Local AE receiving the images
+            query_model="1.2.840.10008.5.1.4.1.2.2.2"
+        ):
+            if status:
+                logger.info(f"C-MOVE status: 0x{status.Status:04x}")
+            else:
+                logger.warning("C-MOVE failed or association aborted")
+
+    assoc.release()
+    storage_ae.shutdown()
 
 
 def delete_studies_from_pacs(studies_csv: str) -> None:
     """
     Delete all studies IDs of the studies_csv from the Orthanc PACS server.
 
-    Parameters
-    ----------
-    studies_csv : str
-
-    Returns
-    -------
-    None
+    Args:
+        studies_csv : str
     """
-    load_orthanc_password()
-    endpoint = f"{OrthancContext.scheme}://{OrthancContext.domain}:{OrthancContext.rest_api_port}"
-    headers = get_http_headers(OrthancContext.username, OrthancContext.password)
-    logger.info(f"PACS Endpoint: {endpoint}")
-
     orthanc_studies_ids = get_values_from_csv(studies_csv, "StudyID")
     for orthanc_study_id in orthanc_studies_ids:
-        delete_orthanc_study(endpoint, headers, orthanc_study_id)
+        delete_orthanc_study(orthanc_study_id)
 
 
 def get_patient_ids_from_pacs() -> None:
     """
     Delete all studies in a dataset from the Orthanc PACS server.
-
-    Returns
-    -------
-    None
     """
 
     csv_paths = [
@@ -419,24 +478,17 @@ def get_patient_ids_from_pacs() -> None:
     for csv_path in csv_paths:
         subject_list_names.extend(get_values_from_csv(csv_path, "SubjectName"))
 
-    load_orthanc_password()
-    endpoint = f"{OrthancContext.scheme}://{OrthancContext.domain}:{OrthancContext.rest_api_port}"
-    headers = get_http_headers(OrthancContext.username, OrthancContext.password)
-    logger.info(f"PACS Endpoint: {endpoint}")
-
-    patient_list = get_orthanc_patients(endpoint, headers)
+    patient_list = get_orthanc_patients()
     for patient_id in patient_list:
-        patient_meta = get_orthanc_patient_meta(endpoint, headers, patient_id)
+        patient_meta = get_orthanc_patient_meta(patient_id)
         logger.info(f"Name: {patient_meta['MainDicomTags']['PatientName']}, ID: {patient_meta['MainDicomTags']['PatientID']}")
     logger.info(f"Total number of patients: {len(patient_list)}")
 
 
 def purge_pacs_studies() -> None:
-    load_orthanc_password()
-    endpoint = f"{OrthancContext.scheme}://{OrthancContext.domain}:{OrthancContext.rest_api_port}"
-    headers = get_http_headers(OrthancContext.username, OrthancContext.password)
-    logger.info(f"PACS Endpoint: {endpoint}")
-
-    orthanc_studies_ids = get_all_orthanc_studies(endpoint, headers)
+    """
+    Purge all studies in a dataset from the Orthanc PACS server.
+    """
+    orthanc_studies_ids = get_all_orthanc_studies()
     for orthanc_study_id in orthanc_studies_ids:
-        delete_orthanc_study(endpoint, headers, orthanc_study_id)
+        delete_orthanc_study(orthanc_study_id)
