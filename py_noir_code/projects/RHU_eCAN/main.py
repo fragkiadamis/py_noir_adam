@@ -9,7 +9,8 @@ from py_noir_code.src.execution.execution_init_service import init_executions, r
 from py_noir_code.src.utils.context_utils import load_context
 from py_noir_code.src.utils.file_utils import get_project_name, find_project_root, create_file_path, save_values_to_csv
 from py_noir_code.projects.RHU_eCAN.dicom_dataset_manager import fetch_datasets_from_json, inspect_and_fix_study_tags, \
-    upload_to_pacs_rest, delete_studies_from_pacs, get_patient_ids_from_pacs, purge_pacs_studies
+    upload_to_pacs_rest, assign_label_to_pacs_study, download_from_pacs_rest, upload_processed_dataset, \
+    delete_studies_from_pacs, get_patient_ids_from_pacs, purge_pacs_studies
 
 if __name__ == '__main__':
     load_context("context.conf", with_orthanc=True)
@@ -38,9 +39,15 @@ if __name__ == '__main__':
     time.sleep(10)
 
     download_dir = find_project_root(__file__) + "/py_noir_code/resources/downloads"
-    fetch_datasets_from_json(filtered_datasets_csv, executions_csv, download_dir)
-    inspect_and_fix_study_tags(download_dir)
-    upload_to_pacs_rest(download_dir, studies_csv)
+    vip_output = os.path.join(download_dir, "vip_output")
+    orthanc_output = os.path.join(download_dir, "orthanc_output")
+
+    fetch_datasets_from_json(filtered_datasets_csv, executions_csv, vip_output)
+    inspect_and_fix_study_tags(vip_output)
+    upload_to_pacs_rest(vip_output, studies_csv)
+    assign_label_to_pacs_study(studies_csv)
+    download_from_pacs_rest(studies_csv, orthanc_output)
+    upload_processed_dataset(orthanc_output)
 
     # ----- AUXILIARY FUNCTIONS FOR DEBUGGING -----
     # get_patient_ids_from_pacs()
