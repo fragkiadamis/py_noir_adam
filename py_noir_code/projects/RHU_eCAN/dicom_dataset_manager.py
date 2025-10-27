@@ -464,6 +464,32 @@ def delete_studies_from_pacs(studies_csv: str) -> None:
         delete_orthanc_study(orthanc_study_id)
 
 
+def upload_processed_dataset(dataset_path: str) -> None:
+    """
+    Upload DICOM processed data to Shanoir server.
+
+    Args:
+        dataset_path : str The path to the dataset directory.
+    """
+    for study in os.listdir(dataset_path):
+        study_dir = os.path.join(dataset_path, study)
+        dcm_files = [
+            os.path.join(root, f)
+            for root, dirs, files in os.walk(study_dir)
+            for f in files
+            if f.endswith(".dcm") and pydicom.dcmread(os.path.join(root, f)).Modality in ("SR", "SEG")
+        ]
+
+        for dcm in dcm_files:
+            with open(dcm, "rb") as f:
+                dicom_bytes = f.read()
+            success = upload_dataset_processing(dicom_bytes)
+            if success:
+                logger.info(f"Successfully uploaded {dcm} to Shanoir.")
+            else:
+                logger.warning(f"Failed to upload {dcm} to Shanoir.")
+
+
 def get_patient_ids_from_pacs() -> None:
     """
     Delete all studies in a dataset from the Orthanc PACS server.

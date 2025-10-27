@@ -1,3 +1,5 @@
+import uuid
+
 import requests
 
 from py_noir_code.src.API.api_service import get, download_file, post
@@ -10,6 +12,7 @@ Define methods for Shanoir datasets MS datasets API call
 ENDPOINT_DATASET = '/datasets/datasets'
 ENDPOINT_EXAMINATION = '/datasets/examinations'
 ENDPOINT_DATASET_PROCESSING = '/datasets/datasetProcessing'
+ENDPOINT_DICOM_STORE = '/datasets/dicomweb'
 
 logger = get_logger()
 
@@ -204,6 +207,25 @@ def download_dataset_processing(dataset_processing_ids, output_folder, result_on
     response = post(path, params=params, json=dataset_processing_ids, stream=True)
     download_file(output_folder, response, unzip=unzip)
     return
+
+
+def upload_dataset_processing(dataset_processing, non_ohif_request=True):
+    """ Upload dataset processing [dataset_processing_path]
+    :param dataset_processing:
+    :param non_ohif_request:
+    :return:
+    """
+    content_type = 'multipart/related; type="application/dicom"; boundary="your-boundary"'
+    boundary = f"====={uuid.uuid4().hex}====="  # generate a unique boundary
+    data = (
+       f"--{boundary}\r\n"
+       f"Content-Type: application/dicom\r\n\r\n"
+    ).encode("utf-8") + dataset_processing + f"\r\n--{boundary}--\r\n".encode("utf-8")
+
+    path = ENDPOINT_DICOM_STORE + '/studies'
+    params = dict(nonOhifRequest=str(non_ohif_request).lower())
+    response = post(path, params=params, data=data, stream=True, content_type=content_type)
+    return True if response.status_code == 200 else False
 
 
 def find_processed_dataset_ids_by_input_dataset_id(dataset_id):
