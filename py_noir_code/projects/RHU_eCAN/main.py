@@ -46,8 +46,10 @@ if __name__ == '__main__':
     inspect_and_fix_study_tags(vip_output)
     upload_to_pacs_rest(vip_output, studies_csv)
     assign_label_to_pacs_study(studies_csv)
-    download_from_pacs_rest(studies_csv, orthanc_output)
-    upload_processed_dataset(orthanc_output)
+
+    # To be used later for the importation of GE AIDream processed output to Shanoir.
+    # download_from_pacs_rest(studies_csv, orthanc_output)
+    # upload_processed_dataset(orthanc_output)
 
     # ----- AUXILIARY FUNCTIONS FOR DEBUGGING -----
     # get_patient_ids_from_pacs()

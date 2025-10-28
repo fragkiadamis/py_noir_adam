@@ -1,4 +1,5 @@
 import logging
+import shutil
 import sys
 import os
 import tempfile
@@ -101,8 +102,8 @@ def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict
     for idx, (subject, exam_items) in enumerate(subjects_datasets.items(), start=1):
         for key in list(exam_items.keys()):
             for ds in exam_items[key][:]:
-                download_dir = tempfile.mkdtemp(prefix=f"{subject}_{ds['id']}")
-                # download_dir = f"py_noir_code/resources/temp/{subject}/{ds['id']}" # for DEBUG
+                # download_dir = tempfile.mkdtemp(prefix=f"{subject}_{ds['id']}")
+                download_dir = f"py_noir_code/resources/filtering/{subject}_{ds['id']}"
                 os.makedirs(download_dir, exist_ok=True)
                 download_dataset(ds["id"], "dcm", download_dir, unzip=True)
 
@@ -111,7 +112,8 @@ def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict
                 num_of_slices = len(os.listdir(download_dir))
                 if num_of_slices > 50 and slice_thickness < 10:
                     filtered_datasets.append(ds)
-                    break
+                else:
+                    shutil.rmtree(download_dir)
 
     return filtered_datasets
 
