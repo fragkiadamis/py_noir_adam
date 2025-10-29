@@ -20,16 +20,19 @@ if __name__ == '__main__':
     create_file_path(json_file_path)
     create_file_path(json_save_path)
 
-    executions_dir = "py_noir_code/resources/executions"
-    orthanc_dir = "py_noir_code/resources/orthanc"
-    create_file_path(executions_dir)
-    create_file_path(orthanc_dir)
-    filtered_datasets_csv = executions_dir + "/ecan_datasets.csv"
-    executions_csv = executions_dir + "/successful_executions_ids.csv"
-    studies_csv = orthanc_dir + "/studies.csv"
+    ecan_tracing_dir = "py_noir_code/resources/ecan_tracing"
+    create_file_path(ecan_tracing_dir)
+    filtered_datasets_csv = ecan_tracing_dir + "/ecan_filtered_datasets.csv"
+    executions_csv = ecan_tracing_dir + "/successful_executions_ids.csv"
+    studies_csv = ecan_tracing_dir + "/orthanc_studies.csv"
+
+    download_dir = find_project_root(__file__) + "/py_noir_code/resources/downloads"
+    shanoir_output = os.path.join(download_dir, "shanoir_output")
+    vip_output = os.path.join(download_dir, "vip_output")
+    orthanc_output = os.path.join(download_dir, "orthanc_output")
 
     if not os.path.exists(json_save_path + json_file_name):
-        executions_dict, filtered_datasets_ids = generate_rhu_ecan_json()
+        executions_dict, filtered_datasets_ids = generate_rhu_ecan_json(shanoir_output)
         save_values_to_csv(filtered_datasets_ids, "DatasetId", filtered_datasets_csv)
         successful_executions = init_executions(json_file_path + json_file_name, executions_dict)
     else:
@@ -37,10 +40,6 @@ if __name__ == '__main__':
     save_values_to_csv(successful_executions, "ExecutionId", executions_csv)
     # Wait for 10 seconds for the data imports to finish in shanoir
     time.sleep(10)
-
-    download_dir = find_project_root(__file__) + "/py_noir_code/resources/downloads"
-    vip_output = os.path.join(download_dir, "vip_output")
-    orthanc_output = os.path.join(download_dir, "orthanc_output")
 
     fetch_datasets_from_json(filtered_datasets_csv, executions_csv, vip_output)
     inspect_and_fix_study_tags(vip_output)

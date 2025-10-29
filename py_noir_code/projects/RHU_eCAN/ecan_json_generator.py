@@ -85,13 +85,14 @@ def find_oldest_exams(subjects_datasets: defaultdict[Any, defaultdict[Any, List]
                     del exam_items[exam_id]
 
 
-def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict[Any, List]]) -> List:
+def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict[Any, List]], download_dir: str) -> List:
     """
     Download datasets for all subjects and filter based on slice criteria.
 
     Parameters
     ----------
     subjects_datasets : defaultdict[Any, defaultdict[Any, List]]
+    download_dir: Path to the directory where the downloaded files will be saved.
 
     Returns
     -------
@@ -102,23 +103,21 @@ def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict
     for idx, (subject, exam_items) in enumerate(subjects_datasets.items(), start=1):
         for key in list(exam_items.keys()):
             for ds in exam_items[key][:]:
-                # download_dir = tempfile.mkdtemp(prefix=f"{subject}_{ds['id']}")
-                download_dir = f"py_noir_code/resources/filtering/{subject}_{ds['id']}"
-                os.makedirs(download_dir, exist_ok=True)
-                download_dataset(ds["id"], "dcm", download_dir, unzip=True)
-
-                first_file = os.path.join(download_dir, os.listdir(download_dir)[0])
+                subject_download_subdir = os.path.join(download_dir, subject, ds["id"])
+                os.makedirs(subject_download_subdir, exist_ok=True)
+                download_dataset(ds["id"], "dcm", subject_download_subdir, unzip=True)
+                first_file = os.path.join(subject_download_subdir, os.listdir(subject_download_subdir)[0])
                 slice_thickness = pydicom.dcmread(first_file, stop_before_pixels=True)['SliceThickness'].value
-                num_of_slices = len(os.listdir(download_dir))
+                num_of_slices = len(os.listdir(subject_download_subdir))
                 if num_of_slices > 50 and slice_thickness < 10:
                     filtered_datasets.append(ds)
                 else:
-                    shutil.rmtree(download_dir)
+                    shutil.rmtree(subject_download_subdir)
 
     return filtered_datasets
 
 
-def generate_rhu_ecan_json() -> Tuple[List[Any], List[Any]]:
+def generate_rhu_ecan_json(download_dir: str) -> Tuple[List[Any], List[Any]]:
     """
     Generate JSON configurations for RHU eCAN executions.
 
@@ -142,7 +141,7 @@ def generate_rhu_ecan_json() -> Tuple[List[Any], List[Any]]:
         subject_name_list = get_values_from_csv(csv_path, "SubjectName")
         subjects_datasets = query_datasets(subject_name_list)
         find_oldest_exams(subjects_datasets)
-        filtered_datasets = download_and_filter_datasets(subjects_datasets)
+        filtered_datasets = download_and_filter_datasets(subjects_datasets, download_dir)
 
         dataset_ids_list.extend(ds["id"] for ds in filtered_datasets)
         logger.info("Building json content...")

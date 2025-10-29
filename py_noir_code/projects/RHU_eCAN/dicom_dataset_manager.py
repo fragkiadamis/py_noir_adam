@@ -222,11 +222,8 @@ def upload_to_pacs_rest(dataset_path: str, studies_csv: str) -> None:
         dataset_path (str): Path to the root dataset directory containing processing subfolders.
         studies_csv (str): Path to the csv file to save the uploaded study IDs.
     """
-    total_file_count, dicom_count = 0, 0
-
-    studies = []
+    total_file_count, dicom_count, studies = 0, 0, []
     for study in os.listdir(dataset_path):
-        parent_study_orthanc_id = None
         study_dir = os.path.join(dataset_path, study)
         logger.info(f"Uploading orthanc study: {study}")
         dcm_files = [
@@ -236,10 +233,13 @@ def upload_to_pacs_rest(dataset_path: str, studies_csv: str) -> None:
             if f.endswith(".dcm")
         ]
 
-        response = upload_study_to_orthanc(dcm_files)
-        if response["Status"] == "Success" or response["Status"] == "AlreadyStored":
-            dicom_count += 1
-            parent_study_orthanc_id = response["ParentStudy"]
+        total_files, successful_uploads, response_json = upload_study_to_orthanc(dcm_files)
+        total_file_count += total_files
+        dicom_count += successful_uploads
+
+        parent_study_orthanc_id = None
+        if response_json and "ParentStudy" in response_json:
+            parent_study_orthanc_id = response_json["ParentStudy"]
 
         processing_id = study.split("_")[1]
         processing = get_dataset_processing(processing_id)
@@ -254,6 +254,7 @@ def upload_to_pacs_rest(dataset_path: str, studies_csv: str) -> None:
 
     update_studies_registry(studies, studies_csv)
 
+    logger.info(f"Total studies uploaded: {len(studies)}")
     if dicom_count == total_file_count:
         logger.info(f"SUCCESS: {dicom_count} DICOM file(s) successfully imported.")
     else:
@@ -319,8 +320,8 @@ def upload_to_pacs_dicom(dataset_path: str, studies_csv: str) -> None:
         study_instance_uid = pydicom.dcmread(dcm_files[0]).StudyInstanceUID
         parent_study_orthanc_id = get_study_orthanc_id_by_uid(study_instance_uid)
         studies.append({
-            "StudyID": parent_study_orthanc_id,
             "PatientName": subject_name,
+            "StudyID": parent_study_orthanc_id,
             "StudyInstanceUID": study_instance_uid
         })
 
@@ -435,7 +436,7 @@ def download_from_pacs_dicom(studies_csv: str, download_dir: str) -> None:
         ds.QueryRetrieveLevel = "STUDY"
         ds.StudyInstanceUID = study["StudyInstanceUID"]
 
-        logger.info(f"Requesting C-MOVE for study: {study["StudyInstanceUID"]}")
+        logger.info(f"Requesting C-MOVE for study: {study['StudyInstanceUID']}")
 
         # Send C-MOVE to the PACS, telling it to push images to our AE
         for status, _ in assoc.send_c_move(
@@ -494,16 +495,6 @@ def get_patient_ids_from_pacs() -> None:
     """
     Delete all studies in a dataset from the Orthanc PACS server.
     """
-
-    csv_paths = [
-        "py_noir_code/projects/RHU_eCAN/ican_subset.csv",
-        "py_noir_code/projects/RHU_eCAN/angptl6_subset.csv"
-    ]
-
-    subject_list_names = []
-    for csv_path in csv_paths:
-        subject_list_names.extend(get_values_from_csv(csv_path, "SubjectName"))
-
     patient_list = get_orthanc_patients()
     for patient_id in patient_list:
         patient_meta = get_orthanc_patient_meta(patient_id)

@@ -1,7 +1,7 @@
 import base64
 import os.path
 import zipfile
-from typing import Dict, List
+from typing import Dict, List, Tuple, Optional
 
 import requests
 
@@ -61,31 +61,39 @@ def orthanc_request(method: str, path: str, raise_for_status: bool = True, **kwa
     return response
 
 
-def upload_study_to_orthanc(files: List[str]) -> Dict[str, str] | None:
+def upload_study_to_orthanc(files: List[str]) -> Tuple[int, int, Optional[Dict[str, str]]]:
     """
-    Upload a single DICOM file to Orthanc and return its parent Study ID.
+    Upload a list of DICOM files to Orthanc and return upload statistics and last response.
+
     Args:
-        files (List[str]): List with pats to the DICOM files.
+        files (List[str]): List of paths to DICOM files.
 
     Returns:
-        bool: True if the upload was successful, False otherwise.
+        Tuple[int, int, Optional[Dict[str, Any]]]:
+            - int: Total number of files attempted.
+            - int: Number of files successfully uploaded (HTTP 200).
+            - Optional[Dict[str, Any]]: The JSON response from the last successful upload,
+              or None if all uploads failed.
     """
-    response = None
+    total_files = len(files)
+    successful_uploads = 0
+    last_response_json = None
+
     for file_path in files:
         try:
             with open(file_path, "rb") as dcm:
-                response = orthanc_request("post", f"instances", data=dcm.read())
+                response = orthanc_request("post", "instances", data=dcm.read())
 
             if response.status_code == 200:
-                return response.json()
+                successful_uploads += 1
+                last_response_json = response.json()
             else:
                 logger.warning(f"Upload failed for {os.path.basename(file_path)} (status {response.status_code})")
-                return None
 
         except Exception as e:
             logger.error(f"Error uploading {file_path}: {e}")
 
-    return None
+    return total_files, successful_uploads, last_response_json
 
 
 def get_all_orthanc_studies() -> List | None:

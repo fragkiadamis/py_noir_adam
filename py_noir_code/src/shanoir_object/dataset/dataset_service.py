@@ -201,7 +201,7 @@ def download_dataset_processing(dataset_processing_ids, output_folder, result_on
         logger.error('Cannot download more than 50 datasets at once. Please use the --search_text option instead to download '
               'the datasets one by one.')
         return
-    logger.info('Downloading dataset processing %s' % dataset_processing_ids)
+    logger.info(f'Downloading dataset {len(dataset_processing_ids)} processing: {dataset_processing_ids}')
     path = ENDPOINT_DATASET_PROCESSING + '/massiveDownloadByProcessingIds'
     params = dict(resultOnly=str(result_only).lower())
     response = post(path, params=params, json=dataset_processing_ids, stream=True)
