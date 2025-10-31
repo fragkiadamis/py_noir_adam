@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import Tuple, List
 
 import pydicom
@@ -9,7 +10,7 @@ from pynetdicom import AE, AllStoragePresentationContexts, StoragePresentationCo
 from py_noir_code.src.orthanc.orthanc_context import OrthancContext
 from py_noir_code.src.orthanc.orthanc_service import set_orthanc_study_label, upload_study_to_orthanc, \
     delete_orthanc_study, get_orthanc_patients, get_orthanc_patient_meta, get_all_orthanc_studies, \
-    get_study_orthanc_id_by_uid, download_orthanc_study
+    get_study_orthanc_id_by_uid, download_orthanc_study, get_orthanc_study_metadata
 from py_noir_code.src.shanoir_object.dataset.dataset_service import find_processed_dataset_ids_by_input_dataset_id, \
     download_dataset_processing, get_dataset_processing, get_dataset, upload_dataset_processing
 
@@ -509,3 +510,11 @@ def purge_pacs_studies() -> None:
     orthanc_studies_ids = get_all_orthanc_studies()
     for orthanc_study_id in orthanc_studies_ids:
         delete_orthanc_study(orthanc_study_id)
+
+
+def get_study_orthanc_details() -> None:
+    orthanc_studies_ids = get_all_orthanc_studies()
+    for orthanc_study_id in orthanc_studies_ids:
+        study = get_orthanc_study_metadata(orthanc_study_id)
+        orthanc_date = datetime.strptime(study["LastUpdate"], "%Y%m%dT%H%M%S")
+        logger.info(f"{orthanc_date} | {study['PatientMainDicomTags']['PatientName']} | {study['MainDicomTags']['StudyInstanceUID']} | {study['Labels']}")
