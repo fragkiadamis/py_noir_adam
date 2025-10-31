@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 
 import pydicom
 from pydicom.dataset import Dataset
@@ -10,7 +10,8 @@ from pynetdicom import AE, AllStoragePresentationContexts, StoragePresentationCo
 from py_noir_code.src.orthanc.orthanc_context import OrthancContext
 from py_noir_code.src.orthanc.orthanc_service import set_orthanc_study_label, upload_study_to_orthanc, \
     delete_orthanc_study, get_orthanc_patients, get_orthanc_patient_meta, get_all_orthanc_studies, \
-    get_study_orthanc_id_by_uid, download_orthanc_study, get_orthanc_study_metadata
+    get_study_orthanc_id_by_uid, download_orthanc_study, get_orthanc_study_metadata, get_orthanc_series_metadata, \
+    get_orthanc_instance_metadata
 from py_noir_code.src.shanoir_object.dataset.dataset_service import find_processed_dataset_ids_by_input_dataset_id, \
     download_dataset_processing, get_dataset_processing, get_dataset, upload_dataset_processing
 
@@ -512,9 +513,38 @@ def purge_pacs_studies() -> None:
         delete_orthanc_study(orthanc_study_id)
 
 
-def get_study_orthanc_details() -> None:
-    orthanc_studies_ids = get_all_orthanc_studies()
-    for orthanc_study_id in orthanc_studies_ids:
-        study = get_orthanc_study_metadata(orthanc_study_id)
+def get_orthanc_study_details() -> None:
+    """
+    Retrieve and log Orthanc study details, including FrameOfReferenceUIDs per series.
+    """
+    studies_ids = get_all_orthanc_studies()
+    for study_id in studies_ids:
+        study = get_orthanc_study_metadata(study_id)
         orthanc_date = datetime.strptime(study["LastUpdate"], "%Y%m%dT%H%M%S")
-        logger.info(f"{orthanc_date} | {study['PatientMainDicomTags']['PatientName']} | {study['MainDicomTags']['StudyInstanceUID']} | {study['Labels']}")
+
+        patient_name = study["PatientMainDicomTags"].get("PatientName", "Unknown")
+        study_uid = study["MainDicomTags"].get("StudyInstanceUID", "N/A")
+        labels = study.get("Labels", [])
+
+        logger.info(f"{orthanc_date} | {patient_name} | {study_uid} | {labels}")
+
+        frame_of_refs: List[Dict[str, str]] = []
+        for series_id in study.get("Series", []):
+            series = get_orthanc_series_metadata(series_id)
+            instance_id = series.get("Instances", [None])[0]
+
+            if not instance_id:
+                continue
+
+            instance = get_orthanc_instance_metadata(instance_id)
+            series_description = instance.get("SeriesDescription", "Unnamed Series")
+            frame_uid = instance.get("FrameOfReferenceUID")
+
+            if frame_uid:
+                frame_of_refs.append({series_description: frame_uid})
+
+        for ref in frame_of_refs:
+            for series_desc, uid in ref.items():
+                logger.info(f"{series_desc}: {uid}")
+
+        logger.info("*" * 90)

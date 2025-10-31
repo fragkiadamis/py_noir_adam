@@ -150,7 +150,7 @@ def get_orthanc_study_metadata(orthanc_study_id: str) -> Dict[str, str] | None:
         Dict[str, Any] or None: Study metadata dictionary if found, otherwise None.
     """
     try:
-        response = orthanc_request("get", f"/studies/{orthanc_study_id}")
+        response = orthanc_request("get", f"studies/{orthanc_study_id}")
         if response.status_code == 200:
             return response.json()
         else:
@@ -158,6 +158,52 @@ def get_orthanc_study_metadata(orthanc_study_id: str) -> Dict[str, str] | None:
             return None
     except Exception as e:
         logger.error(f"Error getting study meta for study '{orthanc_study_id}': {e}")
+        return None
+
+
+def get_orthanc_series_metadata(orthanc_series_id: str) -> Dict[str, str] | None:
+    """
+    Retrieve metadata for a series from Orthanc.
+
+    Args:
+        orthanc_series_id (str): Orthanc series ID.
+
+    Returns:
+        Dict[str, Any] or None: Series metadata dictionary if found, otherwise None.
+    """
+    try:
+        response = orthanc_request("get", f"series/{orthanc_series_id}")
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logger.warning(
+                f"Failed to get series metadata with seriesID '{orthanc_series_id}' (status {response.status_code})")
+            return None
+    except Exception as e:
+        logger.error(f"Error getting series meta for series '{orthanc_series_id}': {e}")
+        return None
+
+
+def get_orthanc_instance_metadata(orthanc_instance_id: str) -> Dict[str, str] | None:
+    """
+    Retrieve metadata for an instance from Orthanc.
+
+    Args:
+        orthanc_instance_id (str): Orthanc orthanc_instance_id ID.
+
+    Returns:
+        Dict[str, Any] or None: Instance metadata dictionary if found, otherwise None.
+    """
+    try:
+        response = orthanc_request("get", f"instances/{orthanc_instance_id}/tags?simplify")
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logger.warning(
+                f"Failed to get instance metadata with instanceID '{orthanc_instance_id}' (status {response.status_code})")
+            return None
+    except Exception as e:
+        logger.error(f"Error getting instance meta for study '{orthanc_instance_id}': {e}")
         return None
 
 
