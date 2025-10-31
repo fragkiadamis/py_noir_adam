@@ -20,17 +20,6 @@ from py_noir_code.src.utils.log_utils import get_logger
 
 logger = get_logger()
 
-TAGS_TO_CHECK = {
-    "FrameOfReferenceUID": (0x0020,0x0052),
-    "ImageOrientationPatient": (0x0020,0x0037),
-    "PixelSpacing": (0x0028,0x0030),
-    "SliceThickness": (0x0018,0x0050),
-    "Rows": (0x0028,0x0010),
-    "Columns": (0x0028,0x0011),
-    "NumberOfFrames": (0x0028,0x0008),
-    "StudyInstanceUID": (0x0020,0x000D)
-}
-
 SEQUENCE_TAG = (0x0040,0x0275)
 SEQUENCE_ITEM_TAG = (0x0040,0x0008)
 
@@ -84,136 +73,86 @@ def fetch_datasets_from_json(ecan_json_path: str, executions_csv: str, output_di
     download_dataset_processing(processing_ids_list, output_dir, unzip=True)
 
 
-def check_series_tag_consistency(series_dir: str) -> Tuple[List, List] | None:
-    """
-    Check for inconsistencies in key DICOM tags across all instances in a series.
-
-    Args:
-        series_dir (str): Path to the DICOM series directory.
-
-    Returns:
-        tuple[list, list] | None:
-            - A tuple (inconsistent_tags, inconsistent_files) if inconsistencies are found.
-            - None if no DICOM files are present.
-    """
-    logger.info(f"Checking tag consistency for image series: {series_dir}")
-    files = [os.path.join(series_dir, f) for f in os.listdir(series_dir) if f.endswith(".dcm")]
-    if not files:
-        logger.info("No DICOM files found in the series.")
-        return None
-
-    # Load first file as reference
-    ref_ds = pydicom.dcmread(files[0], stop_before_pixels=False)
-    inconsistent_tags, inconsistent_files = [], []
-    for tag_name, tag in TAGS_TO_CHECK.items():
-        ref_val = getattr(ref_ds, tag_name, None)
-
-        inconsistent_tag = None
-        for f in files[1:]:
-            ds = pydicom.dcmread(f, stop_before_pixels=False)
-            val = getattr(ds, tag_name, None)
-            if val != ref_val:
-                inconsistent_tag = (tag_name, tag)
-                inconsistent_files.append(f)
-
-        if inconsistent_files and inconsistent_tag is not None:
-            inconsistent_tags.append(inconsistent_tag)
-
-    return inconsistent_tags, inconsistent_files
-
-
-def remove_sequence(mr_dir: str) -> None:
-    """
-    Remove a specific DICOM sequence tag from all instances in a directory.
-
-    Args:
-        mr_dir (str): Path to the directory containing DICOM instances.
-    """
-    for filename in os.listdir(mr_dir):
-        path = os.path.join(mr_dir, filename)
-        ds = pydicom.dcmread(path, stop_before_pixels=False)
-
-        if SEQUENCE_TAG not in ds:
-            ds.save_as(path)
-            continue
-
-        cleaned = False
-        for item in ds[SEQUENCE_TAG].value:
-            if SEQUENCE_ITEM_TAG not in item:
-                continue
-
-            found_item = item[(0x0040, 0x0008)]
-            if found_item.VR != "SQ":
-                continue
-
-            if len(found_item.value) < 2 and len(found_item.value[0]) == 0:
-                del item[SEQUENCE_ITEM_TAG]
-                cleaned = True
-
-        if cleaned:
-            ds.save_as(path)
-
-
-def fix_inconsistent_tags(mr_dir: str, inconsistent_tags, inconsistent_files) -> None:
-    """
-    Fix inconsistent DICOM tags by assigning a consistent reference value.
-
-    Args:
-        mr_dir (str): Path to the directory containing DICOM instances.
-        inconsistent_tags (list): List of (tag_name, tag) pairs found inconsistent.
-        inconsistent_files (list): List of file paths that have inconsistent tags.
-    """
-    for tag_name, _ in inconsistent_tags:
-        logger.info(f"Inconsistent tag: {tag_name}")
-
-        if tag_name == "FrameOfReferenceUID":
-            new_uid = generate_uid()
-            for instance in os.listdir(os.path.join(mr_dir, mr_dir)):
-                instance_path = os.path.join(mr_dir, instance)
-                ds = pydicom.dcmread(instance_path, stop_before_pixels=False)
-                setattr(ds, tag_name, new_uid)
-                ds.save_as(instance_path)
-            continue
-
-        # Otherwise, copy the reference value from the first file
-        dcm_files = sorted(
-            os.path.join(root, f)
-            for root, _, files_in_dir in os.walk(mr_dir)
-            for f in files_in_dir
-            if f.endswith(".dcm")
-        )
-        ref_ds = pydicom.dcmread(dcm_files[0], stop_before_pixels=False)
-        ref_value = getattr(ref_ds, tag_name, None)
-
-        for f in inconsistent_files:
-            ds = pydicom.dcmread(f, stop_before_pixels=False)
-            setattr(ds, tag_name, ref_value)
-            ds.save_as(f)
-
-
 def inspect_and_fix_study_tags(input_dir: str) -> None:
     """
-    Inspect and correct DICOM tag inconsistencies across all studies in a dataset.
+    Inspect and correct DICOM tag inconsistencies across all studies in a dataset
+    and remove empty or malformed nested sequences that may cause parsing issues.
 
     Args:
         input_dir (str): Path to the root folder containing patient subfolders with study data.
     """
     for processing in os.listdir(input_dir):
         processing_dir = os.path.join(input_dir, processing)
-        for item in os.listdir(processing_dir):
-            if item == "output":
+        processing_input_dir = os.path.join(processing_dir, [item for item in os.listdir(processing_dir) if "output" not in item][0])
+        processing_output_dir = os.path.join(processing_dir, "output")
+        mr_files = [os.path.join(processing_input_dir, f) for f in os.listdir(processing_input_dir) if f.endswith(".dcm")]
+        seg_file = os.path.join(processing_output_dir, [f for f in os.listdir(processing_output_dir) if "seg" in f][0])
+
+        is_inconsistent = False
+        # Gather all FrameOfReferenceUIDs in your MR instances
+        uids = {}
+        for file_path in mr_files:
+            ds = pydicom.dcmread(file_path, stop_before_pixels=True)
+            uid = getattr(ds, "FrameOfReferenceUID", None)
+            if uid:
+                uids.setdefault(uid, []).append(os.path.basename(file_path).split(".")[0])
+
+        good_uid = None
+        if len(uids.keys()) > 1:
+            is_inconsistent = True
+            logger.info("Found FrameOfReferenceUIDs:")
+            for k, v in uids.items():
+                logger.info(f"  {k} → {len(v)} instances")
+
+            # Pick the "good" UID (e.g. the most frequent one)
+            good_uid = max(uids, key=lambda k: len(uids[k]))
+            logger.info(f"\nChosen UID: {good_uid}")
+
+            # Fir the MR instances with the good UID
+            for file_path in mr_files:
+                ds = pydicom.dcmread(file_path)
+                if getattr(ds, "FrameOfReferenceUID", None) != good_uid:
+                    ds.FrameOfReferenceUID = good_uid
+                    ds.save_as(file_path)
+        else:
+            good_uid = list(uids.keys())[0]
+
+        # Fix the SEG as well
+        seg = pydicom.dcmread(seg_file)
+        if seg.FrameOfReferenceUID != good_uid:
+            is_inconsistent = True
+            seg.FrameOfReferenceUID = good_uid
+            seg.save_as(seg_file)
+
+        if is_inconsistent:
+            logger.info(f"Inconsistencies were found in FrameOfReferenceUID.")
+
+        # Remove empty or malformed nested DICOM sequences
+        for file_path in mr_files:
+            ds = pydicom.dcmread(file_path, stop_before_pixels=False)
+
+            # Skip if the target sequence tag is missing
+            if SEQUENCE_TAG not in ds:
+                ds.save_as(file_path)
                 continue
-            mr_dir = os.path.join(processing_dir, item)
-            logger.info(f"Checking DICOM tags consistency across the series")
-            inconsistent_tags, inconsistent_files = check_series_tag_consistency(mr_dir)
 
-            remove_sequence(mr_dir)
+            cleaned = False
+            for item in ds[SEQUENCE_TAG].value:
+                # Ensure the sub-sequence exists
+                if SEQUENCE_ITEM_TAG not in item:
+                    continue
+                found_item = item[(0x0040, 0x0008)]
 
-            if not inconsistent_tags:
-                logger.info(f"Tags consistent across all slices.")
-                continue
+                # Skip if it's not actually a sequence
+                if found_item.VR != "SQ":
+                    continue
 
-            fix_inconsistent_tags(mr_dir, inconsistent_tags, inconsistent_files)
+                # Remove if the sequence is empty or malformed
+                if len(found_item.value) < 2 and len(found_item.value[0]) == 0:
+                    del item[SEQUENCE_ITEM_TAG]
+                    cleaned = True
+            if cleaned:
+                ds.save_as(file_path)
 
 
 def upload_to_pacs_rest(dataset_path: str, studies_csv: str) -> None:

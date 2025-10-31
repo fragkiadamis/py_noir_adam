@@ -268,7 +268,7 @@ def delete_orthanc_study(study_id: str) -> bool:
         bool: True if the study was successfully deleted, False otherwise.
     """
     try:
-        response = orthanc_request("delete", f"studies")
+        response = orthanc_request("delete", f"studies/{study_id}")
         if response.status_code == 200:
             logger.info(f"Deleted study {study_id}")
             return True
