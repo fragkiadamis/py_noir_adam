@@ -51,7 +51,8 @@ def solr_search(query: SolrQuery):
     data = {
         # 'subjectName': ['01001'],
         'expertMode': query.expert_mode,
-        'searchText': query.search_text
+        'searchText': query.search_text,
+        'facetPaging': {}
     }
 
     params = dict(page=query.page, size=query.size, sort=query.sort)

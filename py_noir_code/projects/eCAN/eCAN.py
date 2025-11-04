@@ -167,7 +167,7 @@ def getModifiedData(inputFileName, initialData):
 ### Function that makes multiple corrections to the DICOM data
 ### to comply with eCAN requirements
 def correcting_data(workingFolder):
-  # modify all DICOM files from the dataset folder
+    # modify all DICOM files from the dataset folder
     dcm_files = glob.glob(os.path.join(workingFolder, '*.dcm'))
     # we set a common FrameOfReferenceUID metadata for all instances of a serie
     frame_of_reference_uid = generate_uid()

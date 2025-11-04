@@ -18,12 +18,12 @@ def init_executions(json_file_name: str, content_to_process: list[dict]=None):
         logger.info("There is nothing to process. Please verify the data transmitted to the init_executions() method.")
         sys.exit(1)
     create_json_file(json_file_name, content_to_process)
-    start_executions(json_file_name)
+    return start_executions(json_file_name)
 
 def resume_executions(json_file_path: str, json_save_path: str, json_file_name: str):
     shutil.copy(json_save_path + json_file_name, json_file_path + json_file_name)
     update_token(json_file_path + json_file_name)
-    start_executions(json_file_path + json_file_name, True)
+    return start_executions(json_file_path + json_file_name, True)
 
 def create_json_file(json_file_name: string, content_to_process: list[dict]):
     for index, item in enumerate(content_to_process, start=1):

@@ -1,6 +1,5 @@
 import os
 import shutil
-import string
 import sys
 import json
 import threading
@@ -24,9 +23,10 @@ total_items_to_process = None
 items = []
 nb_processed_items = 0
 processed_item_ids = []
+executions = []
 saveFile = ""
 
-def check_pause_shedule(pause_message_event):
+def check_pause_schedule(pause_message_event):
     current_hour = time.localtime(time.time()).tm_hour
     while ExecutionContext.server_reboot_beginning_hour <= current_hour < ExecutionContext.server_reboot_ending_hour:
         if not pause_message_event.is_set():
@@ -42,6 +42,7 @@ def manage_threading_execution(working_file):
     global items
     global nb_processed_items
     global processed_item_ids
+    global executions
 
     monitoring_lock = threading.Lock()
     file_lock = threading.Lock()
@@ -50,18 +51,17 @@ def manage_threading_execution(working_file):
 
     def thread_execution(item: dict):
         global nb_processed_items, processed_item_ids
-        check_pause_shedule(pause_message_event)
+        check_pause_schedule(pause_message_event)
 
         try:
             execution = create_execution(item)
-            if(execution['id'] != None) :
-                logger.info(execution['id'])
+            if execution['id'] is not None:
                 with file_lock:
                     manage_working_file(working_file)
                 monitoring = get_execution_monitoring(execution["id"])
                 logger.info("Execution " + str(execution['id']) + ", " + str(monitoring['identifier']) + " is created.")
                 status = '"Running"'
-                countDown = 12
+                count_down = 12
 
                 while status == '"Running"':
                     time.sleep(5)
@@ -76,14 +76,15 @@ def manage_threading_execution(working_file):
                                 raise  # re-raise after 3 failed attempts
                             time.sleep(1)
 
-                    countDown -= 1
-                    if countDown == 1 and status == '"Running"':
+                    count_down -= 1
+                    if count_down == 1 and status == '"Running"':
                         logger.info("Status for execution " + str(execution["id"]) + " is " + status)
-                        countDown = 12
+                        count_down = 12
 
                 with monitoring_lock:
                     logger.debug("Succes for execution" + str(execution["id"]))
-                    manage_execution_succes(item)
+                    executions.append(execution["id"])
+                    manage_execution_success(item)
 
         except:
             logger.debug("Exception for execution " + str(execution["id"]))
@@ -98,7 +99,7 @@ def manage_threading_execution(working_file):
     logger.info("Executions ended.")
 
 
-def start_executions(json_file_name: string, resume: bool = False):
+def start_executions(json_file_name: str, resume: bool = False):
     global total_items_to_process
     global nb_processed_items
     global processed_item_ids
@@ -120,8 +121,10 @@ def start_executions(json_file_name: string, resume: bool = False):
     os.remove(json_file_name)
     os.remove(saveFile)
 
+    return executions
 
-def read_items_from_json_file(json_file_name: string, resume: bool):
+
+def read_items_from_json_file(json_file_name: str, resume: bool):
     try:
         return get_items_from_json_file(json_file_name)
     except:
@@ -132,7 +135,7 @@ def read_items_from_json_file(json_file_name: string, resume: bool):
             logger.error("Items to process are wrong. Please verify the json file shaping.")
         sys.exit(1)
 
-def manage_execution_succes(item: dict):
+def manage_execution_success(item: dict):
     global nb_processed_items
     global processed_item_ids
 

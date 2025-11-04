@@ -1,6 +1,5 @@
 import logging
 import os
-import string
 import getpass
 import zipfile
 from pathlib import Path
@@ -11,13 +10,16 @@ import requests
 
 from py_noir_code.src.API.api_context import APIContext
 from py_noir_code.src.security.authentication_service import ask_access_token, refresh_access_token
+from py_noir_code.src.utils.log_utils import get_logger
+
+logger = get_logger()
 
 """
 Define methods for generic API call
 """
 
 
-def rest_request(method: string, path, **kwargs):
+def rest_request(method: str, path, **kwargs):
     """ Execute a [method] HTTP query to [path] endpoint
     :param method:
     :param path:
@@ -37,31 +39,31 @@ def rest_request(method: string, path, **kwargs):
         response = requests.put(url, proxies=APIContext.proxies, verify=APIContext.verify, timeout=APIContext.timeout,
                                 **kwargs)
     else:
-        print('Error: unimplemented request type')
+        logger.error('Error: unimplemented request type')
 
     return response
 
 
 # perform a request on the given path, asks for a new access token if the current one is outdated
-def request(method, path, raise_for_status=True, **kwargs):
+def request(method, path, raise_for_status=True, content_type=None, **kwargs):
     """ Authenticate / Re-authenticate user [APIContext.username] and execute a [method] HTTP query to [path] endpoint
     :param method:
     :param path:
     :param raise_for_status:
+    :param content_type:
     :param kwargs:
     :return:
     """
     if APIContext.access_token is None:
         ask_access_token()
 
-    headers = get_http_headers()
-
+    headers = get_http_headers(content_type)
     response = rest_request(method, path, headers=headers, **kwargs)
 
-    # if token is outdated, refresh it and try again
+    # if the token is outdated, refresh it and try again
     if response.status_code == 401:
         refresh_access_token()
-        headers = get_http_headers()
+        headers = get_http_headers(content_type)
         response = rest_request(method, path, headers=headers, **kwargs)
 
     if raise_for_status:
@@ -70,20 +72,20 @@ def request(method, path, raise_for_status=True, **kwargs):
     return response
 
 
-def get_http_headers():
-    """ Set HTTP headers with [APIcontext.access_token]
+def get_http_headers(content_type=None):
+    """ Set HTTP headers with [APIContext.access_token]
     :return:
     """
     headers = {
         'Authorization': 'Bearer ' + APIContext.access_token,
-        'content-type': 'application/json',
+        'content-type': 'application/json' if content_type is None else content_type,
         'charset': 'utf-8'
     }
     return headers
 
 
 # perform a GET request on the given url, asks for a new access token if the current one is outdated
-def get(path: string, params=None, stream=None):
+def get(path: str, params=None, stream=None):
     """ Perform a GET HTTP request on [path] endpoint with given [params]
     :param path: string
     :param params:
@@ -93,8 +95,8 @@ def get(path: string, params=None, stream=None):
     return request('get', path, params=params, stream=stream)
 
 
-def post(path: string, params=None, files=None, stream=None, json=None, data=None,
-         raise_for_status=True):
+def post(path: str, params=None, files=None, stream=None, json=None, data=None,
+         raise_for_status=True, content_type=None):
     """ Perform a POST HTTP request on [path] endpoint with given [params]/[files]/[stream] /[data]
     :param path:
     :param params:
@@ -103,13 +105,14 @@ def post(path: string, params=None, files=None, stream=None, json=None, data=Non
     :param json:
     :param data:
     :param raise_for_status:
+    :param content_type:
     :return:
     """
     return request('post', path, raise_for_status, params=params, files=files, stream=stream, json=json,
-                   data=data)
+                   data=data, content_type=content_type)
 
 
-def put(path: string, params=None, files=None, stream=None, json=None, data=None,
+def put(path: str, params=None, files=None, stream=None, json=None, data=None,
         raise_for_status=True):
     """ Perform a PUT HTTP request on [path] endpoint with given [params]/[files]/[stream] /[data]
     :param path:
@@ -225,7 +228,7 @@ def initialize(args):
                         proxy_url = proxy_config['user'] + ':' + proxy_config['password']
                     proxy_url += '@' + proxy_config['host'] + ':' + proxy_config['port']
         else:
-            print("Proxy configuration file not found. Proxy will be ignored.")
+            logger.info("Proxy configuration file not found. Proxy will be ignored.")
 
     proxies = None
 
