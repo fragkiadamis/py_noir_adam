@@ -4,13 +4,12 @@ import time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
 
-from py_noir_code.projects.RHU_eCAN.ecan_json_generator import generate_rhu_ecan_json
+from py_noir_code.projects.eCAN.ecan_json_generator import generate_rhu_ecan_json
 from py_noir_code.src.execution.execution_init_service import init_executions, resume_executions
 from py_noir_code.src.utils.context_utils import load_context
 from py_noir_code.src.utils.file_utils import get_project_name, find_project_root, create_file_path, save_values_to_csv
-from py_noir_code.projects.RHU_eCAN.dicom_dataset_manager import fetch_datasets_from_json, inspect_and_fix_study_tags, \
-    upload_to_pacs_rest, assign_label_to_pacs_study, download_from_pacs_rest, upload_processed_dataset, \
-    delete_studies_from_pacs, get_patient_ids_from_pacs, purge_pacs_studies, get_orthanc_study_details
+from py_noir_code.projects.eCAN.dicom_dataset_manager import fetch_datasets_from_json, inspect_and_fix_study_tags, \
+    upload_to_pacs_rest, assign_label_to_pacs_study
 
 if __name__ == '__main__':
     load_context("context.conf", with_orthanc=True)
