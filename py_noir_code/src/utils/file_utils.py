@@ -27,8 +27,11 @@ def open_project_file(file_name: str, option: str = "r"):
 
 def get_ids_from_file(file_name: str, option: str = "r"):
     file = open_project_file(file_name, option)
-    return file.read().replace("\n","").split(",")
-
+    content = file.read()
+    if ";" in content:
+        return content.replace("\n","").split(";")
+    else:
+        return content.replace("\n","").split(",")
 
 def save_values_to_csv(values_list: List[str], column: str, csv_path: str) -> None:
     os.makedirs(os.path.dirname(csv_path), exist_ok=True)
