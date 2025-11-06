@@ -150,27 +150,9 @@ def manage_execution_success(item: dict):
     item_processed_increment(item)
     logger.info("%s out of %s items processed." % (nb_processed_items, total_items_to_process))
 
-
-def store_failure_data(item: dict, message: str, detail: str):
-    error_file_path = find_project_root(__file__) + "/py_noir_code/resources/errors/"
-    error_file_name =  get_project_name() + ".txt"
-    create_file_path(error_file_path)
-
-    error_file = open(error_file_path + error_file_name, "a")
-    error_file.write("\n\n\n\n" + message + detail +json.dumps(item, indent=4))
-    error_file.close()
-
-
 def manage_execution_failure(item: dict, message: str, detail: str):
-    global nb_processed_items
-    global processed_item_ids
-
     item_processed_increment(item)
-    store_failure_data(item, message, detail)
-    logger.error(
-        "item %s raised an exception. You can see the item data in py_noir_code/resources/errors." %
-        str(item["identifier"]))
-
+    logger.error("item %s raised an exception." % str(item["identifier"]))
 
 def item_processed_increment(item: dict):
     global items
