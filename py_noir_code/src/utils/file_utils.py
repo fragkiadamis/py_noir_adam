@@ -97,3 +97,14 @@ def find_project_root(starting_path, folder_name="py_noir"):
 def create_file_path(file_path):
         if not os.path.exists(file_path):
            os.makedirs(file_path)
+
+def get_working_file_paths(project_name : str):
+    working_file_path, save_file_path = create_working_paths()
+    return working_file_path + project_name + ".json", save_file_path + project_name + ".json"
+
+def create_working_paths():
+    working_file_path = find_project_root(__file__) + "/py_noir_code/resources/WIP_files/"
+    save_file_path = find_project_root(__file__) + "/py_noir_code/resources/save_files/"
+    create_file_path(working_file_path)
+    create_file_path(save_file_path)
+    return working_file_path, save_file_path
