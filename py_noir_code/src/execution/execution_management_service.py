@@ -11,7 +11,6 @@ from pathlib import Path
 from py_noir_code.src.execution.execution_context import ExecutionContext
 from py_noir_code.src.execution.execution_service import create_execution, get_execution_status, \
     get_execution_monitoring
-from py_noir_code.src.utils.file_utils import get_project_name, create_file_path, find_project_root
 from py_noir_code.src.utils.log_utils import get_logger
 
 sys.path.append('../../../')
@@ -39,10 +38,8 @@ def check_pause_schedule(pause_message_event):
         pause_message_event.clear()
 
 def thread_execution_with_start_signal(working_file, item, start_event):
-    # Signal that this thread started
     start_event.set()
-    # Run your actual work
-    thread_execution(item)
+    thread_execution(working_file, item)
 
 def manage_threading_execution(working_file):
     global items
@@ -58,7 +55,7 @@ def manage_threading_execution(working_file):
             start_events[item] = start_event
             executor.submit(thread_execution_with_start_signal, working_file, item, start_event)
             start_event.wait()
-            time.sleep(1) # Required, to avoid conccurrency issues
+            time.sleep(1) # Required, to avoid concurrency issues
 
     logger.info("Executions ended.")
 
@@ -96,9 +93,12 @@ def thread_execution(working_file, item: dict):
                     count_down = 12
 
             with monitoring_lock:
-                logger.debug("Succes for execution" + str(execution["id"]))
-                executions.append(execution["id"])
-                manage_execution_success(item)
+                if status == 'Finished' :
+                    logger.debug("Success for execution" + str(execution["id"]))
+                    executions.append(execution["id"])
+                    manage_execution_success(item)
+                else :
+                    logger.debug("Failure for execution" + str(execution["id"]))
 
     except:
         logger.debug("Exception for execution " + str(execution["id"]))
