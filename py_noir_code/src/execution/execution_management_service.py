@@ -25,6 +25,7 @@ nb_processed_items = 0
 processed_item_ids = []
 executions = []
 saveFile = ""
+start_events = {}
 
 def check_pause_schedule(pause_message_event):
     current_hour = time.localtime(time.time()).tm_hour
@@ -37,6 +38,11 @@ def check_pause_schedule(pause_message_event):
     if pause_message_event.is_set():
         pause_message_event.clear()
 
+def thread_execution_with_start_signal(working_file, item, start_event):
+    # Signal that this thread started
+    start_event.set()
+    # Run your actual work
+    thread_execution(item)
 
 def manage_threading_execution(working_file):
     global items
@@ -44,60 +50,62 @@ def manage_threading_execution(working_file):
     global processed_item_ids
     global executions
 
-    monitoring_lock = threading.Lock()
-    file_lock = threading.Lock()
-    pause_message_event = threading.Event()
     logger.info("Starting new executions...")
-
-    def thread_execution(item: dict):
-        global nb_processed_items, processed_item_ids
-        check_pause_schedule(pause_message_event)
-
-        try:
-            execution = create_execution(item)
-            if execution['id'] is not None:
-                monitoring = get_execution_monitoring(execution["id"])
-                logger.info("Execution " + str(execution['id']) + ", " + str(monitoring['identifier']) + " is created.")
-                status = '"Running"'
-                count_down = 12
-
-                while status == '"Running"':
-                    time.sleep(5)
-
-                    for attempt in range(5):
-                        try:
-                            status = get_execution_status(monitoring['identifier'])
-                            break  # success, exit retry loop
-                        except Exception as e:
-                            logger.warning(f"Attempt {attempt + 1}/5 failed to get status: {e}")
-                            if attempt == 4:
-                                raise  # re-raise after 3 failed attempts
-                            time.sleep(1)
-
-                    count_down -= 1
-                    if count_down == 1 and status == '"Running"':
-                        logger.info("Status for execution " + str(execution["id"]) + " is " + status)
-                        count_down = 12
-
-                with monitoring_lock:
-                    logger.debug("Succes for execution" + str(execution["id"]))
-                    executions.append(execution["id"])
-                    manage_execution_success(item)
-
-        except:
-            logger.debug("Exception for execution " + str(execution["id"]))
-            with monitoring_lock:
-                manage_execution_failure(item, execution["message"] + "\n" if execution != None and "message" in execution.keys() else "", execution["details"] + "\n" if execution != None and "details" in execution.keys() else "")
-        with file_lock:
-            manage_working_file(working_file)
 
     with ThreadPoolExecutor(max_workers=ExecutionContext.max_thread) as executor:
         for item in items[1:]:
-            executor.submit(thread_execution, item)  # Start the thread
-            time.sleep(1)  # Wait 1 second before submitting the next one
+            start_event = threading.Event()
+            start_events[item] = start_event
+            executor.submit(thread_execution_with_start_signal, working_file, item, start_event)
+            start_event.wait()
+            time.sleep(1) # Required, to avoid conccurrency issues
 
     logger.info("Executions ended.")
 
+def thread_execution(working_file, item: dict):
+    global nb_processed_items, processed_item_ids
+    monitoring_lock = threading.Lock()
+    file_lock = threading.Lock()
+    pause_message_event = threading.Event()
+    check_pause_schedule(pause_message_event)
+
+    try:
+        execution = create_execution(item)
+        if execution['id'] is not None:
+            monitoring = get_execution_monitoring(execution["id"])
+            logger.info("Execution " + str(execution['id']) + ", " + str(monitoring['identifier']) + " is created.")
+            status = '"Running"'
+            count_down = 12
+
+            while status == '"Running"':
+                time.sleep(5)
+
+                for attempt in range(5):
+                    try:
+                        status = get_execution_status(monitoring['identifier'])
+                        break  # success, exit retry loop
+                    except Exception as e:
+                        logger.warning(f"Attempt {attempt + 1}/5 failed to get status: {e}")
+                        if attempt == 4:
+                            raise  # re-raise after 3 failed attempts
+                        time.sleep(1)
+
+                count_down -= 1
+                if count_down == 1 and status == '"Running"':
+                    logger.info("Status for execution " + str(execution["id"]) + " is " + status)
+                    count_down = 12
+
+            with monitoring_lock:
+                logger.debug("Succes for execution" + str(execution["id"]))
+                executions.append(execution["id"])
+                manage_execution_success(item)
+
+    except:
+        logger.debug("Exception for execution " + str(execution["id"]))
+        with monitoring_lock:
+            manage_execution_failure(item, execution["message"] + "\n" if execution != None and "message" in execution.keys() else "", execution["details"] + "\n" if execution != None and "details" in execution.keys() else "")
+    with file_lock:
+        manage_working_file(working_file)
 
 def start_executions(json_file_name: str, resume: bool = False):
     global total_items_to_process
