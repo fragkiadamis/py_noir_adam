@@ -13,16 +13,163 @@
       "extraction_identifier_comment": "Only for clarity (mandatory anyway)",
       "extraction_identifier": "1",
       "input_comment":"it allows to get inputs of the processing or not",
-      "input": true,
-      "filter_comment": "it allows to extract data from a specific context. You can make any combination of filters, only data which respect all of them will be extracted. A filter is composed of a type {study,subject,examination,acquisition,dataset,processing}.{id,name} and a value. In case of name filter, name has to contain the value, not to be equal to. A processing_name/id filter is mandatory for each filter, and the filters are only relative to processing outputs, not inputs. See examples belows.",
+      "input": false,
+      "filter_comment": "it allows to extract data from a specific context. You can make any combination of filters, only data which respect all of them will be extracted. A filter is composed of a type {study,subject,examination,acquisition,dataset,processing}.{id,name} and a value. If name filter, name has to contain the value, not to be equal to. A processing_name/id filter is mandatory for each filter, and the filters are only relative to processing outputs, not inputs. See examples belows.",
       "filter": [
         {
-          "type": "dataset.id",
-          "value": "1418154"
-        },
+          "type": "processing.name",
+          "value": "flair"
+        }
+      ]
+    },
+    {
+      "extraction_identifier_comment": "Only for clarity (mandatory anyway)",
+      "extraction_identifier": "2",
+      "input_comment":"it allows to get inputs of the processing or not",
+      "input": false,
+      "filter_comment": "it allows to extract data from a specific context. You can make any combination of filters, only data which respect all of them will be extracted. A filter is composed of a type {study,subject,examination,acquisition,dataset,processing}.{id,name} and a value. If name filter, name has to contain the value, not to be equal to. A processing_name/id filter is mandatory for each filter, and the filters are only relative to processing outputs, not inputs. See examples belows.",
+      "filter": [
         {
           "type": "processing.name",
-          "value": "SIMS"
+          "value": "pmap"
+        },
+        {
+          "type": "dataset.name",
+          "value": "qc"
+        }
+      ]
+    },
+    {
+      "extraction_identifier_comment": "Only for clarity (mandatory anyway)",
+      "extraction_identifier": "8",
+      "input_comment":"it allows to get inputs of the processing or not",
+      "input": false,
+      "filter_comment": "it allows to extract data from a specific context. You can make any combination of filters, only data which respect all of them will be extracted. A filter is composed of a type {study,subject,examination,acquisition,dataset,processing}.{id,name} and a value. If name filter, name has to contain the value, not to be equal to. A processing_name/id filter is mandatory for each filter, and the filters are only relative to processing outputs, not inputs. See examples belows.",
+      "filter": [
+        {
+          "type": "processing.name",
+          "value": "pmap"
+        },
+        {
+          "type": "dataset.name",
+          "value": "combined_pmap"
+        }
+      ]
+    },
+    {
+      "extraction_identifier_comment": "Only for clarity (mandatory anyway)",
+      "extraction_identifier": "3",
+      "input_comment":"it allows to get inputs of the processing or not",
+      "input": false,
+      "filter_comment": "it allows to extract data from a specific context. You can make any combination of filters, only data which respect all of them will be extracted. A filter is composed of a type {study,subject,examination,acquisition,dataset,processing}.{id,name} and a value. If name filter, name has to contain the value, not to be equal to. A processing_name/id filter is mandatory for each filter, and the filters are only relative to processing outputs, not inputs. See examples belows.",
+      "filter": [
+        {
+          "type": "processing.name",
+          "value": "pmap"
+        },
+        {
+          "type": "dataset.name",
+          "value": "sc_metrics"
+        }
+      ]
+    },
+    {
+      "extraction_identifier_comment": "Only for clarity (mandatory anyway)",
+      "extraction_identifier": "4",
+      "input_comment":"it allows to get inputs of the processing or not",
+      "input": false,
+      "filter_comment": "it allows to extract data from a specific context. You can make any combination of filters, only data which respect all of them will be extracted. A filter is composed of a type {study,subject,examination,acquisition,dataset,processing}.{id,name} and a value. If name filter, name has to contain the value, not to be equal to. A processing_name/id filter is mandatory for each filter, and the filters are only relative to processing outputs, not inputs. See examples belows.",
+      "filter": [
+        {
+          "type": "processing.name",
+          "value": "t2_stir"
+        },
+        {
+          "type": "dataset.name",
+          "value": "qc"
+        },
+        {
+          "type": "processing.processing_date",
+          "value": "> '2025-04-01'"
+        },
+        {
+          "type": "processing.status",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "extraction_identifier_comment": "Only for clarity (mandatory anyway)",
+      "extraction_identifier": "5",
+      "input_comment":"it allows to get inputs of the processing or not",
+      "input": false,
+      "filter_comment": "it allows to extract data from a specific context. You can make any combination of filters, only data which respect all of them will be extracted. A filter is composed of a type {study,subject,examination,acquisition,dataset,processing}.{id,name} and a value. If name filter, name has to contain the value, not to be equal to. A processing_name/id filter is mandatory for each filter, and the filters are only relative to processing outputs, not inputs. See examples belows.",
+      "filter": [
+        {
+          "type": "processing.name",
+          "value": "t2_stir"
+        },
+        {
+          "type": "dataset.name",
+          "value": "results"
+        },
+        {
+          "type": "processing.processing_date",
+          "value": "> '2025-04-01'"
+        },
+        {
+          "type": "processing.status",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "extraction_identifier_comment": "Only for clarity (mandatory anyway)",
+      "extraction_identifier": "6",
+      "input_comment":"it allows to get inputs of the processing or not",
+      "input": false,
+      "filter_comment": "it allows to extract data from a specific context. You can make any combination of filters, only data which respect all of them will be extracted. A filter is composed of a type {study,subject,examination,acquisition,dataset,processing}.{id,name} and a value. If name filter, name has to contain the value, not to be equal to. A processing_name/id filter is mandatory for each filter, and the filters are only relative to processing outputs, not inputs. See examples belows.",
+      "filter": [
+        {
+          "type": "processing.name",
+          "value": "t2_stir"
+        },
+        {
+          "type": "dataset.name",
+          "value": "results"
+        },
+        {
+          "type": "processing.processing_date",
+          "value": "< '2025-04-01'"
+        },
+        {
+          "type": "processing.status",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "extraction_identifier_comment": "Only for clarity (mandatory anyway)",
+      "extraction_identifier": "7",
+      "input_comment":"it allows to get inputs of the processing or not",
+      "input": false,
+      "filter_comment": "it allows to extract data from a specific context. You can make any combination of filters, only data which respect all of them will be extracted. A filter is composed of a type {study,subject,examination,acquisition,dataset,processing}.{id,name} and a value. If name filter, name has to contain the value, not to be equal to. A processing_name/id filter is mandatory for each filter, and the filters are only relative to processing outputs, not inputs. See examples belows.",
+      "filter": [
+        {
+          "type": "processing.name",
+          "value": "t2_stir"
+        },
+        {
+          "type": "dataset.name",
+          "value": "results"
+        },
+        {
+          "type": "processing.processing_date",
+          "value": "< '2025-04-01'"
+        },
+        {
+          "type": "processing.status",
+          "value": "1"
         }
       ]
     }

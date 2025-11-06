@@ -19,7 +19,7 @@ ENDPOINT = '/auth/realms/shanoir-ng/protocol/openid-connect/token'
 
 def ask_access_token():
     """ Prompt user [APIContext.username] for password
-    and set [APIContext.access_token] & [context.refresh_token] from Shanoir auth API
+    and set [APIContext.access_token] & [APIContext.refresh_token] from Shanoir auth API
     :return:
     """
     try:

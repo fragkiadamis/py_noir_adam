@@ -56,8 +56,6 @@ def manage_threading_execution(working_file):
         try:
             execution = create_execution(item)
             if execution['id'] is not None:
-                with file_lock:
-                    manage_working_file(working_file)
                 monitoring = get_execution_monitoring(execution["id"])
                 logger.info("Execution " + str(execution['id']) + ", " + str(monitoring['identifier']) + " is created.")
                 status = '"Running"'
@@ -90,6 +88,8 @@ def manage_threading_execution(working_file):
             logger.debug("Exception for execution " + str(execution["id"]))
             with monitoring_lock:
                 manage_execution_failure(item, execution["message"] + "\n" if execution != None and "message" in execution.keys() else "", execution["details"] + "\n" if execution != None and "details" in execution.keys() else "")
+        with file_lock:
+            manage_working_file(working_file)
 
     with ThreadPoolExecutor(max_workers=ExecutionContext.max_thread) as executor:
         for item in items[1:]:
