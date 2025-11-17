@@ -5,7 +5,7 @@ import json
 import getpass
 import sys
 
-from src.API.api_config import APIContext
+from src import APIContext
 from src.orthanc.orthanc_config import OrthancConfig
 from src.utils.log_utils import get_logger
 

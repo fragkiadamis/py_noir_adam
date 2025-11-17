@@ -2,7 +2,7 @@ import uuid
 
 import requests
 
-from src.API.api_service import get, download_file, post
+from src import get, download_file, post
 from src.utils.log_utils import get_logger
 
 """

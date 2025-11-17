@@ -1,14 +1,14 @@
 import logging
 import os
 
-from src.utils.file_utils import get_project_name, create_file_path
+from src.utils.file_utils import create_file_path
 
 logger = None
 
-def set_logger():
+def set_logger(project_name: str):
     global logger
     log_path = os.path.dirname(os.path.abspath(__file__)) + "/../../resources/logs/"
-    file_name = get_project_name() + ".log"
+    file_name = project_name + ".log"
     create_file_path(log_path)
 
     if logger is None:

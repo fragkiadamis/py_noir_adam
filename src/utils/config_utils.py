@@ -8,7 +8,7 @@ logger = get_logger()
 
 def load_config(**kwargs: str) -> None:
     config = CustomConfigParser()
-    config.read(Path("../../config/config.conf"))
+    config.read(Path("config/config.conf"))
 
     Config.init(config)
     APIConfig.init(config)
@@ -31,9 +31,15 @@ class Config(object):
     @classmethod
     def init(cls, config: CustomConfigParser):
         cls.rootPath = Path(config.get('Config', 'rootPath'))
+        cls.inputPath = cls.rootPath / "input"
+        cls.outputPath = cls.rootPath / "output"
+        cls.resourcePath = cls.rootPath / "resource"
 
     def __init__(self, config: CustomConfigParser):
         self.rootPath = Path(config.get('Config', 'rootPath'))
+        self.inputPath = self.rootPath / "input"
+        self.outputPath = self.rootPath / "output"
+        self.resourcePath = self.rootPath / "resource"
 
 class APIConfig(object):
     """

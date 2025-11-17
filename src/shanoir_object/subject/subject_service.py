@@ -1,4 +1,4 @@
-from src.API.api_service import get
+from src import get
 
 """
 Define methods for Shanoir studies MS subject API call

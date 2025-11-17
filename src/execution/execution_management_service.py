@@ -7,14 +7,9 @@ import time
 
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-
-from src.execution.execution_config import ExecutionContext
-from src.execution.execution_service import create_execution, get_execution_status, \
-    get_execution_monitoring
+from src.execution.execution_service import create_execution, get_execution_status, get_execution_monitoring
+from src.utils.config_utils import ExecutionConfig
 from src.utils.log_utils import get_logger
-
-sys.path.append('../../')
-sys.path.append('../shanoir_object/dataset')
 
 logger = get_logger()
 
@@ -28,10 +23,10 @@ start_events = {}
 
 def check_pause_schedule(pause_message_event):
     current_hour = time.localtime(time.time()).tm_hour
-    while ExecutionContext.server_reboot_beginning_hour <= current_hour < ExecutionContext.server_reboot_ending_hour:
+    while ExecutionConfig.server_reboot_beginning_hour <= current_hour < ExecutionConfig.server_reboot_ending_hour:
         if not pause_message_event.is_set():
             logger.info("Current time is between %s and  %s. Pausing..." % (
-                ExecutionContext.server_reboot_beginning_hour, ExecutionContext.server_reboot_ending_hour))
+                ExecutionConfig.server_reboot_beginning_hour, ExecutionConfig.server_reboot_ending_hour))
             pause_message_event.set()
         time.sleep(60)
     if pause_message_event.is_set():
@@ -49,7 +44,7 @@ def manage_threading_execution(working_file):
 
     logger.info("Starting new executions...")
 
-    with ThreadPoolExecutor(max_workers=ExecutionContext.max_thread) as executor:
+    with ThreadPoolExecutor(max_workers=ExecutionConfig.max_thread) as executor:
         for item in items[1:]:
             start_event = threading.Event()
             start_events[item] = start_event
@@ -107,39 +102,39 @@ def thread_execution(working_file, item: dict):
     with file_lock:
         manage_working_file(working_file)
 
-def start_executions(json_file_name: str, resume: bool = False):
+def start_executions(working_file: Path, resume: bool = False):
     global total_items_to_process
     global nb_processed_items
     global processed_item_ids
     global items
     global saveFile
 
-    items = read_items_from_json_file(json_file_name, resume)
+    items = read_items_from_json_file(working_file, resume)
     items = items.sort(key=lambda x: x["identifier"])
     nb_processed_items = int(items[0]["nb_processed_items"])
     processed_item_ids = list(items[0]["processed_item_ids"])
     total_items_to_process = len(processed_item_ids) + len(items) - 1
 
-    saveFile = str(Path(json_file_name).parent.parent) + "/save_files/" + Path(json_file_name).name
-    shutil.copy(json_file_name, saveFile)
-    initialFile = str(Path(json_file_name).parent.parent) + "/save_files/initial_" + Path(json_file_name).name
-    shutil.copy(json_file_name, initialFile)
+    saveFile = working_file.parent.parent / "save_files" / working_file.name
+    shutil.copy(working_file, saveFile)
+    initialFile = working_file.parent.parent / "save_files" / ("initial_" + working_file.name)
+    shutil.copy(working_file, initialFile)
 
-    with open(json_file_name, "w") as working_file:
-        manage_threading_execution(working_file)
-    os.remove(json_file_name)
+    with open(working_file, "w") as working_content:
+        manage_threading_execution(working_content)
+    os.remove(working_file)
     os.remove(saveFile)
 
     return executions
 
 
-def read_items_from_json_file(json_file_name: str, resume: bool):
+def read_items_from_json_file(working_file: Path, resume: bool):
     try:
-        return get_items_from_json_file(json_file_name)
+        return get_items_from_json_file(working_file)
     except:
         if resume:
             logger.info("Resume script is impossible, monitoring file is corrupted. Deleting monitoring file, please relaunch executions.")
-            os.remove(json_file_name)
+            os.remove(working_file)
         else:
             logger.error("Items to process are wrong. Please verify the json file shaping.")
         sys.exit(1)
@@ -151,7 +146,7 @@ def manage_execution_success(item: dict):
     item_processed_increment(item)
     logger.info("%s out of %s items processed." % (nb_processed_items, total_items_to_process))
 
-def manage_execution_failure(item: dict, message: str, detail: str):
+def manage_execution_failure(item: dict):
     item_processed_increment(item)
     logger.error("item %s raised an exception." % str(item["identifier"]))
 
@@ -176,8 +171,8 @@ def manage_working_file(working_file):
     working_file.flush()
     shutil.copy(working_file.name, saveFile)
 
-def get_items_from_json_file(json_file_name: str):
-    items_to_processed_file = open(json_file_name, "r")
+def get_items_from_json_file(working_file: Path):
+    items_to_processed_file = open(working_file, "r")
     items_to_processed = json.load(items_to_processed_file)
     items_to_processed_file.close()
     return items_to_processed

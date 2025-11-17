@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 import requests
 
-from src.API.api_config import APIContext
+from src import APIContext
 from src.security.authentication_service import ask_access_token, refresh_access_token
 from src.utils.log_utils import get_logger
 

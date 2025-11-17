@@ -1,31 +1,25 @@
-import os
-import sys
-from pathlib import Path
 import csv
+
+from pathlib import Path
 from typing import List, Dict
+from src.utils.config_utils import Config
 
-
-def remove_file_extension(file_name: str):
-    """ Get a file name without its extension [file_full_name]
-    :param file_name:
-    :return file_name_without_extension:
+def get_items_from_input_file(file_name: str):
+    """ Extract the items in the input file separated by (descending priorities) : ";" "," "\n"
+    :param file_name: the file name located in py_noir/input
+    :return: a list of the extracted items
     """
-    pos = file_name.rfind(".")
-
-    if pos != -1:
-        return file_name[:pos]
-    return file_name
-
-def get_ids_from_file(file_path: Path):
-    file = open(file_path, "r")
+    file = open(Config.inputPath/ file_name, "r")
     content = file.read()
     if ";" in content:
         return content.replace("\n","").split(";")
-    else:
+    elif "," in content:
         return content.replace("\n","").split(",")
+    else :
+        return content.split("\n")
 
-def save_values_to_csv(values_list: List[str], column: str, csv_path: str) -> None:
-    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+def save_values_to_csv(values_list: List[str], column: str, csv_path: Path) -> None:
+    csv_path.mkdir(parents=True, exist_ok=True)
     with open(csv_path, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([column])  # header
@@ -33,8 +27,8 @@ def save_values_to_csv(values_list: List[str], column: str, csv_path: str) -> No
             writer.writerow([dataset_id])
 
 
-def save_dict_to_csv(dict_list: List[Dict[str, str]], csv_path: str) -> None:
-    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+def save_dict_to_csv(dict_list: List[Dict[str, str]], csv_path: Path) -> None:
+    csv_path.mkdir(parents=True, exist_ok=True)
     with open(csv_path, mode='w', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=dict_list[0].keys())
         writer.writeheader()
@@ -42,20 +36,20 @@ def save_dict_to_csv(dict_list: List[Dict[str, str]], csv_path: str) -> None:
             writer.writerow(row)
 
 
-def get_values_from_csv(file_name: str, column: str) -> List[str] | None:
-    if not os.path.exists(file_name):
+def get_values_from_csv(file_path: Path, column: str) -> List[str] | None:
+    if not file_path.exists():
         return None
 
     values = []
-    with open(file_name, "r", newline="") as csvfile:
+    with open(file_path, "r", newline="") as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             values.append(row[column])
     return values
 
 
-def get_dict_from_csv(file_name: str) -> List[Dict[str, str]] | None:
-    if not os.path.exists(file_name):
+def get_dict_from_csv(file_name: Path) -> List[Dict[str, str]] | None:
+    if not file_name.exists():
         return None
 
     values = []
@@ -65,37 +59,26 @@ def get_dict_from_csv(file_name: str) -> List[Dict[str, str]] | None:
             values.append(row)
     return values
 
-
-def get_project_name():
-    """ Return the project name (according to the main.py directory name)
-    :return project_name:
-    """
-    return os.path.basename(get_project_path())
-
-def get_project_path():
-    """ Return the project name (according to the main.py directory name)
-    :return project_name:
-    """
-    return os.path.dirname(os.path.abspath(sys.argv[0]))
-
-def find_project_root(starting_path, folder_name="py_noir"):
-    current_path = Path(starting_path).resolve()
-    for parent in current_path.parents:
-        if parent.name == folder_name:
-            return str(parent)
-    raise FileNotFoundError(f"'{folder_name}' folder not found.")
-
 def create_file_path(file_path):
-        if not os.path.exists(file_path):
-           os.makedirs(file_path)
+    """
+    Create the directories of the file path if not existing
+    :param file_path: the directory path to create
+    """
+    file_path.mkdir(parents=True, exist_ok=True)
 
-def get_working_file_paths(project_name : str):
+def get_working_files(project_name : str):
+    """
+    Get the working files paths and names, but does not create the files, only the directory paths
+    """
     working_file_path, save_file_path = create_working_paths()
     return working_file_path + project_name + ".json", save_file_path + project_name + ".json"
 
 def create_working_paths():
-    working_file_path = find_project_root(__file__) + "/py_noir_code/resources/WIP_files/"
-    save_file_path = find_project_root(__file__) + "/py_noir_code/resources/save_files/"
+    """
+    Create the working paths if not existing
+    """
+    working_file_path = Config.resourcePath / "WIP_files"
+    save_file_path = Config.resourcePath / "save_files"
     create_file_path(working_file_path)
     create_file_path(save_file_path)
     return working_file_path, save_file_path

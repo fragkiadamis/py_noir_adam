@@ -1,7 +1,7 @@
 import json
 import time
 
-from src.API.api_service import post, get
+from src.API.api_service import get, post
 from src.utils.log_utils import get_logger
 
 """

@@ -1,7 +1,28 @@
 /*venv*/
 __pycache__
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# IDEs
 .idea
-py_noir_code/resources
-*_to_exec.txt
-*_to_rename.txt
-**/context.conf
+
+# API variables
+config/config.conf
+
+# Resources
+input
+output
+
+# Patient information
+*.csv
+*.xlsx
+*.txt

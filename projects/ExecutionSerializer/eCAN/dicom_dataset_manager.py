@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import List, Dict
 
 import pydicom
@@ -35,10 +36,11 @@ def update_studies_registry(studies, studies_csv):
     if not studies:
         return
 
+    studies_csv_path = Path(studies_csv)
     existing_studies = get_dict_from_csv(studies_csv)
 
     if existing_studies is None:
-        save_dict_to_csv(studies, studies_csv)
+        save_dict_to_csv(studies, studies_csv_path)
         return
 
     # Filter out duplicates
@@ -46,7 +48,7 @@ def update_studies_registry(studies, studies_csv):
 
     if new_studies:
         existing_studies.extend(new_studies)
-        save_dict_to_csv(existing_studies, studies_csv)
+        save_dict_to_csv(existing_studies, studies_csv_path)
 
 
 def fetch_datasets_from_json(ecan_json_path: str, executions_csv: str, output_dir: str) -> None:
@@ -59,11 +61,13 @@ def fetch_datasets_from_json(ecan_json_path: str, executions_csv: str, output_di
         output_dir (str): Output directory path for the downloaded datasets.
     """
     # Load JSON content safely
-    dataset_ids_list = get_values_from_csv(ecan_json_path, "DatasetId")
+    ecan_json_path_path = Path(ecan_json_path)
+    dataset_ids_list = get_values_from_csv(ecan_json_path_path, "DatasetId")
 
     # Map each subject ID to its related processed dataset IDs
     processing_ids_list = []
-    execution_ids = get_values_from_csv(executions_csv, "ExecutionId")
+    executions_csv_path = Path(executions_csv)
+    execution_ids = get_values_from_csv(executions_csv_path, "ExecutionId")
     for dataset_id in dataset_ids_list:
         processing_list = find_processed_dataset_ids_by_input_dataset_id(dataset_id)
         processing_ids_list.extend([item["id"] for item in processing_list if str(item["parentId"]) in execution_ids])
@@ -280,10 +284,11 @@ def assign_label_to_pacs_study(studies_csv: str) -> None:
     Args:
         studies_csv : str
     """
-    ican_ids = get_values_from_csv("py_noir_code/projects/RHU_eCAN/ican_subset.csv", "SubjectName")
-    angptl6_ids = get_values_from_csv("py_noir_code/projects/RHU_eCAN/angptl6_subset.csv", "SubjectName")
+    ican_ids = get_values_from_csv(Path("py_noir_code/projects/RHU_eCAN/ican_subset.csv"), "SubjectName")
+    angptl6_ids = get_values_from_csv(Path("py_noir_code/projects/RHU_eCAN/angptl6_subset.csv"), "SubjectName")
 
-    uploaded_studies = get_dict_from_csv(studies_csv)
+    studies_csv_path = Path(studies_csv)
+    uploaded_studies = get_dict_from_csv(studies_csv_path)
     for study in uploaded_studies:
         subject_name = study["PatientName"]
         if subject_name in ican_ids:
@@ -300,7 +305,8 @@ def download_from_pacs_rest(studies_csv: str, download_dir: str) -> None:
         studies_csv (str): Path to the studies_csv file.
         download_dir: Path to the directory where the downloaded files will be saved.
     """
-    studies = get_dict_from_csv(studies_csv)
+    studies_csv_path = Path(studies_csv)
+    studies = get_dict_from_csv(studies_csv_path)
     os.makedirs(download_dir, exist_ok=True)
     for study in studies:
         download_orthanc_study(study["StudyID"], download_dir)
@@ -370,7 +376,8 @@ def download_from_pacs_dicom(studies_csv: str, download_dir: str) -> None:
         storage_ae.shutdown()
         return
 
-    studies = get_dict_from_csv(studies_csv)
+    studies_csv_path = Path(studies_csv)
+    studies = get_dict_from_csv(studies_csv_path)
     for study in studies:
         # Create C-FIND dataset to locate the study
         ds = Dataset()
@@ -401,7 +408,8 @@ def delete_studies_from_pacs(studies_csv: str) -> None:
     Args:
         studies_csv : str
     """
-    orthanc_studies_ids = get_values_from_csv(studies_csv, "StudyID")
+    studies_csv_path = Path(studies_csv)
+    orthanc_studies_ids = get_values_from_csv(studies_csv_path, "StudyID")
     for orthanc_study_id in orthanc_studies_ids:
         delete_orthanc_study(orthanc_study_id)
 

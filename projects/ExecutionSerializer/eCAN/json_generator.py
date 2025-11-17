@@ -1,22 +1,17 @@
 import logging
 import shutil
-import sys
 import os
-from typing import List, Any, Tuple
+from pathlib import Path
 
 import pydicom
 
-from src.shanoir_object.dataset.dataset_service import download_dataset, \
-    get_examination
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
-
+from typing import List, Any, Tuple
+from src.shanoir_object.dataset.dataset_service import download_dataset, get_examination
 from collections import defaultdict
 from datetime import datetime
-
-from src.API.api_config import APIContext
 from src.shanoir_object.solr_query.solr_query_model import SolrQuery
 from src.shanoir_object.solr_query.solr_query_service import solr_search
+from src.utils.config_utils import APIConfig
 from src.utils.file_utils import get_values_from_csv
 from src.utils.log_utils import get_logger
 
@@ -137,7 +132,8 @@ def generate_json(download_dir: str) -> Tuple[List[Any], List[Any]]:
 
     executions, dataset_ids_list, identifier = [], [], 0
     for csv_path in csv_paths:
-        subject_name_list = get_values_from_csv(csv_path, "SubjectName")
+        csv_path_path = Path(csv_path)
+        subject_name_list = get_values_from_csv(csv_path_path, "SubjectName")
         subjects_datasets = query_datasets(subject_name_list)
         find_oldest_exams(subjects_datasets)
         filtered_datasets = download_and_filter_datasets(subjects_datasets, download_dir)
@@ -154,8 +150,8 @@ def generate_json(download_dir: str) -> Tuple[List[Any], List[Any]]:
                 "inputParameters": {},
                 "outputProcessing": "",
                 "processingType": "SEGMENTATION",
-                "refreshToken": APIContext.refresh_token,
-                "client": APIContext.clientId,
+                "refreshToken": APIConfig.refresh_token,
+                "client": APIConfig.clientId,
                 "datasetParameters": [{
                     "datasetIds": [dataset["id"]],
                     "groupBy": "EXAMINATION",
