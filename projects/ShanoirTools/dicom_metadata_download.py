@@ -6,7 +6,7 @@ from src.utils.file_utils import get_items_from_input_file
 from src.utils.log_utils import get_logger
 
 app = typer.Typer()
-logger = get_logger("dicom_metadata_download")
+logger = get_logger()
 
 @app.callback()
 def explain():
@@ -25,10 +25,10 @@ def execute() -> None:
     """
     Run the dicom metadata download relatively to the comment value of the executions
     """
-    datasetsIds = get_items_from_input_file("inputs.txt")
-    metadataKeys = get_items_from_input_file("inputs_bis.txt")
+    datasets_ids = get_items_from_input_file("inputs.txt")
+    metadata_keys = get_items_from_input_file("inputs_bis.txt")
 
-    response = post("/datasets/datasets/dicomMetadataExtraction", data = {"datasetIds":datasetsIds, "metadataKeys":metadataKeys}, jsonBody=False)
+    response = post("/datasets/datasets/dicomMetadataExtraction", data = {"datasetIds":datasets_ids, "metadataKeys":metadata_keys})
     if response.status_code == 200 :
         start_download(response, "dicom_metadata")
     else :

@@ -6,7 +6,8 @@ from pathlib import Path
 
 from src.API.api_service import reset_token
 from src.execution.execution_management_service import start_executions
-from src.utils.config_utils import APIConfig
+from src.utils.config_utils import APIConfig, ConfigPath
+from src.utils.file_writer import FileWriter
 from src.utils.log_utils import get_logger
 
 logger = get_logger()
@@ -25,13 +26,8 @@ def resume_executions(working_file: Path, save_file: Path):
     return start_executions(working_file, True)
 
 def create_working_file(working_file: Path, content_to_process: list[dict]):
-    for index, item in enumerate(content_to_process, start=1):
-        item['identifier'] = index
     content_to_process.insert(0, dict(nb_processed_items=0, processed_item_ids=[]))
-
-    exams_to_exec = open(working_file, "w")
-    exams_to_exec.write(json.dumps(content_to_process))
-    exams_to_exec.close()
+    FileWriter.replace_content(working_file, json.dumps(content_to_process))
 
 def update_token(working_file: Path):
     reset_token()

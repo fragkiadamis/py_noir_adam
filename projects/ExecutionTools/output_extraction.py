@@ -6,7 +6,7 @@ from src.utils.download_utils import start_download
 from src.utils.log_utils import get_logger
 
 app = typer.Typer()
-logger = get_logger("output_extraction")
+logger = get_logger()
 
 @app.callback()
 def explain():
@@ -14,12 +14,14 @@ def explain():
     Output extraction project command-line interface.
     Status:
     ------
-    /!\ Shanoir output extraction feature is not correctly developed yet, so that execution tool is not available yet. /!\
+    Shanoir output extraction feature is not correctly developed yet, so that execution tool is not available yet.
+
     Commands:
     --------
     * `execute` — runs the output extraction for processing outputs filtered in `input/inputs.json`:
         - Download the outputs according to the filters written input/input.json.
         - More explanations about the filters are available in input/output_extraction_filter_example.json
+
     Usage:
     -----
         uv run main.py output_extraction execute

@@ -1,15 +1,15 @@
 import typer
 
-from src.execution.execution_init_service import init_executions, resume_executions
 from src.utils.file_writer import FileWriter
-from src.utils.log_utils import set_logger
+from src.utils.log_utils import get_logger
 from datetime import datetime, timezone
 from src.utils.file_utils import get_items_from_input_file, get_working_files, reset_tracking_file, get_tracking_file
 from src.shanoir_object.dataset.dataset_service import find_datasets_by_examination_id
 from src.utils.config_utils import APIConfig, ConfigPath
+from src.utils.serializer_utils import init_serialization
 
 app = typer.Typer()
-logger = set_logger("flair")
+logger = get_logger()
 
 @app.callback()
 def explain():
@@ -34,17 +34,9 @@ def execute() -> None:
     working_file_path, save_file_path = get_working_files("Comete_FLAIR")
     tracking_file_path = get_tracking_file("Comete_FLAIR")
 
-    FileWriter.open_files(tracking_file_path)
+    init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json)
 
-    if not save_file_path.exists():
-        reset_tracking_file(tracking_file_path)
-        init_executions(working_file_path, generate_json())
-    else:
-        resume_executions(working_file_path, save_file_path)
-
-    FileWriter.close_all()
-
-def generate_json():
+def generate_json() -> list[dict] :
     examinations = dict()
     identifier = 0
     executions = []
@@ -57,9 +49,9 @@ def generate_json():
         try:
             datasets = find_datasets_by_examination_id(exam_id)
         except:
-            logger.error("An error occurred while downloading examination {} from Shanoir", exam_id)
+            logger.error("An error occurred while downloading examination " + exam_id + " from Shanoir")
             identifier += 1
-            FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",false,,,,")
+            FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",false,,,,,,")
             continue
 
         for dataset in datasets:
@@ -74,9 +66,13 @@ def generate_json():
 
             if "T3DFLAIR" == dataset["updatedMetadata"]["name"]:
                 identifier +=1
-                FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",true,,,,")
+                FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",true,true,,,,,")
                 examinations[exam_id]["FLAIR"].append(ds_id)
                 examinations[exam_id]["identifier"].append(identifier)
+
+        if not examinations[exam_id]["FLAIR"]:
+            identifier +=1
+            FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",true,false,,,,,")
 
     for key, value in examinations.items():
         if value["FLAIR"] :

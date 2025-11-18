@@ -6,7 +6,7 @@ from src.utils.file_utils import get_items_from_input_file
 from src.utils.log_utils import get_logger
 
 app = typer.Typer()
-logger = get_logger("tracking_file_download")
+logger = get_logger()
 
 @app.callback()
 def explain():

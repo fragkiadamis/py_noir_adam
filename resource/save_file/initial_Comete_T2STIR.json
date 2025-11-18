@@ -1,0 +1,270 @@
+[
+  {
+    "nb_processed_items": 0,
+    "processed_item_ids": []
+  },
+  {
+    "identifier": 1,
+    "name": "comete_moelle_01_exam_31967_2025-11-19_150152596",
+    "pipelineIdentifier": "comete_sc_t2_stir/0.1",
+    "inputParameters": {},
+    "datasetParameters": [
+      {
+        "name": "t2_archive",
+        "groupBy": "DATASET",
+        "exportFormat": "nii",
+        "datasetIds": [
+          494395
+        ],
+        "converterId": 2
+      },
+      {
+        "name": "stir_archive",
+        "groupBy": "EXAMINATION",
+        "exportFormat": "nii",
+        "datasetIds": [
+          494412,
+          494426
+        ],
+        "converterId": 2
+      }
+    ],
+    "studyIdentifier": 20,
+    "outputProcessing": "",
+    "processingType": "SEGMENTATION",
+    "refreshToken": "eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIzZjU2YWY3ZS0xZGNlLTQ3MDgtYTI4ZC1iNDUwYjE0MWZhYWEifQ.eyJpYXQiOjE3NjM1NjQ0ODAsImp0aSI6IjY2OTNlNmUwLTBmNDctNDJmMy04ODA4LTllMTMxZGJjZWEyNiIsImlzcyI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsImF1ZCI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsInN1YiI6IjBjZmM0ZjM2LTAxYWUtNDczOS04ODExLTQyZjM4MWJjNDI3MSIsInR5cCI6Ik9mZmxpbmUiLCJhenAiOiJzaGFub2lyLXVwbG9hZGVyIiwic2lkIjoiNzA1NjgxNjMtZmE0OS00NWJlLThmNWYtMGU2YWRlOTlhNDExIiwic2NvcGUiOiJlbWFpbCBhY3Igcm9sZXMgb2ZmbGluZV9hY2Nlc3MgcHJvZmlsZSB3ZWItb3JpZ2lucyBiYXNpYyJ9.Z3V-WL6JP9lck09WWxXR1DarIjD9svDMNvn2zUzn9vwgUxn9-SbvilIPps2i4AEipXMqUTvwWECTn1EGBcpfhg",
+    "client": "shanoir-uploader",
+    "converterId": 2
+  },
+  {
+    "identifier": 2,
+    "name": "comete_moelle_01_exam_31967_2025-11-19_150152597",
+    "pipelineIdentifier": "comete_sc_t2_stir/0.1",
+    "inputParameters": {},
+    "datasetParameters": [
+      {
+        "name": "t2_archive",
+        "groupBy": "DATASET",
+        "exportFormat": "nii",
+        "datasetIds": [
+          494399
+        ],
+        "converterId": 2
+      },
+      {
+        "name": "stir_archive",
+        "groupBy": "EXAMINATION",
+        "exportFormat": "nii",
+        "datasetIds": [
+          494412,
+          494426
+        ],
+        "converterId": 2
+      }
+    ],
+    "studyIdentifier": 20,
+    "outputProcessing": "",
+    "processingType": "SEGMENTATION",
+    "refreshToken": "eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIzZjU2YWY3ZS0xZGNlLTQ3MDgtYTI4ZC1iNDUwYjE0MWZhYWEifQ.eyJpYXQiOjE3NjM1NjQ0ODAsImp0aSI6IjY2OTNlNmUwLTBmNDctNDJmMy04ODA4LTllMTMxZGJjZWEyNiIsImlzcyI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsImF1ZCI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsInN1YiI6IjBjZmM0ZjM2LTAxYWUtNDczOS04ODExLTQyZjM4MWJjNDI3MSIsInR5cCI6Ik9mZmxpbmUiLCJhenAiOiJzaGFub2lyLXVwbG9hZGVyIiwic2lkIjoiNzA1NjgxNjMtZmE0OS00NWJlLThmNWYtMGU2YWRlOTlhNDExIiwic2NvcGUiOiJlbWFpbCBhY3Igcm9sZXMgb2ZmbGluZV9hY2Nlc3MgcHJvZmlsZSB3ZWItb3JpZ2lucyBiYXNpYyJ9.Z3V-WL6JP9lck09WWxXR1DarIjD9svDMNvn2zUzn9vwgUxn9-SbvilIPps2i4AEipXMqUTvwWECTn1EGBcpfhg",
+    "client": "shanoir-uploader",
+    "converterId": 2
+  },
+  {
+    "identifier": 3,
+    "name": "comete_moelle_01_exam_3197_2025-11-19_150152597",
+    "pipelineIdentifier": "comete_sc_t2_stir/0.1",
+    "inputParameters": {},
+    "datasetParameters": [
+      {
+        "name": "t2_archive",
+        "groupBy": "DATASET",
+        "exportFormat": "nii",
+        "datasetIds": [
+          46207
+        ],
+        "converterId": 2
+      },
+      {
+        "name": "stir_archive",
+        "groupBy": "EXAMINATION",
+        "exportFormat": "nii",
+        "datasetIds": [
+          46209,
+          46213
+        ],
+        "converterId": 2
+      }
+    ],
+    "studyIdentifier": 20,
+    "outputProcessing": "",
+    "processingType": "SEGMENTATION",
+    "refreshToken": "eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIzZjU2YWY3ZS0xZGNlLTQ3MDgtYTI4ZC1iNDUwYjE0MWZhYWEifQ.eyJpYXQiOjE3NjM1NjQ0ODAsImp0aSI6IjY2OTNlNmUwLTBmNDctNDJmMy04ODA4LTllMTMxZGJjZWEyNiIsImlzcyI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsImF1ZCI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsInN1YiI6IjBjZmM0ZjM2LTAxYWUtNDczOS04ODExLTQyZjM4MWJjNDI3MSIsInR5cCI6Ik9mZmxpbmUiLCJhenAiOiJzaGFub2lyLXVwbG9hZGVyIiwic2lkIjoiNzA1NjgxNjMtZmE0OS00NWJlLThmNWYtMGU2YWRlOTlhNDExIiwic2NvcGUiOiJlbWFpbCBhY3Igcm9sZXMgb2ZmbGluZV9hY2Nlc3MgcHJvZmlsZSB3ZWItb3JpZ2lucyBiYXNpYyJ9.Z3V-WL6JP9lck09WWxXR1DarIjD9svDMNvn2zUzn9vwgUxn9-SbvilIPps2i4AEipXMqUTvwWECTn1EGBcpfhg",
+    "client": "shanoir-uploader",
+    "converterId": 2
+  },
+  {
+    "identifier": 4,
+    "name": "comete_moelle_01_exam_3197_2025-11-19_150152597",
+    "pipelineIdentifier": "comete_sc_t2_stir/0.1",
+    "inputParameters": {},
+    "datasetParameters": [
+      {
+        "name": "t2_archive",
+        "groupBy": "DATASET",
+        "exportFormat": "nii",
+        "datasetIds": [
+          46215
+        ],
+        "converterId": 2
+      },
+      {
+        "name": "stir_archive",
+        "groupBy": "EXAMINATION",
+        "exportFormat": "nii",
+        "datasetIds": [
+          46209,
+          46213
+        ],
+        "converterId": 2
+      }
+    ],
+    "studyIdentifier": 20,
+    "outputProcessing": "",
+    "processingType": "SEGMENTATION",
+    "refreshToken": "eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIzZjU2YWY3ZS0xZGNlLTQ3MDgtYTI4ZC1iNDUwYjE0MWZhYWEifQ.eyJpYXQiOjE3NjM1NjQ0ODAsImp0aSI6IjY2OTNlNmUwLTBmNDctNDJmMy04ODA4LTllMTMxZGJjZWEyNiIsImlzcyI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsImF1ZCI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsInN1YiI6IjBjZmM0ZjM2LTAxYWUtNDczOS04ODExLTQyZjM4MWJjNDI3MSIsInR5cCI6Ik9mZmxpbmUiLCJhenAiOiJzaGFub2lyLXVwbG9hZGVyIiwic2lkIjoiNzA1NjgxNjMtZmE0OS00NWJlLThmNWYtMGU2YWRlOTlhNDExIiwic2NvcGUiOiJlbWFpbCBhY3Igcm9sZXMgb2ZmbGluZV9hY2Nlc3MgcHJvZmlsZSB3ZWItb3JpZ2lucyBiYXNpYyJ9.Z3V-WL6JP9lck09WWxXR1DarIjD9svDMNvn2zUzn9vwgUxn9-SbvilIPps2i4AEipXMqUTvwWECTn1EGBcpfhg",
+    "client": "shanoir-uploader",
+    "converterId": 2
+  },
+  {
+    "identifier": 6,
+    "name": "comete_moelle_01_exam_32026_2025-11-19_150152597",
+    "pipelineIdentifier": "comete_sc_t2_stir/0.1",
+    "inputParameters": {},
+    "datasetParameters": [
+      {
+        "name": "t2_archive",
+        "groupBy": "DATASET",
+        "exportFormat": "nii",
+        "datasetIds": [
+          495633
+        ],
+        "converterId": 2
+      },
+      {
+        "name": "stir_archive",
+        "groupBy": "EXAMINATION",
+        "exportFormat": "nii",
+        "datasetIds": [
+          495627,
+          495638
+        ],
+        "converterId": 2
+      }
+    ],
+    "studyIdentifier": 20,
+    "outputProcessing": "",
+    "processingType": "SEGMENTATION",
+    "refreshToken": "eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIzZjU2YWY3ZS0xZGNlLTQ3MDgtYTI4ZC1iNDUwYjE0MWZhYWEifQ.eyJpYXQiOjE3NjM1NjQ0ODAsImp0aSI6IjY2OTNlNmUwLTBmNDctNDJmMy04ODA4LTllMTMxZGJjZWEyNiIsImlzcyI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsImF1ZCI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsInN1YiI6IjBjZmM0ZjM2LTAxYWUtNDczOS04ODExLTQyZjM4MWJjNDI3MSIsInR5cCI6Ik9mZmxpbmUiLCJhenAiOiJzaGFub2lyLXVwbG9hZGVyIiwic2lkIjoiNzA1NjgxNjMtZmE0OS00NWJlLThmNWYtMGU2YWRlOTlhNDExIiwic2NvcGUiOiJlbWFpbCBhY3Igcm9sZXMgb2ZmbGluZV9hY2Nlc3MgcHJvZmlsZSB3ZWItb3JpZ2lucyBiYXNpYyJ9.Z3V-WL6JP9lck09WWxXR1DarIjD9svDMNvn2zUzn9vwgUxn9-SbvilIPps2i4AEipXMqUTvwWECTn1EGBcpfhg",
+    "client": "shanoir-uploader",
+    "converterId": 2
+  },
+  {
+    "identifier": 7,
+    "name": "comete_moelle_01_exam_32026_2025-11-19_150152597",
+    "pipelineIdentifier": "comete_sc_t2_stir/0.1",
+    "inputParameters": {},
+    "datasetParameters": [
+      {
+        "name": "t2_archive",
+        "groupBy": "DATASET",
+        "exportFormat": "nii",
+        "datasetIds": [
+          495635
+        ],
+        "converterId": 2
+      },
+      {
+        "name": "stir_archive",
+        "groupBy": "EXAMINATION",
+        "exportFormat": "nii",
+        "datasetIds": [
+          495627,
+          495638
+        ],
+        "converterId": 2
+      }
+    ],
+    "studyIdentifier": 20,
+    "outputProcessing": "",
+    "processingType": "SEGMENTATION",
+    "refreshToken": "eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIzZjU2YWY3ZS0xZGNlLTQ3MDgtYTI4ZC1iNDUwYjE0MWZhYWEifQ.eyJpYXQiOjE3NjM1NjQ0ODAsImp0aSI6IjY2OTNlNmUwLTBmNDctNDJmMy04ODA4LTllMTMxZGJjZWEyNiIsImlzcyI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsImF1ZCI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsInN1YiI6IjBjZmM0ZjM2LTAxYWUtNDczOS04ODExLTQyZjM4MWJjNDI3MSIsInR5cCI6Ik9mZmxpbmUiLCJhenAiOiJzaGFub2lyLXVwbG9hZGVyIiwic2lkIjoiNzA1NjgxNjMtZmE0OS00NWJlLThmNWYtMGU2YWRlOTlhNDExIiwic2NvcGUiOiJlbWFpbCBhY3Igcm9sZXMgb2ZmbGluZV9hY2Nlc3MgcHJvZmlsZSB3ZWItb3JpZ2lucyBiYXNpYyJ9.Z3V-WL6JP9lck09WWxXR1DarIjD9svDMNvn2zUzn9vwgUxn9-SbvilIPps2i4AEipXMqUTvwWECTn1EGBcpfhg",
+    "client": "shanoir-uploader",
+    "converterId": 2
+  },
+  {
+    "identifier": 9,
+    "name": "comete_moelle_01_exam_32005_2025-11-19_150152597",
+    "pipelineIdentifier": "comete_sc_t2_stir/0.1",
+    "inputParameters": {},
+    "datasetParameters": [
+      {
+        "name": "t2_archive",
+        "groupBy": "DATASET",
+        "exportFormat": "nii",
+        "datasetIds": [
+          495167
+        ],
+        "converterId": 2
+      },
+      {
+        "name": "stir_archive",
+        "groupBy": "EXAMINATION",
+        "exportFormat": "nii",
+        "datasetIds": [
+          495169,
+          495175
+        ],
+        "converterId": 2
+      }
+    ],
+    "studyIdentifier": 20,
+    "outputProcessing": "",
+    "processingType": "SEGMENTATION",
+    "refreshToken": "eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIzZjU2YWY3ZS0xZGNlLTQ3MDgtYTI4ZC1iNDUwYjE0MWZhYWEifQ.eyJpYXQiOjE3NjM1NjQ0ODAsImp0aSI6IjY2OTNlNmUwLTBmNDctNDJmMy04ODA4LTllMTMxZGJjZWEyNiIsImlzcyI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsImF1ZCI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsInN1YiI6IjBjZmM0ZjM2LTAxYWUtNDczOS04ODExLTQyZjM4MWJjNDI3MSIsInR5cCI6Ik9mZmxpbmUiLCJhenAiOiJzaGFub2lyLXVwbG9hZGVyIiwic2lkIjoiNzA1NjgxNjMtZmE0OS00NWJlLThmNWYtMGU2YWRlOTlhNDExIiwic2NvcGUiOiJlbWFpbCBhY3Igcm9sZXMgb2ZmbGluZV9hY2Nlc3MgcHJvZmlsZSB3ZWItb3JpZ2lucyBiYXNpYyJ9.Z3V-WL6JP9lck09WWxXR1DarIjD9svDMNvn2zUzn9vwgUxn9-SbvilIPps2i4AEipXMqUTvwWECTn1EGBcpfhg",
+    "client": "shanoir-uploader",
+    "converterId": 2
+  },
+  {
+    "identifier": 10,
+    "name": "comete_moelle_01_exam_32005_2025-11-19_150152597",
+    "pipelineIdentifier": "comete_sc_t2_stir/0.1",
+    "inputParameters": {},
+    "datasetParameters": [
+      {
+        "name": "t2_archive",
+        "groupBy": "DATASET",
+        "exportFormat": "nii",
+        "datasetIds": [
+          495170
+        ],
+        "converterId": 2
+      },
+      {
+        "name": "stir_archive",
+        "groupBy": "EXAMINATION",
+        "exportFormat": "nii",
+        "datasetIds": [
+          495169,
+          495175
+        ],
+        "converterId": 2
+      }
+    ],
+    "studyIdentifier": 20,
+    "outputProcessing": "",
+    "processingType": "SEGMENTATION",
+    "refreshToken": "eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIzZjU2YWY3ZS0xZGNlLTQ3MDgtYTI4ZC1iNDUwYjE0MWZhYWEifQ.eyJpYXQiOjE3NjM1NjQ0ODAsImp0aSI6IjY2OTNlNmUwLTBmNDctNDJmMy04ODA4LTllMTMxZGJjZWEyNiIsImlzcyI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsImF1ZCI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsInN1YiI6IjBjZmM0ZjM2LTAxYWUtNDczOS04ODExLTQyZjM4MWJjNDI3MSIsInR5cCI6Ik9mZmxpbmUiLCJhenAiOiJzaGFub2lyLXVwbG9hZGVyIiwic2lkIjoiNzA1NjgxNjMtZmE0OS00NWJlLThmNWYtMGU2YWRlOTlhNDExIiwic2NvcGUiOiJlbWFpbCBhY3Igcm9sZXMgb2ZmbGluZV9hY2Nlc3MgcHJvZmlsZSB3ZWItb3JpZ2lucyBiYXNpYyJ9.Z3V-WL6JP9lck09WWxXR1DarIjD9svDMNvn2zUzn9vwgUxn9-SbvilIPps2i4AEipXMqUTvwWECTn1EGBcpfhg",
+    "client": "shanoir-uploader",
+    "converterId": 2
+  }
+]

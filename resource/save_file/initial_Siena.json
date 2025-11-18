@@ -1,0 +1,77 @@
+[
+  {
+    "nb_processed_items": 0,
+    "processed_item_ids": []
+  },
+  {
+    "identifier": 1,
+    "name": "siena_1_3_exam_34563_2025-11-19_154645532",
+    "pipelineIdentifier": "Siena/1.3",
+    "inputParameters": {},
+    "datasetParameters": [
+      {
+        "name": "t1_archive",
+        "groupBy": "DATASET",
+        "exportFormat": "nii",
+        "datasetIds": [
+          543686,
+          543692
+        ],
+        "converterId": 2
+      }
+    ],
+    "studyIdentifier": 17,
+    "outputProcessing": "",
+    "processingType": "SEGMENTATION",
+    "refreshToken": "eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIzZjU2YWY3ZS0xZGNlLTQ3MDgtYTI4ZC1iNDUwYjE0MWZhYWEifQ.eyJpYXQiOjE3NjM1NjcxNTYsImp0aSI6IjdlZGY4NmE5LTMzNDEtNDBmNC05N2EwLTY0NjlkMGU3OGZiYyIsImlzcyI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsImF1ZCI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsInN1YiI6IjBjZmM0ZjM2LTAxYWUtNDczOS04ODExLTQyZjM4MWJjNDI3MSIsInR5cCI6Ik9mZmxpbmUiLCJhenAiOiJzaGFub2lyLXVwbG9hZGVyIiwic2lkIjoiZWI0NGQ4NzEtMGRiYy00NzM1LThlNDMtNTEwMTkyNzMxNzYyIiwic2NvcGUiOiJlbWFpbCBhY3Igcm9sZXMgb2ZmbGluZV9hY2Nlc3MgcHJvZmlsZSB3ZWItb3JpZ2lucyBiYXNpYyJ9.mIqlTDKf0Au97DXHAmap9J0dSsvtM43abYjCz7cKt5pZj5tu2DaGjI0VE8DuF1KExXh9fJ2iG6qK5HCzjGjDGw",
+    "client": "shanoir-uploader",
+    "converterId": 2
+  },
+  {
+    "identifier": 3,
+    "name": "siena_1_3_exam_44980_2025-11-19_154645532",
+    "pipelineIdentifier": "Siena/1.3",
+    "inputParameters": {},
+    "datasetParameters": [
+      {
+        "name": "t1_archive",
+        "groupBy": "DATASET",
+        "exportFormat": "nii",
+        "datasetIds": [
+          708973
+        ],
+        "converterId": 2
+      }
+    ],
+    "studyIdentifier": 47,
+    "outputProcessing": "",
+    "processingType": "SEGMENTATION",
+    "refreshToken": "eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIzZjU2YWY3ZS0xZGNlLTQ3MDgtYTI4ZC1iNDUwYjE0MWZhYWEifQ.eyJpYXQiOjE3NjM1NjcxNTYsImp0aSI6IjdlZGY4NmE5LTMzNDEtNDBmNC05N2EwLTY0NjlkMGU3OGZiYyIsImlzcyI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsImF1ZCI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsInN1YiI6IjBjZmM0ZjM2LTAxYWUtNDczOS04ODExLTQyZjM4MWJjNDI3MSIsInR5cCI6Ik9mZmxpbmUiLCJhenAiOiJzaGFub2lyLXVwbG9hZGVyIiwic2lkIjoiZWI0NGQ4NzEtMGRiYy00NzM1LThlNDMtNTEwMTkyNzMxNzYyIiwic2NvcGUiOiJlbWFpbCBhY3Igcm9sZXMgb2ZmbGluZV9hY2Nlc3MgcHJvZmlsZSB3ZWItb3JpZ2lucyBiYXNpYyJ9.mIqlTDKf0Au97DXHAmap9J0dSsvtM43abYjCz7cKt5pZj5tu2DaGjI0VE8DuF1KExXh9fJ2iG6qK5HCzjGjDGw",
+    "client": "shanoir-uploader",
+    "converterId": 2
+  },
+  {
+    "identifier": 4,
+    "name": "siena_1_3_exam_50339_2025-11-19_154645533",
+    "pipelineIdentifier": "Siena/1.3",
+    "inputParameters": {},
+    "datasetParameters": [
+      {
+        "name": "t1_archive",
+        "groupBy": "DATASET",
+        "exportFormat": "nii",
+        "datasetIds": [
+          799873,
+          799876
+        ],
+        "converterId": 2
+      }
+    ],
+    "studyIdentifier": 47,
+    "outputProcessing": "",
+    "processingType": "SEGMENTATION",
+    "refreshToken": "eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIzZjU2YWY3ZS0xZGNlLTQ3MDgtYTI4ZC1iNDUwYjE0MWZhYWEifQ.eyJpYXQiOjE3NjM1NjcxNTYsImp0aSI6IjdlZGY4NmE5LTMzNDEtNDBmNC05N2EwLTY0NjlkMGU3OGZiYyIsImlzcyI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsImF1ZCI6Imh0dHBzOi8vc2hhbm9pci1vZnNlcC1xdWFsaWYuaXJpc2EuZnIvYXV0aC9yZWFsbXMvc2hhbm9pci1uZyIsInN1YiI6IjBjZmM0ZjM2LTAxYWUtNDczOS04ODExLTQyZjM4MWJjNDI3MSIsInR5cCI6Ik9mZmxpbmUiLCJhenAiOiJzaGFub2lyLXVwbG9hZGVyIiwic2lkIjoiZWI0NGQ4NzEtMGRiYy00NzM1LThlNDMtNTEwMTkyNzMxNzYyIiwic2NvcGUiOiJlbWFpbCBhY3Igcm9sZXMgb2ZmbGluZV9hY2Nlc3MgcHJvZmlsZSB3ZWItb3JpZ2lucyBiYXNpYyJ9.mIqlTDKf0Au97DXHAmap9J0dSsvtM43abYjCz7cKt5pZj5tu2DaGjI0VE8DuF1KExXh9fJ2iG6qK5HCzjGjDGw",
+    "client": "shanoir-uploader",
+    "converterId": 2
+  }
+]

@@ -1,0 +1,93 @@
+2025-11-19 15:33:27 INFO get keycloak token...
+2025-11-19 15:33:27 INFO Getting datasets, building json content... 
+2025-11-19 15:33:27 INFO Getting datasets from examination 31967
+2025-11-19 15:34:03 INFO Getting datasets from examination 3197
+2025-11-19 15:34:32 INFO Getting datasets from examination 3198
+2025-11-19 15:34:59 INFO Getting datasets from examination 32026
+2025-11-19 15:35:35 INFO Getting datasets from examination 1000000
+2025-11-19 15:35:51 ERROR Error for exam 1000000
+2025-11-19 15:35:51 ERROR An error occurred while downloading examination 1000000 from Shanoir
+2025-11-19 15:35:51 INFO Getting datasets from examination 32005
+2025-11-19 15:36:20 INFO Number of planned executiosn : 4
+2025-11-19 15:36:20 INFO Starting new executions...
+2025-11-19 15:36:20 INFO Execution 1, workflow-tzo8td is created.
+2025-11-19 15:36:21 INFO Execution 2, workflow-2omvhq is created.
+2025-11-19 15:36:22 INFO Execution 4, workflow-iv9fcc is created.
+2025-11-19 15:36:23 INFO Execution 6, workflow-trgd0m is created.
+2025-11-19 15:36:43 INFO Failure for execution 6, workflow-trgd0m
+2025-11-19 15:36:43 INFO 1 out of 4 items processed.
+2025-11-19 15:36:45 INFO Failure for execution 1, workflow-tzo8td
+2025-11-19 15:36:45 INFO 2 out of 4 items processed.
+2025-11-19 15:36:46 INFO Failure for execution 2, workflow-2omvhq
+2025-11-19 15:36:46 INFO 3 out of 4 items processed.
+2025-11-19 15:36:47 INFO Failure for execution 4, workflow-iv9fcc
+2025-11-19 15:36:47 INFO 4 out of 4 items processed.
+2025-11-19 15:36:47 INFO Executions ended.
+2025-11-19 15:46:33 INFO get keycloak token...
+2025-11-19 15:46:33 INFO Getting datasets, building json content... 
+2025-11-19 15:46:33 INFO Getting datasets from examination 31967
+2025-11-19 15:47:19 INFO Getting datasets from examination 3197
+2025-11-19 15:47:49 INFO Getting datasets from examination 3198
+2025-11-19 15:48:04 ERROR An error occurred while downloading examination 3198 from Shanoir
+2025-11-19 15:48:04 INFO Getting datasets from examination 32026
+2025-11-19 15:48:04 ERROR An error occurred while downloading examination 32026 from Shanoir
+2025-11-19 15:48:04 INFO Getting datasets from examination 1000000
+2025-11-19 15:48:04 ERROR An error occurred while downloading examination 1000000 from Shanoir
+2025-11-19 15:48:04 INFO Getting datasets from examination 32005
+2025-11-19 15:48:05 ERROR An error occurred while downloading examination 32005 from Shanoir
+2025-11-19 15:48:05 INFO Number of planned executiosn : 2
+2025-11-19 15:48:05 INFO Starting new executions...
+2025-11-19 15:50:11 INFO get keycloak token...
+2025-11-19 15:50:11 INFO Getting datasets, building json content... 
+2025-11-19 15:50:11 INFO Getting datasets from examination 31967
+2025-11-19 15:50:40 INFO Getting datasets from examination 3197
+2025-11-19 15:51:02 INFO Getting datasets from examination 3198
+2025-11-19 15:51:23 INFO Getting datasets from examination 32026
+2025-11-19 15:51:46 INFO Getting datasets from examination 1000000
+2025-11-19 15:51:55 ERROR Error for exam 1000000
+2025-11-19 15:51:55 ERROR An error occurred while downloading examination 1000000 from Shanoir
+2025-11-19 15:51:55 INFO Getting datasets from examination 32005
+2025-11-19 15:52:17 INFO Number of planned executiosn : 4
+2025-11-19 15:52:17 INFO Starting new executions...
+2025-11-19 15:52:17 INFO Execution 1, workflow-csmxc2 is created.
+2025-11-19 15:52:18 INFO Execution 2, workflow-ykbfx2 is created.
+2025-11-19 15:52:19 INFO Execution 4, workflow-f5x3v5 is created.
+2025-11-19 15:52:20 INFO Execution 6, workflow-vo36dh is created.
+2025-11-19 15:53:14 INFO Status for execution 1, workflow-csmxc2 is "Running"
+2025-11-19 15:53:14 INFO Status for execution 2, workflow-ykbfx2 is "Running"
+2025-11-19 15:53:15 INFO Status for execution 4, workflow-f5x3v5 is "Running"
+2025-11-19 15:53:18 INFO Status for execution 6, workflow-vo36dh is "Running"
+2025-11-19 15:53:30 INFO Failure for execution 4, workflow-f5x3v5
+2025-11-19 15:53:30 INFO 1 out of 4 items processed.
+2025-11-19 15:53:33 INFO Failure for execution 6, workflow-vo36dh
+2025-11-19 15:53:33 INFO 2 out of 4 items processed.
+2025-11-19 15:53:34 INFO Failure for execution 1, workflow-csmxc2
+2025-11-19 15:53:34 INFO 3 out of 4 items processed.
+2025-11-19 15:53:34 INFO Failure for execution 2, workflow-ykbfx2
+2025-11-19 15:53:34 INFO 4 out of 4 items processed.
+2025-11-19 15:53:34 INFO Executions ended.
+2025-11-19 15:55:00 INFO get keycloak token...
+2025-11-19 15:55:00 INFO Getting datasets, building json content... 
+2025-11-19 15:55:00 INFO Getting datasets from examination 31967
+2025-11-19 15:55:32 INFO Getting datasets from examination 3197
+2025-11-19 15:55:54 INFO Getting datasets from examination 3198
+2025-11-19 15:56:10 INFO Getting datasets from examination 32026
+2025-11-19 15:56:29 INFO Getting datasets from examination 1000000
+2025-11-19 15:56:36 ERROR Error for exam 1000000
+2025-11-19 15:56:36 ERROR An error occurred while downloading examination 1000000 from Shanoir
+2025-11-19 15:56:36 INFO Getting datasets from examination 32005
+2025-11-19 15:56:53 INFO Number of planned executiosn : 4
+2025-11-19 15:56:53 INFO Starting new executions...
+2025-11-19 15:56:53 INFO Execution 1, workflow-po8hir is created.
+2025-11-19 15:56:54 INFO Execution 2, workflow-6yyxh7 is created.
+2025-11-19 15:56:55 INFO Execution 4, workflow-e8f2jp is created.
+2025-11-19 15:56:56 INFO Execution 6, workflow-z2puft is created.
+2025-11-19 15:57:20 INFO Failure for execution 4, workflow-e8f2jp
+2025-11-19 15:57:20 INFO 1 out of 4 items processed.
+2025-11-19 15:57:22 INFO Failure for execution 6, workflow-z2puft
+2025-11-19 15:57:22 INFO 2 out of 4 items processed.
+2025-11-19 15:57:23 INFO Failure for execution 1, workflow-po8hir
+2025-11-19 15:57:23 INFO 3 out of 4 items processed.
+2025-11-19 15:57:24 INFO Failure for execution 2, workflow-6yyxh7
+2025-11-19 15:57:24 INFO 4 out of 4 items processed.
+2025-11-19 15:57:24 INFO Executions ended.

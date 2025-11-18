@@ -1,12 +1,17 @@
+import sys
 import typer
 
 from src.utils.config_utils import load_config
+from src.utils.log_utils import set_logger
+
+load_config()
+set_logger(sys.argv[1])
 
 import projects.ExecutionSerializer.sims as sims
 import projects.ExecutionSerializer.flair as flair
 import projects.ExecutionSerializer.pmap as pmap
 import projects.ExecutionSerializer.t2stir as t2stir
-import projects.ExecutionSerializer.sienax as sienax
+import projects.ExecutionSerializer.siena as siena
 
 import projects.ExecutionTools.carmin_api_test as carmin
 import projects.ExecutionTools.output_extraction as output_extraction
@@ -23,7 +28,7 @@ app.add_typer(sims.app, name="sims")
 app.add_typer(flair.app, name="flair")
 app.add_typer(pmap.app, name="pmap")
 app.add_typer(t2stir.app, name="t2stir")
-app.add_typer(sienax.app, name="sienax")
+app.add_typer(siena.app, name="siena")
 
 #Execution tools
 app.add_typer(carmin.app, name="carmin")
@@ -45,7 +50,7 @@ def explain():
     * - flair: runs the Comete_FLAIR processing pipeline.
     * - pmap: runs the Comete_PMAP processing pipeline.
     * - t2stir: runs the Comete_T2STIR processing pipeline.
-    * - sienax: runs the Sienax processing pipeline.
+    * - siena: runs the Siena processing pipeline.
     *
     * Execution tools :
     * - carmin: runs the CarminAPITest, to check the format in which the data are received in VIP.
@@ -62,5 +67,4 @@ def explain():
 
 
 if __name__ == "__main__":
-    load_config()
     app()

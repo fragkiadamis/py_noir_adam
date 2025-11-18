@@ -21,11 +21,9 @@ config/config.conf
 # Resources
 input
 output
+resource
 
 # Patient information
 *.csv
 *.xlsx
 *.txt
-
-#Package manager
-uv.lock

@@ -6,7 +6,7 @@ from src.utils.file_utils import get_items_from_input_file
 from src.utils.log_utils import get_logger
 
 app = typer.Typer()
-logger = get_logger("carmin")
+logger = get_logger()
 
 @app.callback()
 def explain():
@@ -29,7 +29,7 @@ def execute():
     """
     resource_ids = get_items_from_input_file("inputs.txt")
     for resource_id in resource_ids:
-        response = get("/datasets/carmin-data/path/" + resource_id + "'action=content&converterId=5&format=dcm")
+        response = get("/datasets/carmin-data/path/" + resource_id + "?action=content&converterId=5&format=dcm")
         if response.status_code == 200 :
             start_download(response, "CarminAPI_" + resource_id)
         else :

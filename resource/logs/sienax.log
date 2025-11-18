@@ -1,0 +1,66 @@
+2025-11-19 16:06:50 INFO get keycloak token...
+2025-11-19 16:06:50 INFO Getting datasets, building json content... 
+2025-11-19 16:06:50 INFO Getting datasets from examination 34563
+2025-11-19 16:07:01 INFO Getting datasets from examination 1000000
+2025-11-19 16:07:08 ERROR Error for exam 1000000
+2025-11-19 16:07:08 ERROR An error occurred while downloading examination 1000000 from Shanoir
+2025-11-19 16:07:08 INFO Getting datasets from examination 44980
+2025-11-19 16:07:22 INFO Getting datasets from examination 50339
+2025-11-19 16:07:37 INFO Number of planned executions : 3
+2025-11-19 16:07:37 INFO Starting new executions...
+2025-11-19 16:07:40 INFO Executions ended.
+2025-11-19 16:08:38 INFO get keycloak token...
+2025-11-19 16:08:38 INFO Getting datasets, building json content... 
+2025-11-19 16:08:38 INFO Getting datasets from examination 34563
+2025-11-19 16:08:52 INFO Getting datasets from examination 1000000
+2025-11-19 16:09:03 ERROR Error for exam 1000000
+2025-11-19 16:09:03 ERROR An error occurred while downloading examination 1000000 from Shanoir
+2025-11-19 16:09:03 INFO Getting datasets from examination 44980
+2025-11-19 16:09:23 INFO Getting datasets from examination 50339
+2025-11-19 16:09:41 INFO Number of planned executions : 3
+2025-11-19 16:09:41 INFO Starting new executions...
+2025-11-19 16:09:44 INFO Executions ended.
+2025-11-19 16:10:15 INFO get keycloak token...
+2025-11-19 16:10:15 INFO Getting datasets, building json content... 
+2025-11-19 16:10:15 INFO Getting datasets from examination 34563
+2025-11-19 16:10:27 INFO Getting datasets from examination 1000000
+2025-11-19 16:10:34 ERROR Error for exam 1000000
+2025-11-19 16:10:34 ERROR An error occurred while downloading examination 1000000 from Shanoir
+2025-11-19 16:10:34 INFO Getting datasets from examination 44980
+2025-11-19 16:10:55 INFO Getting datasets from examination 50339
+2025-11-19 16:11:11 INFO Number of planned executions : 3
+2025-11-19 16:11:11 INFO Starting new executions...
+2025-11-19 16:11:14 INFO Executions ended.
+2025-11-19 16:12:17 INFO get keycloak token...
+2025-11-19 16:12:17 INFO Getting datasets, building json content... 
+2025-11-19 16:12:17 INFO Getting datasets from examination 34563
+2025-11-19 16:12:29 INFO Getting datasets from examination 1000000
+2025-11-19 16:12:36 ERROR Error for exam 1000000
+2025-11-19 16:12:36 ERROR An error occurred while downloading examination 1000000 from Shanoir
+2025-11-19 16:12:36 INFO Getting datasets from examination 44980
+2025-11-19 16:12:50 INFO Getting datasets from examination 50339
+2025-11-19 16:13:05 INFO Number of planned executions : 3
+2025-11-19 16:13:05 INFO Starting new executions...
+2025-11-19 16:13:08 INFO Executions ended.
+2025-11-19 16:14:15 INFO get keycloak token...
+2025-11-19 16:14:15 INFO Getting datasets, building json content... 
+2025-11-19 16:14:15 INFO Getting datasets from examination 34563
+2025-11-19 16:14:27 INFO Getting datasets from examination 1000000
+2025-11-19 16:14:34 ERROR Error for exam 1000000
+2025-11-19 16:14:34 ERROR An error occurred while downloading examination 1000000 from Shanoir
+2025-11-19 16:14:34 INFO Getting datasets from examination 44980
+2025-11-19 16:14:47 INFO Getting datasets from examination 50339
+2025-11-19 16:15:03 INFO Number of planned executions : 3
+2025-11-19 16:15:03 INFO Starting new executions...
+2025-11-19 16:15:06 INFO Executions ended.
+2025-11-19 16:27:46 INFO get keycloak token...
+2025-11-19 16:27:46 INFO Getting datasets, building json content... 
+2025-11-19 16:27:46 INFO Getting datasets from examination 34563
+2025-11-19 16:27:57 INFO Getting datasets from examination 1000000
+2025-11-19 16:28:04 ERROR Error for exam 1000000
+2025-11-19 16:28:04 ERROR An error occurred while downloading examination 1000000 from Shanoir
+2025-11-19 16:28:04 INFO Getting datasets from examination 44980
+2025-11-19 16:28:18 INFO Getting datasets from examination 50339
+2025-11-19 16:28:33 INFO Number of planned executions : 3
+2025-11-19 16:28:33 INFO Starting new executions...
+2025-11-19 16:28:36 INFO Executions ended.

@@ -35,7 +35,11 @@ pip install uv
 uv sync
 ```
 
-3. **Finally you can run the project pipeline you need**
+2. **Config your root_path project**
+Modify the rootPath in config/config.conf according to your project path 
+
+4.
+**Finally you can run the project pipeline you need**
 ```bash
 uv run main.py [your_app] [your_feature]
 ```

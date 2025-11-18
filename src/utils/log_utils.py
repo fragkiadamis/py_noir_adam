@@ -1,19 +1,18 @@
 import logging
-import os
 
-from src.utils.file_utils import create_file_path
+from src.utils.config_utils import ConfigPath
 
 logger = None
 
 def set_logger(project_name: str):
     global logger
-    log_path = os.path.dirname(os.path.abspath(__file__)) + "/../../resources/logs/"
+    log_path = ConfigPath.resourcesPath / "logs"
     file_name = project_name + ".log"
-    create_file_path(log_path)
+    log_path.mkdir(parents=True, exist_ok=True)
 
     if logger is None:
         logging.basicConfig(
-            filename=log_path + file_name,
+            filename= str(log_path.joinpath(file_name)),
             filemode='a',
             format='%(asctime)s %(levelname)s %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S',

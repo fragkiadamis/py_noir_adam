@@ -64,38 +64,40 @@ def get_dict_from_csv(file_name: Path) -> List[Dict[str, str]] | None:
 
 def create_file_path(file_path):
     """
-    Create the directories of the file path if not existing
-    :param file_path: the directory path to create
+    Create the directories of the file path and the file if not existing
+    :param file_path: the file path to create
     """
-    file_path.mkdir(parents=True, exist_ok=True)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    if file_path.suffix:
+        file_path.touch(exist_ok=True)
 
 def get_working_files(project_name : str):
     """
-    Get the working files paths and names, but does not create the files, only the directory paths
+    Get the working files paths and names and create the files
     """
-    create_file_path(ConfigPath.wipFilePath)
-    create_file_path(ConfigPath.saveFilePath)
-    return ConfigPath.wipFilePath / project_name + ".json", ConfigPath.saveFilePath + project_name + ".json"
+    wip_file_path = ConfigPath.wipFilePath / (project_name + ".json")
+    save_file_path = ConfigPath.saveFilePath / (project_name + ".json")
+    create_file_path(wip_file_path)
+    create_file_path(save_file_path)
+    return wip_file_path, save_file_path
 
 def get_tracking_file(project_name : str):
     """
-    Get the tracking file path and name, but does not create the file, only the directory path
+    Get the tracking file path and name and create the file
     """
-    create_file_path(ConfigPath.trackingFilePath)
-    return ConfigPath.trackingFilePath / project_name + ".csv"
+    tracking_file_path = ConfigPath.trackingFilePath / (project_name + ".json")
+    create_file_path(tracking_file_path)
+    return tracking_file_path
 
 def reset_tracking_file(tracking_file_path: Path):
     """
-    Reset the tracking file if existing, create file if not existing
+    Reset the tracking file if existing
     :param tracking_file_path:
     """
 
-    if tracking_file_path.exists():
+    if tracking_file_path.stat().st_size != 0:
         if not ask_yes_no("A tracking file of that pipeline is already existing. Do you want to reset its content ?"):
             print("Ok, bye.")
             exit()
-    else:
-        tracking_file_path.mkdir(parents=True, exist_ok=True)
-        tracking_file_path.touch()
 
-    FileWriter.replace_content(tracking_file_path, "exec_identifier,input_id,get_from_Shanoir,execution_requested,execution_start_time,execution_workflow_id,execution_status,execution_end_time")
+    FileWriter.replace_content(tracking_file_path, "exec_identifier,input_id,get_from_Shanoir,executable,execution_requested,execution_start_time,execution_workflow_id,execution_status,execution_end_time")

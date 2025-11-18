@@ -1,8 +1,9 @@
 import uuid
+from typing import Dict
 
 import requests
 
-from src import get, download_file, post
+from src.API.api_service import get, download_file, post
 from src.utils.log_utils import get_logger
 
 """
@@ -94,9 +95,10 @@ def find_dataset_ids_by_subject_id(subject_id):
     return response.json()
 
 
-def find_datasets_by_examination_id(examination_id, output : bool = False):
+def find_datasets_by_examination_id(examination_id, output : bool = False) :
     """ Get all datasets from subjet [subject_id]
     :param examination_id:
+    :param output:
     :return:
     """
     logger.info(f"Getting datasets from examination {examination_id}")
@@ -106,9 +108,8 @@ def find_datasets_by_examination_id(examination_id, output : bool = False):
         response = get(path, params = {"output":output})
         return response.json()
     except requests.exceptions.RequestException as e:
-        logger.error("Error for exam %s : %s" %(examination_id, str(e.response.json().get("message"))))
-        return {}
-
+        logger.error(f"Error for exam {examination_id}")
+        raise
 
 def find_dataset_ids_by_subject_id_study_id(subject_id, study_id):
     """ Get all datasets from subject [subject_id] and study [study_id]

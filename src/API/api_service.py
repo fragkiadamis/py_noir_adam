@@ -2,14 +2,13 @@ import logging
 import os
 import getpass
 import zipfile
-from pathlib import Path
 import re
-from tqdm import tqdm
-
 import requests
 
-from src import APIContext
+from pathlib import Path
+from tqdm import tqdm
 from src.security.authentication_service import ask_access_token, refresh_access_token
+from src.utils.config_utils import APIConfig
 from src.utils.log_utils import get_logger
 
 logger = get_logger()
@@ -26,17 +25,17 @@ def rest_request(method: str, path, **kwargs):
     :param kwargs:
     :return:
     """
-    url = APIContext.scheme + "://" + APIContext.domain + "/shanoir-ng" + path
+    url = APIConfig.scheme + "://" + APIConfig.domain + "/shanoir-ng" + path
 
     response = None
     if method == 'get':
-        response = requests.get(url, proxies=APIContext.proxies, verify=APIContext.verify, timeout=APIContext.timeout,
+        response = requests.get(url, proxies=APIConfig.proxies, verify=APIConfig.verify, timeout=APIConfig.timeout,
                                 **kwargs)
     elif method == 'post':
-        response = requests.post(url, proxies=APIContext.proxies, verify=APIContext.verify, timeout=APIContext.timeout,
+        response = requests.post(url, proxies=APIConfig.proxies, verify=APIConfig.verify, timeout=APIConfig.timeout,
                                  **kwargs)
     elif method == 'put':
-        response = requests.put(url, proxies=APIContext.proxies, verify=APIContext.verify, timeout=APIContext.timeout,
+        response = requests.put(url, proxies=APIConfig.proxies, verify=APIConfig.verify, timeout=APIConfig.timeout,
                                 **kwargs)
     else:
         logger.error('Error: unimplemented request type')
@@ -46,7 +45,7 @@ def rest_request(method: str, path, **kwargs):
 
 # perform a request on the given path, asks for a new access token if the current one is outdated
 def request(method, path, raise_for_status=True, content_type=None, **kwargs):
-    """ Authenticate / Re-authenticate user [APIContext.username] and execute a [method] HTTP query to [path] endpoint
+    """ Authenticate / Re-authenticate user [APIConfig.username] and execute a [method] HTTP query to [path] endpoint
     :param method:
     :param path:
     :param raise_for_status:
@@ -54,7 +53,7 @@ def request(method, path, raise_for_status=True, content_type=None, **kwargs):
     :param kwargs:
     :return:
     """
-    if APIContext.access_token is None:
+    if APIConfig.access_token is None:
         ask_access_token()
 
     headers = get_http_headers(content_type)
@@ -73,11 +72,11 @@ def request(method, path, raise_for_status=True, content_type=None, **kwargs):
 
 
 def get_http_headers(content_type=None):
-    """ Set HTTP headers with [APIContext.access_token]
+    """ Set HTTP headers with [APIConfig.access_token]
     :return:
     """
     headers = {
-        'Authorization': 'Bearer ' + APIContext.access_token,
+        'Authorization': 'Bearer ' + APIConfig.access_token,
         'content-type': 'application/json' if content_type is None else content_type,
         'charset': 'utf-8'
     }
@@ -183,8 +182,8 @@ def log_response(e):
 
 
 def initialize(args):
-    APIContext.domain = args.domain
-    APIContext.username = args.username
+    APIConfig.domain = args.domain
+    APIConfig.username = args.username
 
     verify = args.certificate if hasattr(args, 'certificate') and args.certificate != '' else True
 
@@ -238,11 +237,11 @@ def initialize(args):
             # 'https': 'https://' + proxy_url,
         }
 
-    APIContext.proxies = proxies
-    APIContext.verify = verify
-    APIContext.timeout = args.timeout
-    APIContext.output_folder = args.output_folder
+    APIConfig.proxies = proxies
+    APIConfig.verify = verify
+    APIConfig.timeout = args.timeout
+    APIConfig.output_folder = args.output_folder
 
 def reset_token():
-    if APIContext.access_token is None:
+    if APIConfig.access_token is None:
         refresh_access_token()

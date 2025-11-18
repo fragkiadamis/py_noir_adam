@@ -1,3 +1,4 @@
+import os
 import shutil
 import json
 import threading
@@ -19,6 +20,8 @@ nb_processed_items = 0
 processed_item_ids = []
 saveFile = ""
 start_events = {}
+monitoring_lock = threading.Lock()
+file_lock = threading.Lock()
 
 def check_pause_schedule(pause_message_event):
     current_hour = time.localtime(time.time()).tm_hour
@@ -35,27 +38,24 @@ def thread_execution_with_start_signal(working_file: Path, item, start_event):
     start_event.set()
     thread_execution(working_file, item)
 
-def manage_threading_execution(working_file):
+def manage_threading_execution(working_file: Path):
     global items
     global nb_processed_items
     global processed_item_ids
-
+    logger.info("Number of planned executions : " + str(len(items) - 1))
     logger.info("Starting new executions...")
-
     with ThreadPoolExecutor(max_workers=ExecutionConfig.max_thread) as executor:
         for item in items[1:]:
             start_event = threading.Event()
-            start_events[item] = start_event
+            start_events[item["identifier"]] = start_event
             executor.submit(thread_execution_with_start_signal, working_file, item, start_event)
             start_event.wait()
             time.sleep(1) # Required, to avoid concurrency issues
 
     logger.info("Executions ended.")
 
-def thread_execution(working_file:Path, item: dict):
-    global nb_processed_items, processed_item_ids
-    monitoring_lock = threading.Lock()
-    file_lock = threading.Lock()
+def thread_execution(working_file: Path, item: dict):
+    global nb_processed_items, processed_item_ids, monitoring_lock, file_lock
     pause_message_event = threading.Event()
     check_pause_schedule(pause_message_event)
 
@@ -63,8 +63,9 @@ def thread_execution(working_file:Path, item: dict):
         execution = create_execution(item)
         if execution['id'] is not None:
             monitoring = get_execution_monitoring(execution["id"])
-            FileWriter.update_content_first_matching_line_start(ConfigPath.trackingFilePath, execution["id"], ",,,true," + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "," + str(monitoring['identifier']) + ",Running,", True)
-            logger.info("Execution " + str(execution['id']) + ", " + str(monitoring['identifier']) + " is created.")
+            with monitoring_lock:
+                FileWriter.update_content_first_matching_line_start(ConfigPath.trackingFilePath, str(item["identifier"]), ",,,,true," + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "," + str(monitoring['identifier']) + ",Running,", True)
+            logger.info("Execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']) + " is created.")
             status = '"Running"'
             count_down = 12
 
@@ -83,25 +84,24 @@ def thread_execution(working_file:Path, item: dict):
 
                 count_down -= 1
                 if count_down == 1 and status == '"Running"':
-                    logger.info("Status for execution " + str(execution["id"]) + " is " + status)
+                    logger.info("Status for execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']) + " is " + status)
                     count_down = 12
 
+            if status == '"Finished"' :
+                logger.info("Success for execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']))
+            else :
+                logger.info("Failure for execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']))
             with monitoring_lock:
-                if status == 'Finished' :
-                    logger.info("Success for execution" + str(execution["id"]))
-                else :
-                    logger.info("Failure for execution" + str(execution["id"]))
-
-                FileWriter.update_content_first_matching_line_start(ConfigPath.trackingFilePath, execution["id"], ",,,,,," + status + "," + datetime.now().strftime("%Y-%m-%d %H:%M:%S"), True)
-                logger.info("%s out of %s items processed." % (nb_processed_items + 1, total_items_to_process))
+                FileWriter.update_content_first_matching_line_start(ConfigPath.trackingFilePath, str(item["identifier"]), ",,,,,,," + status.replace("\"","") + "," + datetime.now().strftime("%Y-%m-%d %H:%M:%S"), True)
+            logger.info("%s out of %s items processed." % (nb_processed_items + 1, total_items_to_process))
     except:
         with monitoring_lock:
-            logger.debug("Exception for execution " + str(execution["id"] + ", " + str(item["identifier"])))
-            FileWriter.update_content_first_matching_line_start(ConfigPath.trackingFilePath, execution["id"], ",,,,,," + "PyNoir_exception" + ",", True)
+            logger.error("Exception for execution " + str(item["identifier"] + ", " + str(monitoring['identifier'])))
+            FileWriter.update_content_first_matching_line_start(ConfigPath.trackingFilePath, item["identifier"], ",,,,,,," + "PyNoir_exception" + ",", True)
             logger.info("%s out of %s items processed." % (nb_processed_items + 1, total_items_to_process))
 
+    item_processed_increment(item)
     with file_lock:
-        item_processed_increment(item)
         FileWriter.replace_content(working_file, json.dumps(items))
         shutil.copy(working_file.name, saveFile)
 
@@ -113,7 +113,6 @@ def start_executions(working_file: Path, resume: bool = False):
     global saveFile
 
     items = read_items_from_json_file(working_file, resume)
-    items = items.sort(key=lambda x: x["identifier"])
     nb_processed_items = int(items[0]["nb_processed_items"])
     processed_item_ids = list(items[0]["processed_item_ids"])
     total_items_to_process = len(processed_item_ids) + len(items) - 1
@@ -123,10 +122,9 @@ def start_executions(working_file: Path, resume: bool = False):
     initial_file = ConfigPath.saveFilePath / ("initial_" + working_file.name)
     shutil.copy(working_file, initial_file)
 
-    with open(working_file, "w") as working_content:
-        manage_threading_execution(working_content)
-    Path.unlink(working_file)
-    Path.unlink(save_file)
+    manage_threading_execution(working_file)
+    os.unlink(working_file)
+    os.unlink(save_file)
 
 def read_items_from_json_file(working_file: Path, resume: bool):
     try:

@@ -2,9 +2,6 @@ import configparser
 import json
 
 from pathlib import Path
-from src.utils.log_utils import get_logger
-
-logger = get_logger()
 
 def load_config(**kwargs: str) -> None:
     config = CustomConfigParser()
@@ -27,6 +24,12 @@ class ConfigPath(object):
     Configuration class for project configuration
     """
     rootPath: Path = None
+    inputPath: Path = None
+    outputPath: Path = None
+    trackingFilePath: Path = None
+    resourcesPath: Path = None
+    wipFilePath: Path = None
+    saveFilePath: Path = None
 
     @classmethod
     def init(cls, config: CustomConfigParser):
@@ -34,18 +37,18 @@ class ConfigPath(object):
         cls.inputPath = cls.rootPath / "input"
         cls.outputPath = cls.rootPath / "output"
         cls.trackingFilePath = cls.outputPath / "tracking_file"
-        cls.resourcePath = cls.rootPath / "resource"
-        cls.wipFilePath = cls.resourcePath / "WIP_file"
-        cls.saveFilePath = cls.resourcePath / "save_file"
+        cls.resourcesPath = cls.rootPath / "resource"
+        cls.wipFilePath = cls.resourcesPath / "WIP_file"
+        cls.saveFilePath = cls.resourcesPath / "save_file"
 
     def __init__(self, config: CustomConfigParser):
         self.rootPath = Path(config.get('Config', 'rootPath'))
         self.inputPath = self.rootPath / "input"
         self.outputPath = self.rootPath / "output"
         self.trackingFilePath = self.outputPath / "tracking_file"
-        self.resourcePath = self.rootPath / "resource"
-        self.wipFilePath = self.resourcePath / "WIP_file"
-        self.saveFilePath = self.resourcePath / "save_file"
+        self.resourcesPath = self.rootPath / "resources"
+        self.wipFilePath = self.resourcesPath / "WIP_file"
+        self.saveFilePath = self.resourcesPath / "save_file"
 
 class APIConfig(object):
     """
