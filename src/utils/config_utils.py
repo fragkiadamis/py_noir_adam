@@ -10,7 +10,7 @@ def load_config(**kwargs: str) -> None:
     config = CustomConfigParser()
     config.read(Path("config/config.conf"))
 
-    Config.init(config)
+    ConfigPath.init(config)
     APIConfig.init(config)
     ExecutionConfig.init(config)
     OrthancConfig.init(config)
@@ -22,7 +22,7 @@ class CustomConfigParser(configparser.ConfigParser):
             return None
         return value
 
-class Config(object):
+class ConfigPath(object):
     """
     Configuration class for project configuration
     """
@@ -33,13 +33,19 @@ class Config(object):
         cls.rootPath = Path(config.get('Config', 'rootPath'))
         cls.inputPath = cls.rootPath / "input"
         cls.outputPath = cls.rootPath / "output"
+        cls.trackingFilePath = cls.outputPath / "tracking_file"
         cls.resourcePath = cls.rootPath / "resource"
+        cls.wipFilePath = cls.resourcePath / "WIP_file"
+        cls.saveFilePath = cls.resourcePath / "save_file"
 
     def __init__(self, config: CustomConfigParser):
         self.rootPath = Path(config.get('Config', 'rootPath'))
         self.inputPath = self.rootPath / "input"
         self.outputPath = self.rootPath / "output"
+        self.trackingFilePath = self.outputPath / "tracking_file"
         self.resourcePath = self.rootPath / "resource"
+        self.wipFilePath = self.resourcePath / "WIP_file"
+        self.saveFilePath = self.resourcePath / "save_file"
 
 class APIConfig(object):
     """

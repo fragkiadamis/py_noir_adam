@@ -1,7 +1,7 @@
 import typer
 
 from src.API.api_service import post
-from src.utils.config_utils import Config
+from src.utils.config_utils import ConfigPath
 from src.utils.download_utils import start_download
 from src.utils.log_utils import get_logger
 
@@ -30,7 +30,7 @@ def execute() -> None:
     """
     Run the output extraction
     """
-    with open(Config.inputPath / "input.json", "r") as file:
+    with open(ConfigPath.inputPath / "input.json", "r") as file:
         response = post("/datasets/datasetProcessing/complexMassiveDownload", data = file, stream=True)
     if response.status_code == 200 :
         start_download(response, "Output_extraction")

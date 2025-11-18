@@ -1,20 +1,21 @@
 import json
-from pathlib import Path
-from typing import re, Optional, Sequence, Any
-
 import loguru
 import pandas as pd
 import typer
+import re
 
+from pathlib import Path
+from typing import Optional, Sequence, Any
 from src.execution.execution_init_service import init_executions, resume_executions
-from src.utils.config_utils import APIConfig, Config
-from src.utils.log_utils import get_logger
+from src.utils.config_utils import APIConfig, ConfigPath
+from src.utils.file_writer import FileWriter
+from src.utils.log_utils import set_logger
 from datetime import datetime, timezone
-from src.utils.file_utils import get_items_from_input_file, get_working_files
+from src.utils.file_utils import get_items_from_input_file, get_working_files, get_tracking_file, reset_tracking_file
 from src.shanoir_object.dataset.dataset_service import find_datasets_by_examination_id
 
 app = typer.Typer()
-logger = get_logger("sims")
+logger = set_logger("sims")
 
 @app.callback()
 def explain():
@@ -39,11 +40,17 @@ def execute() -> None:
     Run the SIMS processing pipeline
     """
     working_file_path, save_file_path = get_working_files("SIMS")
+    tracking_file_path = get_tracking_file("SIMS")
 
-    if not (save_file_path).exists():
-        _ = init_executions(working_file_path, generate_json())
+    FileWriter.open_files(tracking_file_path)
+
+    if not save_file_path.exists():
+        reset_tracking_file(tracking_file_path)
+        init_executions(working_file_path, generate_json())
     else:
-        _ = resume_executions(working_file_path, save_file_path)
+        resume_executions(working_file_path, save_file_path)
+
+    FileWriter.close_all()
 
 def generate_json():
     identifier = 0
@@ -54,7 +61,16 @@ def generate_json():
     logger.info("Getting datasets, building json content... ")
 
     for exam_id in exam_ids_to_exec:
-        datasets = find_datasets_by_examination_id(exam_id)
+        identifier += 1
+        try:
+            datasets = find_datasets_by_examination_id(exam_id)
+        except:
+
+            logger.error("An error occurred while downloading examination {} from Shanoir", exam_id)
+            FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",false,,,,")
+            continue
+
+        FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",true,,,,")
 
         execution = {
             "identifier":identifier,
@@ -76,7 +92,6 @@ def generate_json():
             ]
         }
         executions.append(execution)
-        identifier = identifier + 1
 
     return executions
 
@@ -85,7 +100,7 @@ def format() -> None:
     """
     Format the SIMS outputs
     """
-    format_all_JSON(Config.inputPath  / "dataset" )
+    format_all_JSON(ConfigPath.inputPath / "dataset")
 
 def format_all_JSON(input_dir_path: str) -> None:
     """Format each JSON output and concat them into a single TSV file."""
@@ -94,7 +109,7 @@ def format_all_JSON(input_dir_path: str) -> None:
     formatted_dfs = [format_output_to_tsv_by_serie(json_path) for json_path in json_paths]
 
     df = pd.concat(formatted_dfs)
-    df.to_csv(Config.outputPath / "formatted_output_SIMS.tsv", sep='\t', index=False)
+    df.to_csv(ConfigPath.outputPath / "formatted_output_SIMS.tsv", sep='\t', index=False)
 
 def list_output_json_available(input_dir_path: str) -> list[Path]:
     """List available JSON output available in input_dir_path."""

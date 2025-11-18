@@ -28,4 +28,4 @@ def set_logger(project_name: str):
     return logger
 
 def get_logger():
-    return logger or set_logger()
+    return logger

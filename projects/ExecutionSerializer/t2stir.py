@@ -1,14 +1,15 @@
 import typer
 
 from src.execution.execution_init_service import init_executions, resume_executions
-from src.utils.config_utils import APIConfig
-from src.utils.log_utils import get_logger
+from src.utils.config_utils import APIConfig, ConfigPath
+from src.utils.file_writer import FileWriter
+from src.utils.log_utils import set_logger
 from datetime import datetime, timezone
-from src.utils.file_utils import get_items_from_input_file, get_working_files
+from src.utils.file_utils import get_items_from_input_file, get_working_files, get_tracking_file, reset_tracking_file
 from src.shanoir_object.dataset.dataset_service import find_datasets_by_examination_id
 
 app = typer.Typer()
-logger = get_logger("t2stir")
+logger = set_logger("t2stir")
 
 @app.callback()
 def explain():
@@ -31,11 +32,17 @@ def execute() -> None:
     Run the FLAIR processing pipeline
     """
     working_file_path, save_file_path = get_working_files("Comete_T2STIR")
+    tracking_file_path = get_tracking_file("Comete_T2STIR")
 
-    if not (save_file_path).exists():
-        _ = init_executions(working_file_path, generate_json())
+    FileWriter.open_files(tracking_file_path)
+
+    if not save_file_path.exists():
+        reset_tracking_file(tracking_file_path)
+        init_executions(working_file_path, generate_json())
     else:
-        _ = resume_executions(working_file_path, save_file_path)
+        resume_executions(working_file_path, save_file_path)
+
+    FileWriter.close_all()
 
 def generate_json():
     examinations = dict()
@@ -47,7 +54,13 @@ def generate_json():
     logger.info("Getting datasets, building json content... ")
 
     for exam_id in exam_ids_to_exec:
-        datasets = find_datasets_by_examination_id(exam_id)
+        try:
+            datasets = find_datasets_by_examination_id(exam_id)
+        except:
+            logger.error("An error occurred while downloading examination {} from Shanoir", exam_id)
+            identifier += 1
+            FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",false,,,,")
+            continue
 
         for dataset in datasets:
             ds_id = dataset["id"]
@@ -58,17 +71,21 @@ def generate_json():
                 examinations[exam_id]["studyId"] = study_id
                 examinations[exam_id]["T2"] = []
                 examinations[exam_id]["STIR"] = []
+                examinations[exam_id]["identifier"] = []
 
             if "T2DSAGSTIR" == dataset["updatedMetadata"]["name"]:
                 examinations[exam_id]["STIR"].append(ds_id)
             elif "T2DSAGT2" == dataset["updatedMetadata"]["name"]:
+                identifier += 1
+                FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",true,,,,")
                 examinations[exam_id]["T2"].append(ds_id)
+                examinations[exam_id]["identifier"].append(identifier)
 
     for key, value in examinations.items():
         if value["T2"] and value["STIR"] :
-            for t2 in value["T2"]:
+            for i, t2 in enumerate(value["T2"]):
                 execution = {
-                    "identifier":identifier,
+                    "identifier":value["identifier"][i],
 
                     "name": "comete_moelle_01_exam_{}_{}".format(key,
                                                                  datetime.now(timezone.utc).strftime('%F_%H%M%S%f')[:-3]),
@@ -98,6 +115,5 @@ def generate_json():
                     "converterId": 2
                 }
                 executions.append(execution)
-            identifier = identifier + 1
 
     return executions
