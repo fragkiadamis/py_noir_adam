@@ -21,7 +21,7 @@ config/config.conf
 # Resources
 input
 output
-resource
+resources
 
 # Patient information
 *.csv
