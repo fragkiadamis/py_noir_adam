@@ -11,7 +11,7 @@ def init_serialization(
         working_file_path: Path,
         save_file_path: Path,
         tracking_file_path: Path,
-        callback: Callable[[Optional[Path]], Tuple[List[Dict], List[str]] | None],
+        callback: Callable[[Optional[Path]], Tuple[List[Dict], List[str]] | List[Dict]],
         kwargs: Optional[Dict] = None
 ) -> None:
     FileWriter.open_files(tracking_file_path, working_file_path)
