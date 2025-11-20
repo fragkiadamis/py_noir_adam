@@ -29,7 +29,7 @@ def query_datasets(subject_name_list: List) -> defaultdict[Any, defaultdict[Any,
     query.search_text = query.search_text + ") AND datasetName: *TOF*"
     result = solr_search(query).json()
 
-    subjects_datasets = defaultdict(lambda: defaultdict(list))
+    subjects_datasets = defaultdict(lambda: defaultdict(List))
     for item in result["content"]:
         subjects_datasets[item.get("subjectName")][str(item.get("examinationId"))].append(item)
 
@@ -49,7 +49,7 @@ def find_oldest_exams(subjects_datasets: defaultdict[Any, defaultdict[Any, List]
                     oldest_exam = exam
                     oldest_date = exam_date
 
-            for exam_id in list(exam_items.keys()):
+            for exam_id in List(exam_items.keys()):
                 if exam_id != str(oldest_exam["id"]):
                     del exam_items[exam_id]
 
@@ -57,7 +57,7 @@ def find_oldest_exams(subjects_datasets: defaultdict[Any, defaultdict[Any, List]
 def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict[Any, List]], download_dir: Path) -> List:
     filtered_datasets = []
     for idx, (subject, exam_items) in enumerate(subjects_datasets.items(), start=1):
-        for key in list(exam_items.keys()):
+        for key in List(exam_items.keys()):
             for ds in exam_items[key][:]:
                 subject_download_subdir = download_dir / subject / ds["id"]
                 subject_download_subdir.mkdir(parents=True, exist_ok=True)
@@ -148,7 +148,7 @@ def execute() -> None:
     working_file_path, save_file_path = get_working_files("ecan")
     tracking_file_path = get_tracking_file("ecan")
 
-    init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json)
+    init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json, {"download_dir": Path()})
 
 
 @app.command()

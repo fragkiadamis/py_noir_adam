@@ -5,12 +5,12 @@ import typer
 import re
 
 from pathlib import Path
-from typing import Optional, Sequence, Any
+from typing import Optional, Sequence, Any, List, Dict, Set
 from src.utils.config_utils import APIConfig, ConfigPath
 from src.utils.file_writer import FileWriter
 from src.utils.log_utils import get_logger
 from datetime import datetime, timezone
-from src.utils.file_utils import get_items_from_input_file, get_working_files, get_tracking_file, reset_tracking_file
+from src.utils.file_utils import get_items_from_input_file, get_working_files, get_tracking_file
 from src.shanoir_object.dataset.dataset_service import find_datasets_by_examination_id
 from src.utils.serializer_utils import init_serialization
 
@@ -44,7 +44,8 @@ def execute() -> None:
 
     init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json)
 
-def generate_json() -> list[dict]:
+
+def generate_json() -> List[Dict]:
     identifier = 0
     executions = []
 
@@ -86,6 +87,7 @@ def generate_json() -> list[dict]:
 
     return executions
 
+
 @app.command()
 def format() -> None:
     """
@@ -93,7 +95,8 @@ def format() -> None:
     """
     format_all_JSON(ConfigPath.inputPath / "dataset")
 
-def format_all_JSON(input_dir_path: str) -> None:
+
+def format_all_JSON(input_dir_path: Path) -> None:
     """Format each JSON output and concat them into a single TSV file."""
 
     json_paths = list_output_json_available(input_dir_path)
@@ -102,7 +105,8 @@ def format_all_JSON(input_dir_path: str) -> None:
     df = pd.concat(formatted_dfs)
     df.to_csv(ConfigPath.outputPath / "formatted_output_SIMS.tsv", sep='\t', index=False)
 
-def list_output_json_available(input_dir_path: str) -> list[Path]:
+
+def list_output_json_available(input_dir_path: Path) -> List[Path]:
     """List available JSON output available in input_dir_path."""
     result = []
     root = Path(input_dir_path)
@@ -114,6 +118,7 @@ def list_output_json_available(input_dir_path: str) -> list[Path]:
 
     return sorted(result)
 
+
 def format_output_to_tsv_by_serie(json_path: Path) -> Optional[pd.DataFrame]:
     """Convert output_json to a pandas dataframe output"""
 
@@ -122,7 +127,7 @@ def format_output_to_tsv_by_serie(json_path: Path) -> Optional[pd.DataFrame]:
 
     if len(content['series']) == 0:
         loguru.logger.warning(f"JSON contains no volume: {json_path}")
-        return
+        return None
 
     # Split the series list into multiple lines and columns using normalize
     df = pd.json_normalize(content['series'])
@@ -198,13 +203,14 @@ def format_output_to_tsv_by_serie(json_path: Path) -> Optional[pd.DataFrame]:
 
     return df
 
+
 def list_unique_str_reduce(elements: Sequence[Any]) -> Sequence[Any]:
     """
     Convert a list of element to a unique sorted element list of str.
     Ignore empty strings and pd.NA elements.
     If the result is a list of one element, convert it to a string.
     """
-    agg_list = sorted(list(set([str(e) for e in elements if (e != "") and (e is not None)])))
+    agg_list = sorted(List(Set([str(e) for e in elements if (e != "") and (e is not None)])))
     if len(agg_list) == 0:
         return ""
     elif len(agg_list) == 1:

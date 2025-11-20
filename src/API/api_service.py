@@ -3,6 +3,8 @@ import os
 import getpass
 import zipfile
 import re
+from typing import List
+
 import requests
 
 from pathlib import Path
@@ -204,7 +206,7 @@ def initialize(args):
         if hasattr(args, 'configuration_folder') and args.configuration_folder:
             configuration_folder = Path(args.configuration_folder)
         else:
-            cfs = sorted(list(Path.home().glob('.su_v*')))
+            cfs = sorted(List(Path.home().glob('.su_v*')))
             configuration_folder = cfs[-1] if len(cfs) > 0 else Path().home()
 
         proxy_settings = configuration_folder / 'proxy.properties'

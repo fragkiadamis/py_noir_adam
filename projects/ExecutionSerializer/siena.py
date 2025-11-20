@@ -1,3 +1,5 @@
+from typing import List, Dict
+
 import typer
 
 from src.utils.config_utils import APIConfig, ConfigPath
@@ -36,8 +38,8 @@ def execute() -> None:
 
     init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json)
 
-def generate_json() -> list[dict]:
-    examinations = dict()
+def generate_json() -> List[Dict]:
+    examinations = Dict()
     identifier = 0
     executions = []
 

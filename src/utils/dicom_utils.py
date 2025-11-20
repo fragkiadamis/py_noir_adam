@@ -4,9 +4,8 @@ from pathlib import Path
 from typing import List, Dict
 
 import pydicom
-from pynetdicom import AE, StoragePresentationContexts, evt
+from pynetdicom import AE, StoragePresentationContexts
 
-from src.orthanc.orthanc_config import OrthancConfig
 from src.orthanc.orthanc_service import set_orthanc_study_label, upload_study_to_orthanc, \
     delete_orthanc_study, get_orthanc_patients, get_orthanc_patient_meta, get_all_orthanc_studies, \
     get_study_orthanc_id_by_uid, download_orthanc_study, get_orthanc_study_metadata, get_orthanc_series_metadata, \
@@ -95,7 +94,7 @@ def inspect_and_fix_study_tags(input_dir: str) -> None:
                     ds.FrameOfReferenceUID = good_uid
                     ds.save_as(file_path)
         else:
-            good_uid = list(uids.keys())[0]
+            good_uid = List(uids.keys())[0]
 
         # Fix the SEG as well
         seg = pydicom.dcmread(seg_file)

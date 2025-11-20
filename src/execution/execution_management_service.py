@@ -7,6 +7,8 @@ import time
 from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
+from typing import List
+
 from src.execution.execution_service import create_execution, get_execution_status, get_execution_monitoring
 from src.utils.config_utils import ExecutionConfig, ConfigPath
 from src.utils.file_writer import FileWriter
@@ -114,7 +116,7 @@ def start_executions(working_file: Path, resume: bool = False):
 
     items = read_items_from_json_file(working_file, resume)
     nb_processed_items = int(items[0]["nb_processed_items"])
-    processed_item_ids = list(items[0]["processed_item_ids"])
+    processed_item_ids = List(items[0]["processed_item_ids"])
     total_items_to_process = len(processed_item_ids) + len(items) - 1
 
     save_file = ConfigPath.saveFilePath / working_file.name

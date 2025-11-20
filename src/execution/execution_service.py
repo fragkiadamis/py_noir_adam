@@ -1,5 +1,6 @@
 import json
 import time
+from typing import List
 
 from src.API.api_service import get, post
 from src.utils.log_utils import get_logger
@@ -24,7 +25,7 @@ def get_execution_status(execution_monitoring_id:  str):
     response = get(path)
     return response.text
 
-def get_execution_monitoring(execution_id: str) -> list:
+def get_execution_monitoring(execution_id: str) -> List | None:
     """ Get ExecutionMonitoring relative to an execution [execution_id]
     :param execution_id:
     :return: json
@@ -44,3 +45,4 @@ def get_execution_monitoring(execution_id: str) -> list:
                 time.sleep(2)
             else:
                 raise
+    return None

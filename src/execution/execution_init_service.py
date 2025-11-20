@@ -3,17 +3,18 @@ import shutil
 import sys
 import re
 from pathlib import Path
+from typing import List, Dict
 
 from src.API.api_service import reset_token
 from src.execution.execution_management_service import start_executions
-from src.utils.config_utils import APIConfig, ConfigPath
+from src.utils.config_utils import APIConfig
 from src.utils.file_writer import FileWriter
 from src.utils.log_utils import get_logger
 
 logger = get_logger()
-json_content: list[dict] = []
+json_content: List[Dict] = []
 
-def init_executions(working_file: Path, content_to_process: list[dict]=None):
+def init_executions(working_file: Path, content_to_process: List[Dict]=None):
     if len(content_to_process) == 0:
         logger.info("There is nothing to process. Please verify the data transmitted to the init_executions() method.")
         sys.exit(1)
@@ -25,7 +26,7 @@ def resume_executions(working_file: Path, save_file: Path):
     update_token(working_file)
     return start_executions(working_file, True)
 
-def create_working_file(working_file: Path, content_to_process: list[dict]):
+def create_working_file(working_file: Path, content_to_process: List[Dict]):
     content_to_process.insert(0, dict(nb_processed_items=0, processed_item_ids=[]))
     FileWriter.replace_content(working_file, json.dumps(content_to_process))
 
