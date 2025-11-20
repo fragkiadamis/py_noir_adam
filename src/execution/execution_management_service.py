@@ -42,7 +42,7 @@ def manage_threading_execution(working_file: Path):
     global items
     global nb_processed_items
     global processed_item_ids
-    logger.info("Number of planned executions : " + str(len(items) - 1))
+    logger.info("Number of planned executions: " + str(len(items) - 1))
     logger.info("Starting new executions...")
     with ThreadPoolExecutor(max_workers=ExecutionConfig.max_thread) as executor:
         for item in items[1:]:
@@ -87,9 +87,9 @@ def thread_execution(working_file: Path, item: dict):
                     logger.info("Status for execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']) + " is " + status)
                     count_down = 12
 
-            if status == '"Finished"' :
+            if status == '"Finished"':
                 logger.info("Success for execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']))
-            else :
+            else:
                 logger.info("Failure for execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']))
             with monitoring_lock:
                 FileWriter.update_content_first_matching_line_start(ConfigPath.trackingFilePath, str(item["identifier"]), ",,,,,,," + status.replace("\"","") + "," + datetime.now().strftime("%Y-%m-%d %H:%M:%S"), True)

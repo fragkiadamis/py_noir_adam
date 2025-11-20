@@ -12,7 +12,7 @@ app = typer.Typer()
 logger = get_logger()
 
 @app.callback()
-def explain():
+def explain() -> None:
     """
     Siena project command-line interface.
     Commands:
@@ -36,7 +36,7 @@ def execute() -> None:
 
     init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json)
 
-def generate_json() -> list[dict] :
+def generate_json() -> list[dict]:
     examinations = dict()
     identifier = 0
     executions = []
@@ -71,7 +71,7 @@ def generate_json() -> list[dict] :
 
 
     for key, value in examinations.items():
-        if value["T1MPRAGE"] :
+        if value["T1MPRAGE"]:
             FileWriter.update_content_first_matching_line_start(ConfigPath.trackingFilePath, str(value["identifier"]),  ",,,true,,,,,", True)
 
             execution = {

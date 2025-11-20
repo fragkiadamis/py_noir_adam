@@ -18,7 +18,7 @@ app = typer.Typer()
 logger = get_logger()
 
 @app.callback()
-def explain():
+def explain() -> None:
     """
     SIMS project command-line interface.
     Commands:
@@ -44,7 +44,7 @@ def execute() -> None:
 
     init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json)
 
-def generate_json() -> list[dict] :
+def generate_json() -> list[dict]:
     identifier = 0
     executions = []
 
@@ -121,7 +121,7 @@ def format_output_to_tsv_by_serie(json_path: Path) -> Optional[pd.DataFrame]:
         content = json.load(file)
 
     if len(content['series']) == 0:
-        loguru.logger.warning(f"JSON contains no volume : {json_path}")
+        loguru.logger.warning(f"JSON contains no volume: {json_path}")
         return
 
     # Split the series list into multiple lines and columns using normalize

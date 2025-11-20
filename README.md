@@ -43,4 +43,4 @@ Modify the rootPath in config/config.conf according to your project path
 ```bash
 uv run main.py [your_app] [your_feature]
 ```
-An example : uv run main.py ecan execute  
+An example: uv run main.py ecan execute  

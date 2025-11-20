@@ -8,7 +8,7 @@ from src.utils.user_prompt import ask_yes_no
 
 
 def get_items_from_input_file(file_name: str):
-    """ Extract the items in the input file separated by (descending priorities) : ";" "," "\n"
+    """ Extract the items in the input file separated by (descending priorities): ";" "," "\n"
     :param file_name: the file name located in py_noir/input
     :return: a list of the extracted items
     """
@@ -18,7 +18,7 @@ def get_items_from_input_file(file_name: str):
         return content.replace("\n","").split(";")
     elif "," in content:
         return content.replace("\n","").split(",")
-    else :
+    else:
         return content.split("\n")
 
 def save_values_to_csv(values_list: List[str], column: str, csv_path: Path) -> None:
@@ -71,7 +71,7 @@ def create_file_path(file_path):
     if file_path.suffix:
         file_path.touch(exist_ok=True)
 
-def get_working_files(project_name : str):
+def get_working_files(project_name: str):
     """
     Get the working files paths and names and create the files
     """
@@ -81,7 +81,7 @@ def get_working_files(project_name : str):
     create_file_path(save_file_path)
     return wip_file_path, save_file_path
 
-def get_tracking_file(project_name : str):
+def get_tracking_file(project_name: str):
     """
     Get the tracking file path and name and create the file
     """
@@ -96,7 +96,7 @@ def reset_tracking_file(tracking_file_path: Path):
     """
 
     if tracking_file_path.stat().st_size != 0:
-        if not ask_yes_no("A tracking file of that pipeline is already existing. Do you want to reset its content ?"):
+        if not ask_yes_no("A tracking file of that pipeline is already existing. Do you want to reset its content?"):
             print("Ok, bye.")
             exit()
 

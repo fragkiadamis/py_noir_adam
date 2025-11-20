@@ -9,7 +9,7 @@ app = typer.Typer()
 logger = get_logger()
 
 @app.callback()
-def explain():
+def explain() -> None:
     """
     Tracking file download project command-line interface.
     Commands:
@@ -29,8 +29,8 @@ def execute()-> None:
 
     for pipeline_name in pipeline_names:
         response = get("/datasets/execution-monitoring/tracking-file", params = {"pipelineName":pipeline_name})
-        if response.status_code == 200 :
+        if response.status_code == 200:
             start_download(response, pipeline_name)
-        else :
+        else:
             logger.error("An error has occured while trying to get {} tracking file.", pipeline_name)
 

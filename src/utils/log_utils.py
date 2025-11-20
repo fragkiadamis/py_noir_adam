@@ -18,7 +18,7 @@ def set_logger(project_name: str):
             datefmt='%Y-%m-%d %H:%M:%S',
             level=logging.INFO
         )
-        formatter = logging.Formatter(fmt='%(asctime)s %(levelname)s : %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+        formatter = logging.Formatter(fmt='%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
         stdout_handler = logging.StreamHandler()
         stdout_handler.setFormatter(formatter)
         logging.getLogger().addHandler(stdout_handler)

@@ -8,7 +8,7 @@ app = typer.Typer()
 logger = get_logger()
 
 @app.callback()
-def explain():
+def explain() -> None:
     """
     Post-processing project command-line interface.
     Commands:
@@ -32,5 +32,5 @@ def execute() -> None:
 
     for pipeline_name in pipeline_names:
         response = get("/datasets/vip/postProcessing/", params = {"comment":pipeline_name})
-        if response.status_code != 200 :
+        if response.status_code != 200:
             logger.error("An error has occurred while trying to launch {} delayed post processings.", pipeline_name)

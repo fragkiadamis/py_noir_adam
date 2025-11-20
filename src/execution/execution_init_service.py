@@ -14,7 +14,7 @@ logger = get_logger()
 json_content: list[dict] = []
 
 def init_executions(working_file: Path, content_to_process: list[dict]=None):
-    if len(content_to_process) == 0 :
+    if len(content_to_process) == 0:
         logger.info("There is nothing to process. Please verify the data transmitted to the init_executions() method.")
         sys.exit(1)
     create_working_file(working_file, content_to_process)

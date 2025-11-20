@@ -9,14 +9,14 @@ app = typer.Typer()
 logger = get_logger()
 
 @app.callback()
-def explain():
+def explain() -> None:
     """
     CarminAPITest project command-line interface.
     Commands:
     --------
     * `execute` — runs the Carmin API test for shanoir resource_ids listed in `input/inputs.txt`:
         - Download the data relative to the existing resource_ids in the VIP format data reception.
-        - Resource ids are like : 1d18478f-9470-4be8-ba4b-21055f3b461b and can be found ine the processing_resource dataset table in ShanoirDB.
+        - Resource ids are like: 1d18478f-9470-4be8-ba4b-21055f3b461b and can be found ine the processing_resource dataset table in ShanoirDB.
     Usage:
     -----
         uv run main.py carmin execute
@@ -30,7 +30,7 @@ def execute():
     resource_ids = get_items_from_input_file("inputs.txt")
     for resource_id in resource_ids:
         response = get("/datasets/carmin-data/path/" + resource_id + "?action=content&converterId=5&format=dcm")
-        if response.status_code == 200 :
+        if response.status_code == 200:
             start_download(response, "CarminAPI_" + resource_id)
-        else :
+        else:
             logger.error("An error has occurred while trying to get resource {} from Shanoir.", resource_id)

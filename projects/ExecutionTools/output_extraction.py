@@ -9,7 +9,7 @@ app = typer.Typer()
 logger = get_logger()
 
 @app.callback()
-def explain():
+def explain() -> None:
     """
     Output extraction project command-line interface.
     Status:
@@ -34,7 +34,7 @@ def execute() -> None:
     """
     with open(ConfigPath.inputPath / "input.json", "r") as file:
         response = post("/datasets/datasetProcessing/complexMassiveDownload", data = file, stream=True)
-    if response.status_code == 200 :
+    if response.status_code == 200:
         start_download(response, "Output_extraction")
-    else :
+    else:
         logger.error("An error has occurred while trying to download processing outputs.")

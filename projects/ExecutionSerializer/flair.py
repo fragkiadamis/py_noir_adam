@@ -12,7 +12,7 @@ app = typer.Typer()
 logger = get_logger()
 
 @app.callback()
-def explain():
+def explain() -> None:
     """
     Comete_FLAIR project command-line interface.
     Commands:
@@ -36,7 +36,7 @@ def execute() -> None:
 
     init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json)
 
-def generate_json() -> list[dict] :
+def generate_json() -> list[dict]:
     examinations = dict()
     identifier = 0
     executions = []
@@ -75,7 +75,7 @@ def generate_json() -> list[dict] :
             FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",true,false,,,,,")
 
     for key, value in examinations.items():
-        if value["FLAIR"] :
+        if value["FLAIR"]:
             for i, flair in enumerate(value["FLAIR"]):
                 execution = {
                     "identifier":value["identifier"][i],
