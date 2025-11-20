@@ -148,7 +148,7 @@ def execute() -> None:
     working_file_path, save_file_path = get_working_files("ecan")
     tracking_file_path = get_tracking_file("ecan")
 
-    init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json, {"download_dir": Path()})
+    init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json, kwargs={"download_dir": Path()})
 
 
 @app.command()

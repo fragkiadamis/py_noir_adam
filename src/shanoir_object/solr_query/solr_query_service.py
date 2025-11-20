@@ -1,6 +1,6 @@
 import json
 
-from src import post
+from src.API.api_service import post
 from src.shanoir_object.solr_query.solr_query_model import SolrQuery
 
 """

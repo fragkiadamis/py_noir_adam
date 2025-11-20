@@ -5,7 +5,7 @@ import typer
 from src.utils.file_writer import FileWriter
 from src.utils.log_utils import get_logger
 from datetime import datetime, timezone
-from src.utils.file_utils import get_items_from_input_file, get_working_files, reset_tracking_file, get_tracking_file
+from src.utils.file_utils import get_items_from_input_file, get_working_files, get_tracking_file
 from src.shanoir_object.dataset.dataset_service import find_datasets_by_examination_id
 from src.utils.config_utils import APIConfig, ConfigPath
 from src.utils.serializer_utils import init_serialization
