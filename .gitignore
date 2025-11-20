@@ -16,7 +16,7 @@ wheels/
 .idea
 
 # API variables
-config/config.conf
+config.conf
 
 # Resources
 input

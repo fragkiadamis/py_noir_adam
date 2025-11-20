@@ -33,7 +33,7 @@ class ConfigPath(object):
 
     @classmethod
     def init(cls, config: CustomConfigParser):
-        cls.rootPath = Path(config.get('Config', 'rootPath'))
+        cls.rootPath = Path(config.get('Path', 'root'))
         cls.inputPath = cls.rootPath / "input"
         cls.outputPath = cls.rootPath / "output"
         cls.trackingFilePath = cls.outputPath / "tracking_file"
@@ -42,7 +42,7 @@ class ConfigPath(object):
         cls.saveFilePath = cls.resourcesPath / "save_file"
 
     def __init__(self, config: CustomConfigParser):
-        self.rootPath = Path(config.get('Config', 'rootPath'))
+        self.rootPath = Path(config.get('Path', 'root'))
         self.inputPath = self.rootPath / "input"
         self.outputPath = self.rootPath / "output"
         self.trackingFilePath = self.outputPath / "tracking_file"
