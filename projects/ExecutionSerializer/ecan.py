@@ -1,38 +1,24 @@
-import logging
-import shutil
-import os
+from datetime import datetime
 from pathlib import Path
+from typing import Any, List, Dict, Tuple
+from collections import defaultdict
 
+import typer
 import pydicom
 
-from typing import List, Any, Tuple
-from src.shanoir_object.dataset.dataset_service import download_dataset, get_examination
-from collections import defaultdict
-from datetime import datetime
+from src.shanoir_object.dataset.dataset_service import get_examination, download_dataset
 from src.shanoir_object.solr_query.solr_query_model import SolrQuery
 from src.shanoir_object.solr_query.solr_query_service import solr_search
 from src.utils.config_utils import APIConfig
-from src.utils.file_utils import get_values_from_csv
 from src.utils.log_utils import get_logger
+from src.utils.file_utils import get_working_files, get_tracking_file, get_values_from_csv
+from src.utils.serializer_utils import init_serialization
 
+app = typer.Typer()
 logger = get_logger()
 
 
 def query_datasets(subject_name_list: List) -> defaultdict[Any, defaultdict[Any, List]]:
-    """
-    Query SOLR for datasets corresponding to subject IDs from a CSV file.
-
-    Parameters
-    ----------
-    subject_name_list : List
-        Name of the subjects
-
-    Returns
-    -------
-    defaultdict[Any, List]
-        A mapping of examinationId → list of dataset entries.
-    """
-    # Query the datasets for each subject using SOLR
     logger.info("Searching for subjects' datasets...")
     query = SolrQuery()
     query.size = 100000
@@ -51,17 +37,6 @@ def query_datasets(subject_name_list: List) -> defaultdict[Any, defaultdict[Any,
 
 
 def find_oldest_exams(subjects_datasets: defaultdict[Any, defaultdict[Any, List]]) -> None:
-    """
-    Keep only the oldest examination for each subject.
-
-    Parameters
-    ----------
-    subjects_datasets : defaultdict[Any, defaultdict[Any, List]]
-
-    Returns
-    -------
-    None
-    """
     for subject, exam_items in subjects_datasets.items():
         if len(exam_items.keys()) > 1:
             oldest_exam, oldest_date = None, None
@@ -79,52 +54,26 @@ def find_oldest_exams(subjects_datasets: defaultdict[Any, defaultdict[Any, List]
                     del exam_items[exam_id]
 
 
-def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict[Any, List]], download_dir: str) -> List:
-    """
-    Download datasets for all subjects and filter based on slice criteria.
-
-    Parameters
-    ----------
-    subjects_datasets : defaultdict[Any, defaultdict[Any, List]]
-    download_dir: Path to the directory where the downloaded files will be saved.
-
-    Returns
-    -------
-    List
-        A list of filtered dataset entries that meet the slice count and thickness criteria.
-    """
+def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict[Any, List]], download_dir: Path) -> List:
     filtered_datasets = []
     for idx, (subject, exam_items) in enumerate(subjects_datasets.items(), start=1):
         for key in list(exam_items.keys()):
             for ds in exam_items[key][:]:
-                subject_download_subdir = os.path.join(download_dir, subject, ds["id"])
-                os.makedirs(subject_download_subdir, exist_ok=True)
+                subject_download_subdir = download_dir / subject / ds["id"]
+                subject_download_subdir.mkdir(parents=True, exist_ok=True)
                 download_dataset(ds["id"], "dcm", subject_download_subdir, unzip=True)
-                first_file = os.path.join(subject_download_subdir, os.listdir(subject_download_subdir)[0])
+                first_file = next(p for p in subject_download_subdir.iterdir() if p.is_file())
                 slice_thickness = pydicom.dcmread(first_file, stop_before_pixels=True)['SliceThickness'].value
-                num_of_slices = len(os.listdir(subject_download_subdir))
+                num_of_slices = sum(1 for p in subject_download_subdir.iterdir() if p.is_file() and p.suffix == ".dcm")
                 if num_of_slices > 50 and slice_thickness < 10:
                     filtered_datasets.append(ds)
                 else:
-                    shutil.rmtree(subject_download_subdir)
+                    subject_download_subdir.unlink(missing_ok=True)
 
     return filtered_datasets
 
 
-def generate_json(download_dir: str) -> Tuple[List[Any], List[Any]]:
-    """
-    Generate JSON configurations for RHU eCAN executions.
-
-    The function:
-    - Reads subject IDs from predefined CSV files.
-    - Queries and filters their datasets.
-    - Builds JSON payloads for each selected dataset.
-
-    Returns
-    -------
-    Tuple[List[Any], List[Any]
-        A tuple containing: executions, dataset_ids_list
-    """
+def generate_json(download_dir: Path) -> Tuple[List[Dict], List[str]]:
     csv_paths = [
         "py_noir_code/projects/RHU_eCAN/ican_subset.csv",
         "py_noir_code/projects/RHU_eCAN/angptl6_subset.csv"
@@ -161,5 +110,52 @@ def generate_json(download_dir: str) -> Tuple[List[Any], List[Any]]:
             })
 
             identifier += 1
-        logging.info(f"Finished processing {csv_path}.")
+        logger.info(f"Finished processing {csv_path}.")
     return executions, dataset_ids_list
+
+
+@app.callback()
+def explain() -> None:
+    """
+    eCAN project command-line interface.
+    Commands:
+    --------
+    * `execute` — runs the eCAN pipeline for subjects listed in `ecan_subject_id_list.csv` (ignored):
+        - Retrieves datasets for each subject ID.
+        - Filters the datasets (keep the oldest examination, >=50 slices, )
+        - Generates JSON executions for the SIMS/3.0 pipeline.
+        - Launches executions or resumes incomplete runs.
+        --- Auxiliary debug functions ---
+    * `populate` — populates the CHU Nantes Orthanc PACS with the processed output and the input datasets
+        - Download the processed output alongside the input dataset
+        - Inspect DICOM files for inconsistencies and fixes them
+        - Upload the processed output along the input dataset to an orthanc instance
+        - Assign labels to the orthanc studies
+    * `pacs` — Runs functions for the environment of CHU Nantes to inspect the Orthanc PACS
+    Usage:
+    -----
+        uv run main.py ecan execute
+        uv run main.py ecan populate
+        uv run main.py ecan pacs
+    """
+
+
+@app.command()
+def execute() -> None:
+    """
+    Run the eCAN processing pipeline
+    """
+    working_file_path, save_file_path = get_working_files("ecan")
+    tracking_file_path = get_tracking_file("ecan")
+
+    init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json)
+
+
+@app.command()
+def populate() -> None:
+    pass
+
+
+@app.command()
+def pacs() -> None:
+    pass
