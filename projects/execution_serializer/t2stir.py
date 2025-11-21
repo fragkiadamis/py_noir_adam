@@ -1,4 +1,5 @@
-from typing import List, Dict
+from pathlib import Path
+from typing import List, Dict, Optional
 
 import typer
 
@@ -38,7 +39,7 @@ def execute() -> None:
 
     init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json)
 
-def generate_json() -> List[Dict]:
+def generate_json(_: Optional[Path] = None) -> List[Dict]:
     examinations = Dict()
     identifier = 0
     executions = []
@@ -53,7 +54,7 @@ def generate_json() -> List[Dict]:
         except:
             logger.error("An error occurred while downloading examination " + exam_id + " from Shanoir")
             identifier += 1
-            FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",false,,,,,")
+            FileWriter.append_content(ConfigPath.tracking_file_path, str(identifier) + "," + str(exam_id) + ",false,,,,,")
             continue
 
         for dataset in datasets:
@@ -71,13 +72,13 @@ def generate_json() -> List[Dict]:
                 examinations[exam_id]["STIR"].append(ds_id)
             elif "T2DSAGT2" == dataset["updatedMetadata"]["name"]:
                 identifier += 1
-                FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",true,true,,,,,")
+                FileWriter.append_content(ConfigPath.tracking_file_path, str(identifier) + "," + str(exam_id) + ",true,true,,,,,")
                 examinations[exam_id]["T2"].append(ds_id)
                 examinations[exam_id]["identifier"].append(identifier)
 
         if not examinations[exam_id]["T2"]:
             identifier +=1
-            FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",true,false,,,,,")
+            FileWriter.append_content(ConfigPath.tracking_file_path, str(identifier) + "," + str(exam_id) + ",true,false,,,,,")
 
     for key, value in examinations.items():
         if value["T2"] and value["STIR"]:

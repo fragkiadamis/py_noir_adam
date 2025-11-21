@@ -6,7 +6,7 @@ logger = None
 
 def set_logger(project_name: str):
     global logger
-    log_path = ConfigPath.resourcesPath / "logs"
+    log_path = ConfigPath.resources_path / "logs"
     file_name = project_name + ".log"
     log_path.mkdir(parents=True, exist_ok=True)
 

@@ -12,7 +12,7 @@ def get_items_from_input_file(file_name: str):
     :param file_name: the file name located in py_noir/input
     :return: a list of the extracted items
     """
-    file = open(ConfigPath.inputPath / file_name, "r")
+    file = open(ConfigPath.input_path / file_name, "r")
     content = file.read()
     if ";" in content:
         return content.replace("\n","").split(";")
@@ -20,6 +20,7 @@ def get_items_from_input_file(file_name: str):
         return content.replace("\n","").split(",")
     else:
         return content.split("\n")
+
 
 def save_values_to_csv(values_list: List[str], column: str, csv_path: Path) -> None:
     csv_path.mkdir(parents=True, exist_ok=True)
@@ -62,6 +63,7 @@ def get_dict_from_csv(file_name: Path) -> List[Dict[str, str]] | None:
             values.append(row)
     return values
 
+
 def create_file_path(file_path):
     """
     Create the directories of the file path and the file if not existing
@@ -71,23 +73,26 @@ def create_file_path(file_path):
     if file_path.suffix:
         file_path.touch(exist_ok=True)
 
+
 def get_working_files(project_name: str):
     """
     Get the working files paths and names and create the files
     """
-    wip_file_path = ConfigPath.wipFilePath / (project_name + ".json")
-    save_file_path = ConfigPath.saveFilePath / (project_name + ".json")
+    wip_file_path = ConfigPath.wip_file_path / (project_name + ".json")
+    save_file_path = ConfigPath.save_file_path / (project_name + ".json")
     create_file_path(wip_file_path)
     create_file_path(save_file_path)
     return wip_file_path, save_file_path
+
 
 def get_tracking_file(project_name: str):
     """
     Get the tracking file path and name and create the file
     """
-    tracking_file_path = ConfigPath.trackingFilePath / (project_name + ".json")
+    tracking_file_path = ConfigPath.tracking_file_path / (project_name + ".json")
     create_file_path(tracking_file_path)
     return tracking_file_path
+
 
 def reset_tracking_file(tracking_file_path: Path):
     """
@@ -101,3 +106,9 @@ def reset_tracking_file(tracking_file_path: Path):
             exit()
 
     FileWriter.replace_content(tracking_file_path, "exec_identifier,input_id,get_from_Shanoir,executable,execution_requested,execution_start_time,execution_workflow_id,execution_status,execution_end_time")
+
+
+def get_working_directory(working_dir: str, project_name: str) -> Path:
+    download_dir = ConfigPath.resources_path / working_dir / project_name
+    download_dir.mkdir(parents=True, exist_ok=True)
+    return download_dir

@@ -7,20 +7,20 @@ from src.utils.log_utils import set_logger
 load_config()
 set_logger(sys.argv[1])
 
-import projects.ExecutionSerializer.sims as sims
-import projects.ExecutionSerializer.flair as flair
-import projects.ExecutionSerializer.pmap as pmap
-import projects.ExecutionSerializer.t2stir as t2stir
-import projects.ExecutionSerializer.siena as siena
-import projects.ExecutionSerializer.ecan as ecan
+import projects.execution_serializer.sims as sims
+import projects.execution_serializer.flair as flair
+import projects.execution_serializer.pmap as pmap
+import projects.execution_serializer.t2stir as t2stir
+import projects.execution_serializer.siena as siena
+import projects.execution_serializer.ecan as ecan
 
-import projects.ExecutionTools.carmin_api_test as carmin
-import projects.ExecutionTools.output_extraction as output_extraction
-import projects.ExecutionTools.post_processing as post_processing
-import projects.ExecutionTools.tracking_file_download as tracking_file_download
-import projects.ExecutionTools.vip_logs_import as vip_logs_import
+import projects.execution_tools.carmin_api_test as carmin
+import projects.execution_tools.output_extraction as output_extraction
+import projects.execution_tools.post_processing as post_processing
+import projects.execution_tools.tracking_file_download as tracking_file_download
+import projects.execution_tools.vip_logs_import as vip_logs_import
 
-import projects.ShanoirTools.dicom_metadata_download as dicom_metadata_download
+import projects.shanoir_tools.dicom_metadata_download as dicom_metadata_download
 
 app = typer.Typer()
 

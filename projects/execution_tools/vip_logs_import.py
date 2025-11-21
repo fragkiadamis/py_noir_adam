@@ -35,7 +35,7 @@ def execute() -> None:
 
 def log_response(response: Response, workflow_id: str) -> None:
     if response.content.__len__() > 100:
-        error_file_path = ConfigPath.outputPath / "imported_logs" / (workflow_id + ".txt")
+        error_file_path = ConfigPath.output_path / "imported_logs" / (workflow_id + ".txt")
         create_file_path(error_file_path)
 
         FileWriter.open_files(error_file_path)

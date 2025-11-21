@@ -66,7 +66,7 @@ def thread_execution(working_file: Path, item: dict):
         if execution['id'] is not None:
             monitoring = get_execution_monitoring(execution["id"])
             with monitoring_lock:
-                FileWriter.update_content_first_matching_line_start(ConfigPath.trackingFilePath, str(item["identifier"]), ",,,,true," + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "," + str(monitoring['identifier']) + ",Running,", True)
+                FileWriter.update_content_first_matching_line_start(ConfigPath.tracking_file_path, str(item["identifier"]), ",,,,true," + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "," + str(monitoring['identifier']) + ",Running,", True)
             logger.info("Execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']) + " is created.")
             status = '"Running"'
             count_down = 12
@@ -94,12 +94,12 @@ def thread_execution(working_file: Path, item: dict):
             else:
                 logger.info("Failure for execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']))
             with monitoring_lock:
-                FileWriter.update_content_first_matching_line_start(ConfigPath.trackingFilePath, str(item["identifier"]), ",,,,,,," + status.replace("\"","") + "," + datetime.now().strftime("%Y-%m-%d %H:%M:%S"), True)
+                FileWriter.update_content_first_matching_line_start(ConfigPath.tracking_file_path, str(item["identifier"]), ",,,,,,," + status.replace("\"","") + "," + datetime.now().strftime("%Y-%m-%d %H:%M:%S"), True)
             logger.info("%s out of %s items processed." % (nb_processed_items + 1, total_items_to_process))
     except:
         with monitoring_lock:
             logger.error("Exception for execution " + str(item["identifier"] + ", " + str(monitoring['identifier'])))
-            FileWriter.update_content_first_matching_line_start(ConfigPath.trackingFilePath, item["identifier"], ",,,,,,," + "PyNoir_exception" + ",", True)
+            FileWriter.update_content_first_matching_line_start(ConfigPath.tracking_file_path, item["identifier"], ",,,,,,," + "PyNoir_exception" + ",", True)
             logger.info("%s out of %s items processed." % (nb_processed_items + 1, total_items_to_process))
 
     item_processed_increment(item)
@@ -116,12 +116,12 @@ def start_executions(working_file: Path, resume: bool = False):
 
     items = read_items_from_json_file(working_file, resume)
     nb_processed_items = int(items[0]["nb_processed_items"])
-    processed_item_ids = List(items[0]["processed_item_ids"])
+    processed_item_ids = list(items[0]["processed_item_ids"])
     total_items_to_process = len(processed_item_ids) + len(items) - 1
 
-    save_file = ConfigPath.saveFilePath / working_file.name
+    save_file = ConfigPath.save_file_path / working_file.name
     shutil.copy(working_file, save_file)
-    initial_file = ConfigPath.saveFilePath / ("initial_" + working_file.name)
+    initial_file = ConfigPath.save_file_path / ("initial_" + working_file.name)
     shutil.copy(working_file, initial_file)
 
     manage_threading_execution(working_file)

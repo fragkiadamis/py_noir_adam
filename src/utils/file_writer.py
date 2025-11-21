@@ -33,11 +33,11 @@ class FileWriter:
                 type = file_path.parent.name
                 match type:
                     case "tracking_file":
-                        cls.files[ConfigPath.trackingFilePath] = f
+                        cls.files[ConfigPath.tracking_file_path] = f
                     case "WIP_file":
-                        cls.files[ConfigPath.wipFilePath] = f
+                        cls.files[ConfigPath.wip_file_path] = f
                     case "save_file":
-                        cls.files[ConfigPath.saveFilePath] = f
+                        cls.files[ConfigPath.save_file_path] = f
 
     @classmethod
     def replace_content(cls, file_path: Path, text: str):

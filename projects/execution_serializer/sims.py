@@ -45,7 +45,7 @@ def execute() -> None:
     init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json)
 
 
-def generate_json() -> List[Dict]:
+def generate_json(_: Optional[Path] = None) -> List[Dict]:
     identifier = 0
     executions = []
 
@@ -59,10 +59,10 @@ def generate_json() -> List[Dict]:
             datasets = find_datasets_by_examination_id(exam_id)
         except:
             logger.error("An error occurred while downloading examination " + exam_id + " from Shanoir")
-            FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",false,,,,,,")
+            FileWriter.append_content(ConfigPath.tracking_file_path, str(identifier) + "," + str(exam_id) + ",false,,,,,,")
             continue
 
-        FileWriter.append_content(ConfigPath.trackingFilePath, str(identifier) + "," + str(exam_id) + ",true,true,,,,,")
+        FileWriter.append_content(ConfigPath.tracking_file_path, str(identifier) + "," + str(exam_id) + ",true,true,,,,,")
 
         execution = {
             "identifier":identifier,
@@ -88,22 +88,16 @@ def generate_json() -> List[Dict]:
     return executions
 
 
-@app.command()
-def format() -> None:
-    """
-    Format the SIMS outputs
-    """
-    format_all_JSON(ConfigPath.inputPath / "dataset")
-
-
-def format_all_JSON(input_dir_path: Path) -> None:
+@app.command("format")
+def format_all_json(input_dir_path: Path) -> None:
     """Format each JSON output and concat them into a single TSV file."""
 
+    input_dir_path = ConfigPath.input_path / "dataset"
     json_paths = list_output_json_available(input_dir_path)
-    formatted_dfs = [format_output_to_tsv_by_serie(json_path) for json_path in json_paths]
+    formatted_dfs = [format_output_to_tsv_by_series(json_path) for json_path in json_paths]
 
     df = pd.concat(formatted_dfs)
-    df.to_csv(ConfigPath.outputPath / "formatted_output_SIMS.tsv", sep='\t', index=False)
+    df.to_csv(ConfigPath.output_path / "formatted_output_SIMS.tsv", sep='\t', index=False)
 
 
 def list_output_json_available(input_dir_path: Path) -> List[Path]:
@@ -119,7 +113,7 @@ def list_output_json_available(input_dir_path: Path) -> List[Path]:
     return sorted(result)
 
 
-def format_output_to_tsv_by_serie(json_path: Path) -> Optional[pd.DataFrame]:
+def format_output_to_tsv_by_series(json_path: Path) -> Optional[pd.DataFrame]:
     """Convert output_json to a pandas dataframe output"""
 
     with open(json_path, 'r') as file:

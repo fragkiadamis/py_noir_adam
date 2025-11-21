@@ -1,6 +1,6 @@
 import json
 import time
-from typing import List
+from typing import List, Dict
 
 from src.API.api_service import get, post
 from src.utils.log_utils import get_logger
@@ -11,9 +11,10 @@ Define methods for Shanoir datasets MS execution API call
 
 logger = get_logger()
 
-def create_execution(execution: dict):
+def create_execution(execution: Dict):
     path = "/datasets/vip/execution/"
     response = post(path, {}, data=json.dumps(execution), raise_for_status=False)
+    print(response.json())
     return response.json()
 
 def get_execution_status(execution_monitoring_id:  str):

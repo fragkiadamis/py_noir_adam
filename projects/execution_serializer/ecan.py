@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Any, List, Dict, Tuple
+from typing import Any, List, Dict
 from collections import defaultdict
 
 import typer
@@ -11,7 +11,7 @@ from src.shanoir_object.solr_query.solr_query_model import SolrQuery
 from src.shanoir_object.solr_query.solr_query_service import solr_search
 from src.utils.config_utils import APIConfig
 from src.utils.log_utils import get_logger
-from src.utils.file_utils import get_working_files, get_tracking_file, get_values_from_csv
+from src.utils.file_utils import get_working_files, get_tracking_file, get_items_from_input_file, get_working_directory
 from src.utils.serializer_utils import init_serialization
 
 app = typer.Typer()
@@ -29,7 +29,7 @@ def query_datasets(subject_name_list: List) -> defaultdict[Any, defaultdict[Any,
     query.search_text = query.search_text + ") AND datasetName: *TOF*"
     result = solr_search(query).json()
 
-    subjects_datasets = defaultdict(lambda: defaultdict(List))
+    subjects_datasets = defaultdict(lambda: defaultdict(list))
     for item in result["content"]:
         subjects_datasets[item.get("subjectName")][str(item.get("examinationId"))].append(item)
 
@@ -57,11 +57,11 @@ def find_oldest_exams(subjects_datasets: defaultdict[Any, defaultdict[Any, List]
 def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict[Any, List]], download_dir: Path) -> List:
     filtered_datasets = []
     for idx, (subject, exam_items) in enumerate(subjects_datasets.items(), start=1):
-        for key in List(exam_items.keys()):
+        for key in list(exam_items.keys()):
             for ds in exam_items[key][:]:
                 subject_download_subdir = download_dir / subject / ds["id"]
                 subject_download_subdir.mkdir(parents=True, exist_ok=True)
-                download_dataset(ds["id"], "dcm", subject_download_subdir, unzip=True)
+                # download_dataset(ds["id"], "dcm", subject_download_subdir, unzip=True)
                 first_file = next(p for p in subject_download_subdir.iterdir() if p.is_file())
                 slice_thickness = pydicom.dcmread(first_file, stop_before_pixels=True)['SliceThickness'].value
                 num_of_slices = sum(1 for p in subject_download_subdir.iterdir() if p.is_file() and p.suffix == ".dcm")
@@ -73,45 +73,41 @@ def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict
     return filtered_datasets
 
 
-def generate_json(download_dir: Path) -> Tuple[List[Dict], List[str]]:
-    csv_paths = [
-        "py_noir_code/projects/RHU_eCAN/ican_subset.csv",
-        "py_noir_code/projects/RHU_eCAN/angptl6_subset.csv"
+def generate_json(download_dir: Path) -> List[Dict]:
+    subject_name_list = [
+        # *get_items_from_input_file("ican_subset.txt"),
+        # *get_items_from_input_file("angptl6_subset.txt")
+        *get_items_from_input_file("temp.txt")
     ]
 
-    executions, dataset_ids_list, identifier = [], [], 0
-    for csv_path in csv_paths:
-        csv_path_path = Path(csv_path)
-        subject_name_list = get_values_from_csv(csv_path_path, "SubjectName")
-        subjects_datasets = query_datasets(subject_name_list)
-        find_oldest_exams(subjects_datasets)
-        filtered_datasets = download_and_filter_datasets(subjects_datasets, download_dir)
+    executions, identifier = [], 0
+    subjects_datasets = query_datasets(subject_name_list)
+    find_oldest_exams(subjects_datasets)
+    filtered_datasets = download_and_filter_datasets(subjects_datasets, download_dir)
 
-        dataset_ids_list.extend(ds["id"] for ds in filtered_datasets)
-        logger.info("Building json content...")
-        for dataset in filtered_datasets:
-            dt = datetime.now().strftime('%F_%H%M%S%f')[:-3]
-            executions.append({
-                "identifier": identifier,
-                "name": f"landmarkDetection_0_4_exam_{dataset['examinationId']}_{dt}",
-                "pipelineIdentifier": "landmarkDetection/0.4",
-                "studyIdentifier": dataset["studyId"],
-                "inputParameters": {},
-                "outputProcessing": "",
-                "processingType": "SEGMENTATION",
-                "refreshToken": APIConfig.refresh_token,
-                "client": APIConfig.clientId,
-                "datasetParameters": [{
-                    "datasetIds": [dataset["id"]],
-                    "groupBy": "EXAMINATION",
-                    "name": "dicom_input_zip",
-                    "exportFormat": "dcm"
-                }],
-            })
+    logger.info("Building json content...")
+    for dataset in filtered_datasets:
+        dt = datetime.now().strftime('%F_%H%M%S%f')[:-3]
+        executions.append({
+            "identifier": identifier,
+            "name": f"landmarkDetection_0_4_exam_{dataset['examinationId']}_{dt}",
+            "pipelineIdentifier": "landmarkDetection/0.4",
+            "studyIdentifier": dataset["studyId"],
+            "inputParameters": {},
+            "outputProcessing": "",
+            "processingType": "SEGMENTATION",
+            "refreshToken": APIConfig.refresh_token,
+            "client": APIConfig.clientId,
+            "datasetParameters": [{
+                "datasetIds": [dataset["id"]],
+                "groupBy": "EXAMINATION",
+                "name": "dicom_input_zip",
+                "exportFormat": "dcm"
+            }],
+        })
 
-            identifier += 1
-        logger.info(f"Finished processing {csv_path}.")
-    return executions, dataset_ids_list
+        identifier += 1
+    return executions
 
 
 @app.callback()
@@ -147,8 +143,8 @@ def execute() -> None:
     """
     working_file_path, save_file_path = get_working_files("ecan")
     tracking_file_path = get_tracking_file("ecan")
-
-    init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json, kwargs={"download_dir": Path()})
+    download_dir = get_working_directory("downloads", "ecan")
+    init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json, kwargs={"download_dir": download_dir})
 
 
 @app.command()

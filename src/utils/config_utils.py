@@ -3,9 +3,9 @@ import json
 
 from pathlib import Path
 
-def load_config(**kwargs: str) -> None:
+def load_config() -> None:
     config = CustomConfigParser()
-    config.read(Path("config/config.conf"))
+    config.read(Path("config.conf"))
 
     ConfigPath.init(config)
     APIConfig.init(config)
@@ -23,32 +23,32 @@ class ConfigPath(object):
     """
     Configuration class for project configuration
     """
-    rootPath: Path = None
-    inputPath: Path = None
-    outputPath: Path = None
-    trackingFilePath: Path = None
-    resourcesPath: Path = None
-    wipFilePath: Path = None
-    saveFilePath: Path = None
+    root_path: Path = None
+    input_path: Path = None
+    output_path: Path = None
+    tracking_file_path: Path = None
+    resources_path: Path = None
+    wip_file_path: Path = None
+    save_file_path: Path = None
 
     @classmethod
     def init(cls, config: CustomConfigParser):
-        cls.rootPath = Path(config.get('Path', 'root'))
-        cls.inputPath = cls.rootPath / "input"
-        cls.outputPath = cls.rootPath / "output"
-        cls.trackingFilePath = cls.outputPath / "tracking_file"
-        cls.resourcesPath = cls.rootPath / "resource"
-        cls.wipFilePath = cls.resourcesPath / "WIP_file"
-        cls.saveFilePath = cls.resourcesPath / "save_file"
+        cls.root_path = Path(config.get('Path', 'root'))
+        cls.input_path = cls.root_path / "input"
+        cls.output_path = cls.root_path / "output"
+        cls.tracking_file_path = cls.output_path / "tracking_file"
+        cls.resources_path = cls.root_path / "resources"
+        cls.wip_file_path = cls.resources_path / "wip_file"
+        cls.save_file_path = cls.resources_path / "save_file"
 
     def __init__(self, config: CustomConfigParser):
-        self.rootPath = Path(config.get('Path', 'root'))
-        self.inputPath = self.rootPath / "input"
-        self.outputPath = self.rootPath / "output"
-        self.trackingFilePath = self.outputPath / "tracking_file"
-        self.resourcesPath = self.rootPath / "resources"
-        self.wipFilePath = self.resourcesPath / "WIP_file"
-        self.saveFilePath = self.resourcesPath / "save_file"
+        self.root_path = Path(config.get('Path', 'root'))
+        self.input_path = self.root_path / "input"
+        self.output_path = self.root_path / "output"
+        self.tracking_file_path = self.output_path / "tracking_file"
+        self.resources_path = self.root_path / "resources"
+        self.wip_file_path = self.resources_path / "WIP_file"
+        self.save_file_path = self.resources_path / "save_file"
 
 class APIConfig(object):
     """
