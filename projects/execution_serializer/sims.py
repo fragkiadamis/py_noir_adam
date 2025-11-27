@@ -7,10 +7,9 @@ import re
 from pathlib import Path
 from typing import Optional, Sequence, Any, List, Dict, Set
 from src.utils.config_utils import APIConfig, ConfigPath
-from src.utils.file_writer import FileWriter
 from src.utils.log_utils import get_logger
 from datetime import datetime, timezone
-from src.utils.file_utils import get_items_from_input_file, get_working_files, get_tracking_file
+from src.utils.file_utils import get_items_from_input_file, initiate_working_files
 from src.shanoir_object.dataset.dataset_service import find_datasets_by_examination_id
 from src.utils.serializer_utils import init_serialization
 
@@ -39,10 +38,8 @@ def execute() -> None:
     """
     Run the SIMS processing pipeline
     """
-    working_file_path, save_file_path = get_working_files("sims")
-    tracking_file_path = get_tracking_file("sims")
-
-    init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json)
+    initiate_working_files("sims")
+    init_serialization(generate_json)
 
 
 def generate_json(_: Optional[Path] = None) -> List[Dict]:
@@ -53,16 +50,32 @@ def generate_json(_: Optional[Path] = None) -> List[Dict]:
 
     logger.info("Getting datasets, building json content... ")
 
+    df = pd.read_csv(ConfigPath.tracking_file_path)
     for exam_id in exam_ids_to_exec:
         identifier += 1
         try:
             datasets = find_datasets_by_examination_id(exam_id)
         except:
             logger.error("An error occurred while downloading examination " + exam_id + " from Shanoir")
-            FileWriter.append_content(ConfigPath.tracking_file_path, str(identifier) + "," + str(exam_id) + ",false,,,,,,")
+            values = {
+                "identifier": identifier,
+                "examination_id": exam_id,
+                "get_from_shanoir": False,
+            }
+            for col, val in values.items():
+                df.loc[identifier, col] = val
+            df.to_csv(ConfigPath.tracking_file_path, index=False)
             continue
 
-        FileWriter.append_content(ConfigPath.tracking_file_path, str(identifier) + "," + str(exam_id) + ",true,true,,,,,")
+        values = {
+            "identifier": identifier + 1,
+            "examination_id": exam_id,
+            "get_from_shanoir": True,
+            "executable": True,
+        }
+        for col, val in values.items():
+            df.loc[identifier, col] = val
+        df.to_csv(ConfigPath.tracking_file_path, index=False)
 
         execution = {
             "identifier":identifier,

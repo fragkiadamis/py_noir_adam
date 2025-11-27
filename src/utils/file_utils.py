@@ -78,21 +78,15 @@ def create_file_path(file_path):
         file_path.touch(exist_ok=True)
 
 
-def get_working_files(project_name: str) -> None:
+def initiate_working_files(project_name: str) -> None:
     """
-    Get the working files paths and names and create the files
+    Initiate the working and tracking files paths and names and create the files
     """
     ConfigPath.wip_file_path = ConfigPath.wip_file_path / (project_name + ".json")
     ConfigPath.save_file_path = ConfigPath.save_file_path / (project_name + ".json")
+    ConfigPath.tracking_file_path = ConfigPath.tracking_file_path / (project_name + ".csv")
     create_file_path(ConfigPath.wip_file_path)
     create_file_path(ConfigPath.save_file_path)
-
-
-def get_tracking_file(project_name: str) -> None:
-    """
-    Get the tracking file path and name and create the file
-    """
-    ConfigPath.tracking_file_path = ConfigPath.tracking_file_path / (project_name + ".csv")
     create_file_path(ConfigPath.tracking_file_path)
 
 

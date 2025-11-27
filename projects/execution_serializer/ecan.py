@@ -11,10 +11,8 @@ from src.shanoir_object.dataset.dataset_service import get_examination, download
 from src.shanoir_object.solr_query.solr_query_model import SolrQuery
 from src.shanoir_object.solr_query.solr_query_service import solr_search
 from src.utils.config_utils import APIConfig, ConfigPath
-from src.utils.file_writer import FileWriter
 from src.utils.log_utils import get_logger
-from src.utils.file_utils import get_working_files, get_tracking_file, get_items_from_input_file, get_working_directory, \
-    get_dict_from_csv
+from src.utils.file_utils import get_items_from_input_file, get_working_directory, initiate_working_files
 from src.utils.serializer_utils import init_serialization
 
 app = typer.Typer()
@@ -90,7 +88,6 @@ def generate_json(download_dir: Path) -> List[Dict]:
     logger.info("Building json content...")
     for idx, dataset in enumerate(filtered_datasets, start=1):
         df = pd.read_csv(ConfigPath.tracking_file_path)
-        print(dataset)
         values = {
             "identifier": idx,
             "dataset_id": dataset["id"],
@@ -101,7 +98,7 @@ def generate_json(download_dir: Path) -> List[Dict]:
             "executable": True
         }
         for col, val in values.items():
-            df.loc[0, col] = val
+            df.loc[idx - 1, col] = val
         df.to_csv(ConfigPath.tracking_file_path, index=False)
 
         dt = datetime.now().strftime('%F_%H%M%S%f')[:-3]
@@ -157,8 +154,7 @@ def execute() -> None:
     """
     Run the eCAN processing pipeline
     """
-    get_working_files("ecan")
-    get_tracking_file("ecan")
+    initiate_working_files("ecan")
     download_dir = get_working_directory("downloads", "ecan", "shanoir_output")
     init_serialization(generate_json, kwargs={"download_dir": download_dir})
 

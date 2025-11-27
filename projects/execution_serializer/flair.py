@@ -1,12 +1,12 @@
 from pathlib import Path
 from typing import List, Dict, Optional
 
+import pandas as pd
 import typer
 
-from src.utils.file_writer import FileWriter
 from src.utils.log_utils import get_logger
 from datetime import datetime, timezone
-from src.utils.file_utils import get_items_from_input_file, get_working_files, get_tracking_file
+from src.utils.file_utils import get_items_from_input_file, initiate_working_files
 from src.shanoir_object.dataset.dataset_service import find_datasets_by_examination_id
 from src.utils.config_utils import APIConfig, ConfigPath
 from src.utils.serializer_utils import init_serialization
@@ -34,10 +34,8 @@ def execute() -> None:
     """
     Run the FLAIR processing pipeline
     """
-    working_file_path, save_file_path = get_working_files("Comete_FLAIR")
-    tracking_file_path = get_tracking_file("Comete_FLAIR")
-
-    init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json)
+    initiate_working_files("Comete_FLAIR")
+    init_serialization(generate_json)
 
 def generate_json(_: Optional[Path] = None) -> List[Dict]:
     examinations = Dict()
@@ -47,13 +45,21 @@ def generate_json(_: Optional[Path] = None) -> List[Dict]:
     exam_ids_to_exec = get_items_from_input_file("inputs.txt")
     logger.info("Getting datasets, building json content... ")
 
+    df = pd.read_csv(ConfigPath.tracking_file_path)
     for exam_id in exam_ids_to_exec:
         try:
             datasets = find_datasets_by_examination_id(exam_id)
         except:
             logger.error("An error occurred while downloading examination " + exam_id + " from Shanoir")
+            values = {
+                "identifier": identifier + 1,
+                "examination_id": exam_id,
+                "get_from_shanoir": False,
+            }
+            for col, val in values.items():
+                df.loc[identifier, col] = val
+            df.to_csv(ConfigPath.tracking_file_path, index=False)
             identifier += 1
-            FileWriter.append_content(ConfigPath.tracking_file_path, str(identifier) + "," + str(exam_id) + ",false,,,,,,")
             continue
 
         for dataset in datasets:
@@ -67,14 +73,30 @@ def generate_json(_: Optional[Path] = None) -> List[Dict]:
                 examinations[exam_id]["identifier"] = []
 
             if "T3DFLAIR" == dataset["updatedMetadata"]["name"]:
-                identifier +=1
-                FileWriter.append_content(ConfigPath.tracking_file_path, str(identifier) + "," + str(exam_id) + ",true,true,,,,,")
+                values = {
+                    "identifier": identifier + 1,
+                    "examination_id": exam_id,
+                    "get_from_shanoir": True,
+                    "executable": True,
+                }
+                for col, val in values.items():
+                    df.loc[identifier, col] = val
+                df.to_csv(ConfigPath.tracking_file_path, index=False)
                 examinations[exam_id]["FLAIR"].append(ds_id)
-                examinations[exam_id]["identifier"].append(identifier)
+                examinations[exam_id]["identifier"].append(identifier + 1)
+                identifier +=1
 
         if not examinations[exam_id]["FLAIR"]:
+            values = {
+                "identifier": identifier + 1,
+                "examination_id": exam_id,
+                "get_from_shanoir": True,
+                "executable": False,
+            }
+            for col, val in values.items():
+                df.loc[identifier, col] = val
+            df.to_csv(ConfigPath.tracking_file_path, index=False)
             identifier +=1
-            FileWriter.append_content(ConfigPath.tracking_file_path, str(identifier) + "," + str(exam_id) + ",true,false,,,,,")
 
     for key, value in examinations.items():
         if value["FLAIR"]:
