@@ -25,7 +25,6 @@ class ConfigPath(object):
     """
     root_path: Path = None
     input_path: Path = None
-    output_path: Path = None
     tracking_file_path: Path = None
     resources_path: Path = None
     wip_file_path: Path = None
@@ -35,18 +34,16 @@ class ConfigPath(object):
     def init(cls, config: CustomConfigParser):
         cls.root_path = Path(config.get('Path', 'root'))
         cls.input_path = cls.root_path / "input"
-        cls.output_path = cls.root_path / "output"
-        cls.tracking_file_path = cls.output_path / "tracking_file"
         cls.resources_path = cls.root_path / "resources"
+        cls.tracking_file_path = cls.resources_path / "tracking_file"
         cls.wip_file_path = cls.resources_path / "wip_file"
         cls.save_file_path = cls.resources_path / "save_file"
 
     def __init__(self, config: CustomConfigParser):
         self.root_path = Path(config.get('Path', 'root'))
         self.input_path = self.root_path / "input"
-        self.output_path = self.root_path / "output"
-        self.tracking_file_path = self.output_path / "tracking_file"
         self.resources_path = self.root_path / "resources"
+        self.tracking_file_path = self.resources_path / "tracking_file"
         self.wip_file_path = self.resources_path / "WIP_file"
         self.save_file_path = self.resources_path / "save_file"
 

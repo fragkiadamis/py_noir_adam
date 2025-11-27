@@ -41,7 +41,7 @@ def update_studies_registry(studies, studies_csv):
         save_dict_to_csv(existing_studies, studies_csv_path)
 
 
-def fetch_datasets_from_json(ecan_json_path: str, executions_csv: str, output_dir: str) -> None:
+def fetch_datasets_from_json(ecan_json_path: Path, executions_csv: Path, output_dir: Path) -> None:
     # Load JSON content safely
     ecan_json_path_path = Path(ecan_json_path)
     dataset_ids_list = get_values_from_csv(ecan_json_path_path, "DatasetId")
@@ -59,7 +59,7 @@ def fetch_datasets_from_json(ecan_json_path: str, executions_csv: str, output_di
     download_dataset_processing(processing_ids_list, output_dir, unzip=True)
 
 
-def inspect_and_fix_study_tags(input_dir: str) -> None:
+def inspect_and_fix_study_tags(input_dir: Path) -> None:
     for processing in os.listdir(input_dir):
         processing_dir = os.path.join(input_dir, processing)
         processing_input_dir = os.path.join(processing_dir, [item for item in os.listdir(processing_dir) if "output" not in item][0])
@@ -134,7 +134,7 @@ def inspect_and_fix_study_tags(input_dir: str) -> None:
                 ds.save_as(file_path)
 
 
-def upload_to_pacs_rest(dataset_path: str, studies_csv: str) -> None:
+def upload_to_pacs_rest(dataset_path: Path, studies_csv: Path) -> None:
     total_file_count, dicom_count, studies = 0, 0, []
     for study in os.listdir(dataset_path):
         study_dir = os.path.join(dataset_path, study)
@@ -174,7 +174,7 @@ def upload_to_pacs_rest(dataset_path: str, studies_csv: str) -> None:
         logger.warning(f"WARNING: Only {dicom_count}/{total_file_count} files imported successfully.")
 
 
-def upload_to_pacs_dicom(dataset_path: str, studies_csv: str) -> None:
+def upload_to_pacs_dicom(dataset_path: Path, studies_csv: Path) -> None:
     # Initialize AE
     ae = AE(ae_title=OrthancConfig.client_ae_title)
     ae.acse_timeout = 30
@@ -237,7 +237,7 @@ def upload_to_pacs_dicom(dataset_path: str, studies_csv: str) -> None:
     logger.info("C-STORE upload completed.")
 
 
-def assign_label_to_pacs_study(studies_csv: str) -> None:
+def assign_label_to_pacs_study(studies_csv: Path) -> None:
     ican_ids = get_values_from_csv(Path("py_noir_code/projects/RHU_eCAN/ican_subset.csv"), "SubjectName")
     angptl6_ids = get_values_from_csv(Path("py_noir_code/projects/RHU_eCAN/angptl6_subset.csv"), "SubjectName")
 
@@ -251,7 +251,7 @@ def assign_label_to_pacs_study(studies_csv: str) -> None:
             set_orthanc_study_label(study["StudyID"], "ANGPTL6_SUBSET")
 
 
-def download_from_pacs_rest(studies_csv: str, download_dir: str) -> None:
+def download_from_pacs_rest(studies_csv: Path, download_dir: Path) -> None:
     studies_csv_path = Path(studies_csv)
     studies = get_dict_from_csv(studies_csv_path)
     os.makedirs(download_dir, exist_ok=True)
@@ -259,14 +259,14 @@ def download_from_pacs_rest(studies_csv: str, download_dir: str) -> None:
         download_orthanc_study(study["StudyID"], download_dir)
 
 
-def delete_studies_from_pacs(studies_csv: str) -> None:
+def delete_studies_from_pacs(studies_csv: Path) -> None:
     studies_csv_path = Path(studies_csv)
     orthanc_studies_ids = get_values_from_csv(studies_csv_path, "StudyID")
     for orthanc_study_id in orthanc_studies_ids:
         delete_orthanc_study(orthanc_study_id)
 
 
-def upload_processed_dataset(dataset_path: str) -> None:
+def upload_processed_dataset(dataset_path: Path) -> None:
     for study in os.listdir(dataset_path):
         study_dir = os.path.join(dataset_path, study)
         dcm_files = [

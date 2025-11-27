@@ -3,15 +3,18 @@ from pathlib import Path
 from typing import Any, List, Dict
 from collections import defaultdict
 
+import pandas as pd
 import typer
 import pydicom
 
 from src.shanoir_object.dataset.dataset_service import get_examination, download_dataset
 from src.shanoir_object.solr_query.solr_query_model import SolrQuery
 from src.shanoir_object.solr_query.solr_query_service import solr_search
-from src.utils.config_utils import APIConfig
+from src.utils.config_utils import APIConfig, ConfigPath
+from src.utils.file_writer import FileWriter
 from src.utils.log_utils import get_logger
-from src.utils.file_utils import get_working_files, get_tracking_file, get_items_from_input_file, get_working_directory
+from src.utils.file_utils import get_working_files, get_tracking_file, get_items_from_input_file, get_working_directory, \
+    get_dict_from_csv
 from src.utils.serializer_utils import init_serialization
 
 app = typer.Typer()
@@ -61,7 +64,7 @@ def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict
             for ds in exam_items[key][:]:
                 subject_download_subdir = download_dir / subject / ds["id"]
                 subject_download_subdir.mkdir(parents=True, exist_ok=True)
-                # download_dataset(ds["id"], "dcm", subject_download_subdir, unzip=True)
+                download_dataset(ds["id"], "dcm", subject_download_subdir, unzip=True)
                 first_file = next(p for p in subject_download_subdir.iterdir() if p.is_file())
                 slice_thickness = pydicom.dcmread(first_file, stop_before_pixels=True)['SliceThickness'].value
                 num_of_slices = sum(1 for p in subject_download_subdir.iterdir() if p.is_file() and p.suffix == ".dcm")
@@ -75,21 +78,35 @@ def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict
 
 def generate_json(download_dir: Path) -> List[Dict]:
     subject_name_list = [
-        # *get_items_from_input_file("ican_subset.txt"),
-        # *get_items_from_input_file("angptl6_subset.txt")
-        *get_items_from_input_file("temp.txt")
+        *get_items_from_input_file("ican_subset.txt"),
+        *get_items_from_input_file("angptl6_subset.txt")
     ]
 
-    executions, identifier = [], 0
+    executions = []
     subjects_datasets = query_datasets(subject_name_list)
     find_oldest_exams(subjects_datasets)
     filtered_datasets = download_and_filter_datasets(subjects_datasets, download_dir)
 
     logger.info("Building json content...")
-    for dataset in filtered_datasets:
+    for idx, dataset in enumerate(filtered_datasets, start=1):
+        df = pd.read_csv(ConfigPath.tracking_file_path)
+        print(dataset)
+        values = {
+            "identifier": idx,
+            "dataset_id": dataset["id"],
+            "examination_id": dataset["examinationId"],
+            "subject_id": dataset["subjectId"],
+            "subject_name": dataset["subjectName"],
+            "get_from_shanoir": True,
+            "executable": True
+        }
+        for col, val in values.items():
+            df.loc[0, col] = val
+        df.to_csv(ConfigPath.tracking_file_path, index=False)
+
         dt = datetime.now().strftime('%F_%H%M%S%f')[:-3]
         executions.append({
-            "identifier": identifier,
+            "identifier": idx,
             "name": f"landmarkDetection_0_4_exam_{dataset['examinationId']}_{dt}",
             "pipelineIdentifier": "landmarkDetection/0.4",
             "studyIdentifier": dataset["studyId"],
@@ -106,7 +123,6 @@ def generate_json(download_dir: Path) -> List[Dict]:
             }],
         })
 
-        identifier += 1
     return executions
 
 
@@ -141,10 +157,10 @@ def execute() -> None:
     """
     Run the eCAN processing pipeline
     """
-    working_file_path, save_file_path = get_working_files("ecan")
-    tracking_file_path = get_tracking_file("ecan")
-    download_dir = get_working_directory("downloads", "ecan")
-    init_serialization(working_file_path, save_file_path, tracking_file_path, generate_json, kwargs={"download_dir": download_dir})
+    get_working_files("ecan")
+    get_tracking_file("ecan")
+    download_dir = get_working_directory("downloads", "ecan", "shanoir_output")
+    init_serialization(generate_json, kwargs={"download_dir": download_dir})
 
 
 @app.command()

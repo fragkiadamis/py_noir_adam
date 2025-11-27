@@ -1,10 +1,14 @@
 import csv
-
 from pathlib import Path
 from typing import List, Dict
+
+import pandas as pd
+
 from src.utils.config_utils import ConfigPath
-from src.utils.file_writer import FileWriter
+from src.utils.log_utils import get_logger
 from src.utils.user_prompt import ask_yes_no
+
+logger = get_logger()
 
 
 def get_items_from_input_file(file_name: str):
@@ -32,7 +36,7 @@ def save_values_to_csv(values_list: List[str], column: str, csv_path: Path) -> N
 
 
 def save_dict_to_csv(dict_list: List[Dict[str, str]], csv_path: Path) -> None:
-    csv_path.mkdir(parents=True, exist_ok=True)
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
     with open(csv_path, mode='w', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=dict_list[0].keys())
         writer.writeheader()
@@ -74,24 +78,22 @@ def create_file_path(file_path):
         file_path.touch(exist_ok=True)
 
 
-def get_working_files(project_name: str):
+def get_working_files(project_name: str) -> None:
     """
     Get the working files paths and names and create the files
     """
-    wip_file_path = ConfigPath.wip_file_path / (project_name + ".json")
-    save_file_path = ConfigPath.save_file_path / (project_name + ".json")
-    create_file_path(wip_file_path)
-    create_file_path(save_file_path)
-    return wip_file_path, save_file_path
+    ConfigPath.wip_file_path = ConfigPath.wip_file_path / (project_name + ".json")
+    ConfigPath.save_file_path = ConfigPath.save_file_path / (project_name + ".json")
+    create_file_path(ConfigPath.wip_file_path)
+    create_file_path(ConfigPath.save_file_path)
 
 
-def get_tracking_file(project_name: str):
+def get_tracking_file(project_name: str) -> None:
     """
     Get the tracking file path and name and create the file
     """
-    tracking_file_path = ConfigPath.tracking_file_path / (project_name + ".json")
-    create_file_path(tracking_file_path)
-    return tracking_file_path
+    ConfigPath.tracking_file_path = ConfigPath.tracking_file_path / (project_name + ".csv")
+    create_file_path(ConfigPath.tracking_file_path)
 
 
 def reset_tracking_file(tracking_file_path: Path):
@@ -102,13 +104,22 @@ def reset_tracking_file(tracking_file_path: Path):
 
     if tracking_file_path.stat().st_size != 0:
         if not ask_yes_no("A tracking file of that pipeline is already existing. Do you want to reset its content?"):
-            print("Ok, bye.")
+            logger.info("Ok, bye.")
             exit()
 
-    FileWriter.replace_content(tracking_file_path, "exec_identifier,input_id,get_from_Shanoir,executable,execution_requested,execution_start_time,execution_workflow_id,execution_status,execution_end_time")
+    df = pd.DataFrame(columns=[
+        "identifier", "dataset_id", "examination_id",
+        "subject_id", "subject_name", "get_from_shanoir", "executable",
+        "execution_requested", "execution_id", "execution_workflow_id",
+        "execution_status", "execution_start_time", "execution_end_time"
+    ])
+    df.to_csv(tracking_file_path, index=False)
 
 
-def get_working_directory(working_dir: str, project_name: str) -> Path:
-    download_dir = ConfigPath.resources_path / working_dir / project_name
+def get_working_directory(working_dir: str, project_name: str, sub_dirs: str = None) -> Path:
+    if sub_dirs is None:
+        download_dir = ConfigPath.resources_path / working_dir / project_name
+    else:
+        download_dir = ConfigPath.resources_path / working_dir / project_name / sub_dirs
     download_dir.mkdir(parents=True, exist_ok=True)
     return download_dir

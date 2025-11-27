@@ -207,7 +207,7 @@ def get_orthanc_instance_metadata(orthanc_instance_id: str) -> Dict[str, str] | 
         return None
 
 
-def download_orthanc_study(study_id: str, download_path: str, unzip: bool = True):
+def download_orthanc_study(study_id: str, download_path: Path, unzip: bool = True):
     try:
         output_file = os.path.join(download_path, f"{study_id}.zip")
         response = orthanc_request("get", f"studies/{study_id}/archive")
