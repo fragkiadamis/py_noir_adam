@@ -81,7 +81,7 @@ def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict
 def generate_json(output_dir: Path) -> List[Dict]:
     ican_list = [*get_items_from_input_file("ican_subset.txt")]
     angptl6_list = [*get_items_from_input_file("angptl6_subset.txt")]
-    subject_name_list = [ican_list, angptl6_list]
+    subject_name_list = [*ican_list, *angptl6_list]
 
     executions = []
     subjects_datasets = query_datasets(subject_name_list)
@@ -158,7 +158,7 @@ def explain() -> None:
         - Upload the processed output to shanoir
     Usage:
     -----
-        uv run main.py ecan execute-pipeline
+        uv run main.py ecan execute
         uv run main.py ecan populate-orthanc
         uv run main.py ecan debug-orthanc
         uv run main.py ecan import-shanoir
@@ -166,7 +166,7 @@ def explain() -> None:
 
 
 @app.command()
-def execute_pipeline() -> None:
+def execute() -> None:
     """
     Run the eCAN processing pipeline
     """
