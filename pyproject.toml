@@ -1,0 +1,20 @@
+[project]
+name = "py-noir"
+version = "2.0.0"
+description = "Python client for Shanoir, gathering generic tools and processing tool."
+readme = "README.md"
+authors = [
+    {name = "Guéwen Hubert", email = "guewen.hubert@inria.fr"},
+    {name = "Laurent Valet", email = "laurent.valet@chu-nantes.fr"},
+    {name = "Adam Fragkiadakis", email = "adam.fragkiadakis@inria.fr"}
+]
+requires-python = ">=3.12"
+dependencies = [
+    "loguru>=0.7.3",
+    "pandas>=2.3.3",
+    "pydicom>=3.0.1",
+    "pynetdicom>=3.0.4",
+    "requests>=2.32.5",
+    "tqdm>=4.67.1",
+    "typer>=0.20.0",
+]

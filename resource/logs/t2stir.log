@@ -1,0 +1,39 @@
+2025-11-19 16:00:26 INFO get keycloak token...
+2025-11-19 16:01:06 INFO get keycloak token...
+2025-11-19 16:01:20 INFO get keycloak token...
+2025-11-19 16:01:20 INFO Getting datasets, building json content... 
+2025-11-19 16:01:20 INFO Getting datasets from examination 31967
+2025-11-19 16:01:29 INFO Getting datasets from examination 3197
+2025-11-19 16:01:35 INFO Getting datasets from examination 3198
+2025-11-19 16:01:43 INFO Getting datasets from examination 32026
+2025-11-19 16:01:49 INFO Getting datasets from examination 1000000
+2025-11-19 16:01:49 ERROR Error for exam 1000000
+2025-11-19 16:01:49 ERROR An error occurred while downloading examination 1000000 from Shanoir
+2025-11-19 16:01:49 INFO Getting datasets from examination 32005
+2025-11-19 16:01:52 INFO Number of planned executiosn : 8
+2025-11-19 16:01:52 INFO Starting new executions...
+2025-11-19 16:01:52 INFO Execution 1, workflow-08v2op is created.
+2025-11-19 16:01:53 INFO Execution 2, workflow-1s9rh1 is created.
+2025-11-19 16:01:54 INFO Execution 3, workflow-etizii is created.
+2025-11-19 16:01:55 INFO Execution 4, workflow-b6nl6x is created.
+2025-11-19 16:01:56 INFO Execution 6, workflow-c2ok4s is created.
+2025-11-19 16:01:57 INFO Execution 7, workflow-3vjnni is created.
+2025-11-19 16:01:58 INFO Execution 9, workflow-ixwybm is created.
+2025-11-19 16:01:59 INFO Execution 10, workflow-u54sjq is created.
+2025-11-19 16:02:22 INFO Failure for execution 6, workflow-c2ok4s
+2025-11-19 16:02:22 INFO 1 out of 8 items processed.
+2025-11-19 16:02:23 INFO Failure for execution 7, workflow-3vjnni
+2025-11-19 16:02:23 INFO 2 out of 8 items processed.
+2025-11-19 16:02:23 INFO Failure for execution 1, workflow-08v2op
+2025-11-19 16:02:23 INFO 3 out of 8 items processed.
+2025-11-19 16:02:24 INFO Failure for execution 9, workflow-ixwybm
+2025-11-19 16:02:24 INFO 4 out of 8 items processed.
+2025-11-19 16:02:24 INFO Failure for execution 2, workflow-1s9rh1
+2025-11-19 16:02:24 INFO 5 out of 8 items processed.
+2025-11-19 16:02:25 INFO Failure for execution 10, workflow-u54sjq
+2025-11-19 16:02:25 INFO 6 out of 8 items processed.
+2025-11-19 16:02:26 INFO Failure for execution 3, workflow-etizii
+2025-11-19 16:02:26 INFO 7 out of 8 items processed.
+2025-11-19 16:02:26 INFO Failure for execution 4, workflow-b6nl6x
+2025-11-19 16:02:26 INFO 8 out of 8 items processed.
+2025-11-19 16:02:26 INFO Executions ended.
