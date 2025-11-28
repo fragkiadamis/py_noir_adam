@@ -1,3 +1,4 @@
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any, List, Dict
@@ -11,8 +12,11 @@ from src.shanoir_object.dataset.dataset_service import get_examination, download
 from src.shanoir_object.solr_query.solr_query_model import SolrQuery
 from src.shanoir_object.solr_query.solr_query_service import solr_search
 from src.utils.config_utils import APIConfig, ConfigPath
+from src.utils.dicom_utils import fetch_datasets_from_json, upload_to_pacs_rest, assign_label_to_pacs_study, \
+    inspect_and_fix_study_tags, upload_to_pacs_dicom, get_patient_ids_from_pacs, get_orthanc_study_details, \
+    delete_studies_from_pacs, purge_pacs_studies, download_from_pacs_rest, upload_processed_dataset
 from src.utils.log_utils import get_logger
-from src.utils.file_utils import get_items_from_input_file, get_working_directory, initiate_working_files
+from src.utils.file_utils import get_items_from_input_file, initiate_working_files
 from src.utils.serializer_utils import init_serialization
 
 app = typer.Typer()
@@ -50,7 +54,7 @@ def find_oldest_exams(subjects_datasets: defaultdict[Any, defaultdict[Any, List]
                     oldest_exam = exam
                     oldest_date = exam_date
 
-            for exam_id in List(exam_items.keys()):
+            for exam_id in list(exam_items.keys()):
                 if exam_id != str(oldest_exam["id"]):
                     del exam_items[exam_id]
 
@@ -60,34 +64,33 @@ def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict
     for idx, (subject, exam_items) in enumerate(subjects_datasets.items(), start=1):
         for key in list(exam_items.keys()):
             for ds in exam_items[key][:]:
-                subject_download_subdir = download_dir / subject / ds["id"]
-                subject_download_subdir.mkdir(parents=True, exist_ok=True)
-                download_dataset(ds["id"], "dcm", subject_download_subdir, unzip=True)
-                first_file = next(p for p in subject_download_subdir.iterdir() if p.is_file())
+                dataset_download_path = download_dir / subject / ds["id"]
+                dataset_download_path.mkdir(parents=True, exist_ok=True)
+                download_dataset(ds["id"], "dcm", dataset_download_path, unzip=True)
+                first_file = next(p for p in dataset_download_path.iterdir() if p.is_file())
                 slice_thickness = pydicom.dcmread(first_file, stop_before_pixels=True)['SliceThickness'].value
-                num_of_slices = sum(1 for p in subject_download_subdir.iterdir() if p.is_file() and p.suffix == ".dcm")
+                num_of_slices = sum(1 for p in dataset_download_path.iterdir() if p.is_file() and p.suffix == ".dcm")
                 if num_of_slices > 50 and slice_thickness < 10:
                     filtered_datasets.append(ds)
                 else:
-                    subject_download_subdir.unlink(missing_ok=True)
+                    shutil.rmtree(dataset_download_path)
 
     return filtered_datasets
 
 
-def generate_json(download_dir: Path) -> List[Dict]:
-    subject_name_list = [
-        *get_items_from_input_file("ican_subset.txt"),
-        *get_items_from_input_file("angptl6_subset.txt")
-    ]
+def generate_json(output_dir: Path) -> List[Dict]:
+    ican_list = [*get_items_from_input_file("ican_subset.txt")]
+    angptl6_list = [*get_items_from_input_file("angptl6_subset.txt")]
+    subject_name_list = [ican_list, angptl6_list]
 
     executions = []
     subjects_datasets = query_datasets(subject_name_list)
     find_oldest_exams(subjects_datasets)
-    filtered_datasets = download_and_filter_datasets(subjects_datasets, download_dir)
+    filtered_datasets = download_and_filter_datasets(subjects_datasets, output_dir)
 
     logger.info("Building json content...")
     for idx, dataset in enumerate(filtered_datasets, start=1):
-        df = pd.read_csv(ConfigPath.tracking_file_path)
+        df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
         values = {
             "identifier": idx,
             "dataset_id": dataset["id"],
@@ -95,7 +98,12 @@ def generate_json(download_dir: Path) -> List[Dict]:
             "subject_id": dataset["subjectId"],
             "subject_name": dataset["subjectName"],
             "get_from_shanoir": True,
-            "executable": True
+            "executable": True,
+            "label": (
+                "ICAN" if dataset["subjectName"] in ican_list else
+                "ANGPTL16" if dataset["subjectName"] in angptl6_list else
+                None
+            )
         }
         for col, val in values.items():
             df.loc[idx - 1, col] = val
@@ -129,41 +137,67 @@ def explain() -> None:
     eCAN project command-line interface.
     Commands:
     --------
-    * `execute` — runs the eCAN pipeline for subjects listed in `ecan_subject_id_list.csv` (ignored):
+    * `execute-pipeline` — runs the eCAN pipeline for subjects listed in `ecan_subject_id_list.csv` (ignored):
         - Retrieves datasets for each subject ID.
         - Filters the datasets (keep the oldest examination, >=50 slices, )
         - Generates JSON executions for the SIMS/3.0 pipeline.
         - Launches executions or resumes incomplete runs.
         --- Auxiliary debug functions ---
-    * `populate` — populates the CHU Nantes Orthanc PACS with the processed output and the input datasets
+    * `populate-orthanc` — populates the CHU Nantes Orthanc PACS with the processed output and the input datasets
         - Download the processed output alongside the input dataset
         - Inspect DICOM files for inconsistencies and fixes them
         - Upload the processed output along the input dataset to an orthanc instance
         - Assign labels to the orthanc studies
-    * `pacs` — Runs functions for the environment of CHU Nantes to inspect the Orthanc PACS
+    * `debug-orthanc` — Runs functions for the environment of CHU Nantes to inspect the Orthanc PACS
+        - Get and log patients from the Orthanc instance
+        - Get and log studies from the Orthanc instance
+        - Delete uploaded studies from ecan.csv tracking file
+        - Purge Orthanc instance
+    * `import-shanoir` — Imports data from Orthanc to shanoir
+        - Get further processed outputs from shanoir
+        - Upload the processed output to shanoir
     Usage:
     -----
-        uv run main.py ecan execute
-        uv run main.py ecan populate
-        uv run main.py ecan pacs
+        uv run main.py ecan execute-pipeline
+        uv run main.py ecan populate-orthanc
+        uv run main.py ecan debug-orthanc
+        uv run main.py ecan import-shanoir
     """
 
 
 @app.command()
-def execute() -> None:
+def execute_pipeline() -> None:
     """
     Run the eCAN processing pipeline
     """
     initiate_working_files("ecan")
-    download_dir = get_working_directory("downloads", "ecan", "shanoir_output")
-    init_serialization(generate_json, kwargs={"download_dir": download_dir})
+    init_serialization(generate_json, kwargs={"output_dir": ConfigPath.output_path / "ecan" / "shanoir_output"})
 
 
 @app.command()
-def populate() -> None:
-    pass
+def populate_orthanc() -> None:
+    initiate_working_files("ecan")
+    vip_output = ConfigPath.output_path / "ecan" / "vip_output"
+    fetch_datasets_from_json(vip_output)
+    inspect_and_fix_study_tags(vip_output)
+    upload_to_pacs_rest(vip_output) # RESTAPI or DICOM WEB STORE --> upload_to_pacs_dicom(vip_output)
+    assign_label_to_pacs_study()
 
 
 @app.command()
-def pacs() -> None:
-    pass
+def debug_orthanc() -> None:
+    initiate_working_files("ecan")
+    get_patient_ids_from_pacs()
+    get_orthanc_study_details()
+
+    # ------------------- DANGER ZONE -------------------
+    # delete_studies_from_pacs()
+    # purge_pacs_studies()
+
+
+@app.command()
+def import_shanoir() -> None:
+    initiate_working_files("ecan")
+    orthanc_output = ConfigPath.output_path / "ecan" / "orthanc_output"
+    download_from_pacs_rest(orthanc_output)
+    upload_processed_dataset(orthanc_output)

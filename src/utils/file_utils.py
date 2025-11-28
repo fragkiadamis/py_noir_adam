@@ -26,48 +26,6 @@ def get_items_from_input_file(file_name: str):
         return content.split("\n")
 
 
-def save_values_to_csv(values_list: List[str], column: str, csv_path: Path) -> None:
-    csv_path.mkdir(parents=True, exist_ok=True)
-    with open(csv_path, mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow([column])  # header
-        for dataset_id in values_list:
-            writer.writerow([dataset_id])
-
-
-def save_dict_to_csv(dict_list: List[Dict[str, str]], csv_path: Path) -> None:
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(csv_path, mode='w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=dict_list[0].keys())
-        writer.writeheader()
-        for row in dict_list:
-            writer.writerow(row)
-
-
-def get_values_from_csv(file_path: Path, column: str) -> List[str] | None:
-    if not file_path.exists():
-        return None
-
-    values = []
-    with open(file_path, "r", newline="") as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            values.append(row[column])
-    return values
-
-
-def get_dict_from_csv(file_name: Path) -> List[Dict[str, str]] | None:
-    if not file_name.exists():
-        return None
-
-    values = []
-    with open(file_name, "r", newline="") as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            values.append(row)
-    return values
-
-
 def create_file_path(file_path):
     """
     Create the directories of the file path and the file if not existing
@@ -108,12 +66,3 @@ def reset_tracking_file(tracking_file_path: Path):
         "execution_status", "execution_start_time", "execution_end_time"
     ])
     df.to_csv(tracking_file_path, index=False)
-
-
-def get_working_directory(working_dir: str, project_name: str, sub_dirs: str = None) -> Path:
-    if sub_dirs is None:
-        download_dir = ConfigPath.resources_path / working_dir / project_name
-    else:
-        download_dir = ConfigPath.resources_path / working_dir / project_name / sub_dirs
-    download_dir.mkdir(parents=True, exist_ok=True)
-    return download_dir

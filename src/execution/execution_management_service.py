@@ -111,6 +111,8 @@ def thread_execution(item: Dict) -> None:
             else:
                 logger.info("Failure for execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']))
             with monitoring_lock:
+                df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
+                row_index = df.index[df["identifier"] == str(item["identifier"])].tolist()
                 values = {
                     "execution_status": status.replace("\"",""),
                     "execution_end_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -122,6 +124,8 @@ def thread_execution(item: Dict) -> None:
     except:
         with monitoring_lock:
             logger.error("Exception for execution " + str(item["identifier"] + ", " + str(monitoring['identifier'])))
+            df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
+            row_index = df.index[df["identifier"] == str(item["identifier"])].tolist()
             values = {"execution_status": "PyNoir_exception"}
             for col, val in values.items():
                 df.loc[row_index, col] = val
