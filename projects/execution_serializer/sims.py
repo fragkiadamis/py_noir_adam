@@ -46,7 +46,7 @@ def generate_json(_: Optional[Path] = None) -> List[Dict]:
     identifier = 0
     executions = []
 
-    exam_ids_to_exec = get_items_from_input_file("inputs.txt")
+    exam_ids_to_exec = get_items_from_input_file("sims.txt")
 
     logger.info("Getting datasets, building json content... ")
 

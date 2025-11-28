@@ -38,11 +38,11 @@ def execute() -> None:
     init_serialization(generate_json)
 
 def generate_json(_: Optional[Path] = None) -> List[Dict]:
-    examinations = Dict()
+    examinations = {}
     identifier = 0
     executions = []
 
-    exam_ids_to_exec = get_items_from_input_file("inputs.txt")
+    exam_ids_to_exec = get_items_from_input_file("comete.txt")
 
     logger.info("Getting datasets, building json content... ")
 
