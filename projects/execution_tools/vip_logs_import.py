@@ -10,6 +10,7 @@ from src.utils.log_utils import get_logger
 app = typer.Typer()
 logger = get_logger()
 
+
 @app.callback()
 def explain() -> None:
     """
@@ -22,6 +23,7 @@ def explain() -> None:
         uv run main.py vip_logs_import execute
     """
 
+
 @app.command()
 def execute() -> None:
     workflow_ids = get_items_from_input_file("inputs.txt")
@@ -32,6 +34,7 @@ def execute() -> None:
             log_response(response, workflow_id)
         else:
             logger.error("An error has occurred while trying to download " + workflow_id + " logs.")
+
 
 def log_response(response: Response, workflow_id: str) -> None:
     if response.content.__len__() > 100:

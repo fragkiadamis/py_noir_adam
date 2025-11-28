@@ -110,7 +110,8 @@ def format_all_json(input_dir_path: Path) -> None:
     formatted_dfs = [format_output_to_tsv_by_series(json_path) for json_path in json_paths]
 
     df = pd.concat(formatted_dfs)
-    df.to_csv(ConfigPath.output_path / "formatted_output_SIMS.tsv", sep='\t', index=False)
+    sims_output_dir = (ConfigPath.output_path / "sims").mkdir(parents=True, exist_ok=True)
+    df.to_csv(sims_output_dir / "formatted_output_SIMS.tsv", sep='\t', index=False)
 
 
 def list_output_json_available(input_dir_path: Path) -> List[Path]:

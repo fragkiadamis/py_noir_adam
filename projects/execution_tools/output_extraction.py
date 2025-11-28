@@ -8,6 +8,7 @@ from src.utils.log_utils import get_logger
 app = typer.Typer()
 logger = get_logger()
 
+
 @app.callback()
 def explain() -> None:
     """
@@ -27,6 +28,7 @@ def explain() -> None:
         uv run main.py output_extraction execute
     """
 
+
 @app.command()
 def execute() -> None:
     """
@@ -35,6 +37,6 @@ def execute() -> None:
     with open(ConfigPath.input_path / "input.json", "r") as file:
         response = post("/datasets/datasetProcessing/complexMassiveDownload", data = file, stream=True)
     if response.status_code == 200:
-        start_download(response, "Output_extraction")
+        start_download(response, "extraction", "Output_extraction")
     else:
         logger.error("An error has occurred while trying to download processing outputs.")

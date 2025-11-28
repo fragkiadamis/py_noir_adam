@@ -31,6 +31,6 @@ def execute():
     for resource_id in resource_ids:
         response = get("/datasets/carmin-data/path/" + resource_id + "?action=content&converterId=5&format=dcm")
         if response.status_code == 200:
-            start_download(response, "CarminAPI_" + resource_id)
+            start_download(response, "CarminAPI", "CarminAPI_" + resource_id)
         else:
             logger.error("An error has occurred while trying to get resource {} from Shanoir.", resource_id)
