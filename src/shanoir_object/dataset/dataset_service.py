@@ -209,8 +209,8 @@ def upload_dataset_processing(dataset_processing, non_ohif_request=True) -> bool
     :param non_ohif_request:
     :return:
     """
-    content_type = 'multipart/related; type="application/dicom"; boundary="your-boundary"'
     boundary = f"====={uuid.uuid4().hex}====="  # generate a unique boundary
+    content_type = f'multipart/related; type="application/dicom"; boundary="{boundary}"'
     data = (
        f"--{boundary}\r\n"
        f"Content-Type: application/dicom\r\n\r\n"

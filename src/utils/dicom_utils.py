@@ -121,7 +121,7 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
 
 
 def upload_to_pacs_rest(dataset_path: Path) -> None:
-    total_file_count, dicom_count, studies = 0, 0, []
+    total_file_count, dicom_count, studies_count = 0, 0, 0
     df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
     for study_path in dataset_path.iterdir():
         logger.info(f"Uploading orthanc study: {study_path.name}")
@@ -134,13 +134,14 @@ def upload_to_pacs_rest(dataset_path: Path) -> None:
         parent_study_orthanc_id = None
         if response_json and "ParentStudy" in response_json:
             parent_study_orthanc_id = response_json["ParentStudy"]
+            studies_count += 1
 
         processing_id = study_path.name.split("_")[1]
         df.loc[df["processing_id"] == processing_id, "orthanc_study_id"] = parent_study_orthanc_id
         df.loc[df["processing_id"] == processing_id, "study_instance_uid"] = pydicom.dcmread(dcm_files[0]).StudyInstanceUID
         df.to_csv(ConfigPath.tracking_file_path, index=False)
 
-    logger.info(f"Total studies uploaded: {len(studies)}")
+    logger.info(f"Total studies uploaded: {studies_count}")
     if dicom_count == total_file_count:
         logger.info(f"SUCCESS: {dicom_count} DICOM file(s) successfully imported.")
     else:
@@ -220,23 +221,19 @@ def delete_studies_from_pacs() -> None:
 
 
 def upload_processed_dataset(dataset_path: Path) -> None:
-    for study in os.listdir(dataset_path):
-        study_dir = os.path.join(dataset_path, study)
-        dcm_files = [
-            os.path.join(root, f)
-            for root, dirs, files in os.walk(study_dir)
-            for f in files
-            if f.endswith(".dcm") and pydicom.dcmread(os.path.join(root, f)).Modality in ("SR", "SEG")
-        ]
+    for dcm_path in dataset_path.rglob("*.dcm"):
+        ds = pydicom.dcmread(dcm_path)
 
-        for dcm in dcm_files:
-            with open(dcm, "rb") as f:
-                dicom_bytes = f.read()
-            success = upload_dataset_processing(dicom_bytes)
-            if success:
-                logger.info(f"Successfully uploaded {dcm} to Shanoir.")
-            else:
-                logger.warning(f"Failed to upload {dcm} to Shanoir.")
+        if ds.Modality not in ("SR", "SEG"):
+            continue
+
+        with open(dcm_path, "rb") as f:
+            dicom_bytes = f.read()
+        success = upload_dataset_processing(dicom_bytes)
+        if success:
+            logger.info(f"Successfully uploaded {dcm_path.name} to Shanoir.")
+        else:
+            logger.warning(f"Failed to upload {dcm_path.name} to Shanoir.")
 
 
 def get_patient_ids_from_pacs() -> None:

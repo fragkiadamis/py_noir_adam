@@ -180,7 +180,8 @@ def populate_orthanc() -> None:
     vip_output = ConfigPath.output_path / "ecan" / "vip_output"
     fetch_datasets_from_json(vip_output)
     inspect_and_fix_study_tags(vip_output)
-    upload_to_pacs_rest(vip_output) # RESTAPI or DICOM WEB STORE --> upload_to_pacs_dicom(vip_output)
+    upload_to_pacs_rest(vip_output) # for REST API
+    # upload_to_pacs_dicom(vip_output) # For dicom web store
     assign_label_to_pacs_study()
 
 
@@ -199,5 +200,5 @@ def debug_orthanc() -> None:
 def import_shanoir() -> None:
     initiate_working_files("ecan")
     orthanc_output = ConfigPath.output_path / "ecan" / "orthanc_output"
-    download_from_pacs_rest(orthanc_output)
+    # download_from_pacs_rest(orthanc_output) # for REST API
     upload_processed_dataset(orthanc_output)
