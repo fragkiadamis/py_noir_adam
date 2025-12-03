@@ -19,15 +19,19 @@ logger = get_logger()
 @app.callback()
 def explain() -> None:
     """
+    \b
     SIMS project command-line interface.
+
     Commands:
     --------
-    * `execute` — runs the SIMS pipeline for examinations listed in `input/inputs.txt`:
+    * `execute` — runs the SIMS pipeline for examinations listed in `input/comete.txt`:
         - Retrieves datasets for each examination ID.
         - Generates JSON executions for the SIMS/3.0 pipeline.
         - Launches executions or resumes incomplete runs.
     * `format` - format the SIMS outputs into a .tsv file
-        - outputs must be in input/dataset, whatever the subdirectories
+        - Outputs must be in input/, whatever the subdirectories
+        - All .json files in inputs/ are taken in account
+
     Usage:
     -----
         uv run main.py sims execute
@@ -102,11 +106,10 @@ def generate_json(_: Optional[Path] = None) -> List[Dict]:
 
 
 @app.command("format")
-def format_all_json(input_dir_path: Path) -> None:
+def format_all_json() -> None:
     """Format each JSON output and concat them into a single TSV file."""
 
-    input_dir_path = ConfigPath.input_path / "dataset"
-    json_paths = list_output_json_available(input_dir_path)
+    json_paths = list_output_json_available()
     formatted_dfs = [format_output_to_tsv_by_series(json_path) for json_path in json_paths]
 
     df = pd.concat(formatted_dfs)
@@ -114,16 +117,16 @@ def format_all_json(input_dir_path: Path) -> None:
     df.to_csv(sims_output_dir / "formatted_output_SIMS.tsv", sep='\t', index=False)
 
 
-def list_output_json_available(input_dir_path: Path) -> List[Path]:
+def list_output_json_available() -> List[Path]:
     """List available JSON output available in input_dir_path."""
     result = []
-    root = Path(input_dir_path)
 
-    for file_path in root.rglob("*"):
+    for file_path in ConfigPath.input_path.rglob("*"):
         if file_path.is_file():
             if re.search(r"\.json", str(file_path)):
                 result.append(file_path)
 
+    logger.info(f"Number of listed output.json : {str(len(result))}")
     return sorted(result)
 
 
@@ -149,6 +152,9 @@ def format_output_to_tsv_by_series(json_path: Path) -> Optional[pd.DataFrame]:
     volumes_cols = pd.DataFrame(df['volumes'].tolist()).add_prefix("volume.", axis=1)
     df = df.drop(columns=['volumes']).add_prefix("serie.", axis=1).reset_index(drop=True)
     df = pd.concat([df, volumes_cols], axis=1, )
+
+    if "volume.status" in df.columns and "volume.type" in df.columns:
+        df.loc[df["volume.status"] == "IGNORED", "volume.type"] = df["volume.status"]
 
     first_cols = [
         "serie.burnedInAnnotation",
@@ -202,9 +208,16 @@ def format_output_to_tsv_by_series(json_path: Path) -> Optional[pd.DataFrame]:
         "volume.type",
         "volume.serieId",
         "volume.numberOfSlices",
+        "volume.shanoirId"
     ]
 
-    df = df.groupby(['volume.serieId']).agg(dict({key: list_unique_str_reduce for key in first_cols}))
+    existing_first_cols = [c for c in first_cols if c in df.columns]
+
+    df = df.groupby(['volume.serieId']).agg(dict({key: list_unique_str_reduce for key in existing_first_cols}))
+
+    if "volume.shanoirId" in df.columns:
+       df["volume.shanoirId"] = df["volume.shanoirId"].str.split(",")
+       df = df.explode("volume.shanoirId").reset_index(drop=True)
 
     reorder_cols = [col for col in df.columns if col in first_cols]
     df = df[reorder_cols]

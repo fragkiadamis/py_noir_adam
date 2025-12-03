@@ -17,13 +17,16 @@ logger = get_logger()
 @app.callback()
 def explain() -> None:
     """
+    \b
     Comete_T2STIR project command-line interface.
+
     Commands:
     --------
-    * `execute` — runs the Comete_T2STIR pipeline for examinations listed in `input/inputs.txt`:
+    * `execute` — runs the Comete_T2STIR pipeline for examinations listed in `input/comete.txt`:
         - Retrieves datasets for each examination ID.
         - Generates JSON executions for the Comete_T2STIR/0.1 pipeline.
         - Launches executions or resumes incomplete runs.
+
     Usage:
     -----
         uv run main.py t2stir execute

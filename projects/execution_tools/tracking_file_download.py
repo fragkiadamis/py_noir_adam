@@ -12,10 +12,13 @@ logger = get_logger()
 @app.callback()
 def explain() -> None:
     """
+    \b
     Tracking file download project command-line interface.
+
     Commands:
     --------
     * `execute` — download the tracking files relative to the pipeline names written in `input/inputs.txt`
+
     Usage:
     -----
         uv run main.py tracking_file_download execute
@@ -32,7 +35,7 @@ def execute()-> None:
     for pipeline_name in pipeline_names:
         response = get("/datasets/execution-monitoring/tracking-file", params = {"pipelineName":pipeline_name})
         if response.status_code == 200:
-            start_download(response, "monitoring", pipeline_name)
+            start_download(response, pipeline_name)
         else:
             logger.error("An error has occured while trying to get {} tracking file.", pipeline_name)
 

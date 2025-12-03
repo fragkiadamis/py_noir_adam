@@ -10,7 +10,9 @@ logger = get_logger()
 @app.callback()
 def explain() -> None:
     """
+    \b
     Post-processing project command-line interface.
+
     Commands:
     --------
     * `execute` — runs the delayed post processings for VIP outputs in Shanoir according to the pipeline names written in `input/inputs.txt`:
@@ -18,6 +20,7 @@ def explain() -> None:
         - A post processing is a treatement that should occur on/with execution ouputs once they are received from VIP
         - Care that to have a delayed post processing available, the execution name in Shanoir must end with "_post_processing"
         - To set a delay to a post processing on an execution, you can add "_post_processing" at the end of the name field in the execution serializer json_generator() method.
+
     Usage:
     -----
         uv run main.py post_processing execute

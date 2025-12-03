@@ -17,13 +17,16 @@ logger = get_logger()
 @app.callback()
 def explain() -> None:
     """
+    \b
     Siena project command-line interface.
+
     Commands:
     --------
-    * `execute` — runs the Siena pipeline for examinations listed in `input/inputs.txt`:
+    * `execute` — runs the Siena pipeline for examinations listed in `input/comete.txt`:
         - Retrieves datasets for each examination ID.
         - Generates JSON executions for the Siena/1.3 pipeline.
         - Launches executions or resumes incomplete runs.
+
     Usage:
     -----
         uv run main.py siena execute
