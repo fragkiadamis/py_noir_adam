@@ -3,6 +3,8 @@ import os
 import getpass
 import zipfile
 import re
+from typing import List
+
 import requests
 
 from pathlib import Path
@@ -127,7 +129,7 @@ def put(path: str, params=None, files=None, stream=None, json=None, data=None,
                    data=data)
 
 
-def download_file(output_folder, response, unzip):
+def download_file(output_folder: Path, response, unzip):
     filename = get_filename_from_response(output_folder, response)
     if not filename:
         return
@@ -156,7 +158,7 @@ def download_files(output_folder, response):
     return
 
 
-def get_filename_from_response(output_folder, response):
+def get_filename_from_response(output_folder: Path, response):
     """ Build file path with [output_folder] and [response] 'Content-Disposition' header
     :param output_folder:
     :param response:
@@ -165,10 +167,9 @@ def get_filename_from_response(output_folder, response):
     filename = None
     if response.headers and 'Content-Disposition' in response.headers:
         filenames = re.findall('filename=(.+)', response.headers['Content-Disposition'])
-        filename = str(output_folder + '/' + filenames[0]) if len(filenames) > 0 else None
+        filename = str(output_folder / filenames[0]) if len(filenames) > 0 else None
     if filename is None:
-        raise Exception('Could not find file name in response header', response.status_code, response.reason,
-                        response.error, response.headers, response)
+        raise Exception('Could not find file name in response header', response.status_code, response.reason, response.error, response.headers, response)
     return filename
 
 
@@ -204,7 +205,7 @@ def initialize(args):
         if hasattr(args, 'configuration_folder') and args.configuration_folder:
             configuration_folder = Path(args.configuration_folder)
         else:
-            cfs = sorted(list(Path.home().glob('.su_v*')))
+            cfs = sorted(List(Path.home().glob('.su_v*')))
             configuration_folder = cfs[-1] if len(cfs) > 0 else Path().home()
 
         proxy_settings = configuration_folder / 'proxy.properties'

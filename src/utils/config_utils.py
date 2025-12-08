@@ -3,9 +3,9 @@ import json
 
 from pathlib import Path
 
-def load_config(**kwargs: str) -> None:
+def load_config() -> None:
     config = CustomConfigParser()
-    config.read(Path("config/config.conf"))
+    config.read(Path("config.conf"))
 
     ConfigPath.init(config)
     APIConfig.init(config)
@@ -23,32 +23,31 @@ class ConfigPath(object):
     """
     Configuration class for project configuration
     """
-    rootPath: Path = None
-    inputPath: Path = None
-    outputPath: Path = None
-    trackingFilePath: Path = None
-    resourcesPath: Path = None
-    wipFilePath: Path = None
-    saveFilePath: Path = None
+    root_path: Path = None
+    input_path: Path = None
+    tracking_file_path: Path = None
+    resources_path: Path = None
+    wip_file_path: Path = None
+    save_file_path: Path = None
 
     @classmethod
     def init(cls, config: CustomConfigParser):
-        cls.rootPath = Path(config.get('Config', 'rootPath'))
-        cls.inputPath = cls.rootPath / "input"
-        cls.outputPath = cls.rootPath / "output"
-        cls.trackingFilePath = cls.outputPath / "tracking_file"
-        cls.resourcesPath = cls.rootPath / "resource"
-        cls.wipFilePath = cls.resourcesPath / "WIP_file"
-        cls.saveFilePath = cls.resourcesPath / "save_file"
+        cls.root_path = Path(config.get('Path', 'root'))
+        cls.input_path = cls.root_path / "input"
+        cls.resources_path = cls.root_path / "resources"
+        cls.output_path = cls.resources_path / "output"
+        cls.tracking_file_path = cls.resources_path / "tracking_file"
+        cls.wip_file_path = cls.resources_path / "wip_file"
+        cls.save_file_path = cls.resources_path / "save_file"
 
     def __init__(self, config: CustomConfigParser):
-        self.rootPath = Path(config.get('Config', 'rootPath'))
-        self.inputPath = self.rootPath / "input"
-        self.outputPath = self.rootPath / "output"
-        self.trackingFilePath = self.outputPath / "tracking_file"
-        self.resourcesPath = self.rootPath / "resources"
-        self.wipFilePath = self.resourcesPath / "WIP_file"
-        self.saveFilePath = self.resourcesPath / "save_file"
+        self.root_path = Path(config.get('Path', 'root'))
+        self.input_path = self.root_path / "input"
+        self.resources_path = self.root_path / "resources"
+        self.output_path = self.resources_path / "output"
+        self.tracking_file_path = self.resources_path / "tracking_file"
+        self.wip_file_path = self.resources_path / "WIP_file"
+        self.save_file_path = self.resources_path / "save_file"
 
 class APIConfig(object):
     """
@@ -121,25 +120,25 @@ class OrthancConfig(object):
 
     @classmethod
     def init(cls, config: CustomConfigParser):
-        cls.pacs_ae_title = config.get('Orthanc context', 'pacs_ae_title')
-        cls.client_ae_title = config.get('Orthanc context', 'client_ae_title')
-        cls.scheme = config.get('Orthanc context', 'scheme')
-        cls.domain = config.get('Orthanc context', 'domain')
-        cls.rest_api_port = config.get('Orthanc context', 'rest_api_port')
-        cls.dicom_server_port = config.get('Orthanc context', 'dicom_server_port')
-        cls.dicom_client_port = config.get('Orthanc context', 'dicom_client_port')
-        cls.username = config.get('Orthanc context', 'username')
+        cls.pacs_ae_title = config.get('Orthanc config', 'pacs_ae_title')
+        cls.client_ae_title = config.get('Orthanc config', 'client_ae_title')
+        cls.scheme = config.get('Orthanc config', 'scheme')
+        cls.domain = config.get('Orthanc config', 'domain')
+        cls.rest_api_port = config.get('Orthanc config', 'rest_api_port')
+        cls.dicom_server_port = config.get('Orthanc config', 'dicom_server_port')
+        cls.dicom_client_port = config.get('Orthanc config', 'dicom_client_port')
+        cls.username = config.get('Orthanc config', 'username')
         cls.password = None
 
     def __init__(self, config: CustomConfigParser):
-        self.pacs_ae_title = config.get('Orthanc context', 'pacs_ae_title')
-        self.client_ae_title = config.get('Orthanc context', 'client_ae_title')
-        self.scheme = config.get('Orthanc context', 'scheme')
-        self.domain = config.get('Orthanc context', 'domain')
-        self.rest_api_port = config.get('Orthanc context', 'rest_api_port')
-        self.dicom_server_port = config.get('Orthanc context', 'dicom_server_port')
-        self.dicom_client_port = config.get('Orthanc context', 'dicom_client_port')
-        self.username = config.get('Orthanc context', 'username')
+        self.pacs_ae_title = config.get('Orthanc config', 'pacs_ae_title')
+        self.client_ae_title = config.get('Orthanc config', 'client_ae_title')
+        self.scheme = config.get('Orthanc config', 'scheme')
+        self.domain = config.get('Orthanc config', 'domain')
+        self.rest_api_port = config.get('Orthanc config', 'rest_api_port')
+        self.dicom_server_port = config.get('Orthanc config', 'dicom_server_port')
+        self.dicom_client_port = config.get('Orthanc config', 'dicom_client_port')
+        self.username = config.get('Orthanc config', 'username')
         self.password = None
 
 

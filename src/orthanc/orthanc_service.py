@@ -1,11 +1,13 @@
 import base64
 import os.path
 import zipfile
+from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
 import requests
+from requests import Response
 
-from src.orthanc.orthanc_config import OrthancConfig
+from src.utils.config_utils import OrthancConfig
 from src.security.authentication_service import load_orthanc_password
 from src.utils.log_utils import get_logger
 
@@ -29,7 +31,7 @@ def get_http_headers(username: str, password: str) -> Dict[str, str]:
     }
 
 
-def orthanc_request(method: str, path: str, raise_for_status: bool = True, **kwargs):
+def orthanc_request(method: str, path: str, raise_for_status: bool = True, **kwargs) -> Response:
     """ Authenticate / Re-authenticate user [APIContext.username] and execute a [method] HTTP query to [path] endpoint
     :param method:
     :param path:
@@ -61,7 +63,7 @@ def orthanc_request(method: str, path: str, raise_for_status: bool = True, **kwa
     return response
 
 
-def upload_study_to_orthanc(files: List[str]) -> Tuple[int, int, Optional[Dict[str, str]]]:
+def upload_study_to_orthanc(files: List[Path]) -> Tuple[int, int, Optional[Dict[str, str]]]:
     """
     Upload a list of DICOM files to Orthanc and return upload statistics and last response.
 
@@ -88,8 +90,7 @@ def upload_study_to_orthanc(files: List[str]) -> Tuple[int, int, Optional[Dict[s
                 successful_uploads += 1
                 last_response_json = response.json()
             else:
-                logger.warning(f"Upload failed for {os.path.basename(file_path)} (status {response.status_code})")
-
+                logger.warning(f"Upload failed for {file_path.name} (status {response.status_code})")
         except Exception as e:
             logger.error(f"Error uploading {file_path}: {e}")
 
@@ -207,7 +208,7 @@ def get_orthanc_instance_metadata(orthanc_instance_id: str) -> Dict[str, str] | 
         return None
 
 
-def download_orthanc_study(study_id: str, download_path: str, unzip: bool = True):
+def download_orthanc_study(study_id: str, download_path: Path, unzip: bool = True):
     try:
         output_file = os.path.join(download_path, f"{study_id}.zip")
         response = orthanc_request("get", f"studies/{study_id}/archive")

@@ -8,8 +8,9 @@ from src.utils.log_utils import get_logger
 app = typer.Typer()
 logger = get_logger()
 
+
 @app.callback()
-def explain():
+def explain() -> None:
     """
     Dicom metadata download project command-line interface.
     Commands:
@@ -20,6 +21,7 @@ def explain():
         uv run main.py dicom_metadata_download execute
     """
 
+
 @app.command()
 def execute() -> None:
     """
@@ -29,7 +31,7 @@ def execute() -> None:
     metadata_keys = get_items_from_input_file("inputs_bis.txt")
 
     response = post("/datasets/datasets/dicomMetadataExtraction", data = {"datasetIds":datasets_ids, "metadataKeys":metadata_keys})
-    if response.status_code == 200 :
-        start_download(response, "dicom_metadata")
-    else :
+    if response.status_code == 200:
+        start_download(response, "metadata", "dicom_metadata")
+    else:
         logger.error("An error has occured while trying to download the metadata csv.")

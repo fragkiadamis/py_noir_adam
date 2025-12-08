@@ -43,9 +43,9 @@ def ask_access_token():
 
     response_json = json.loads(response.text)
     if not hasattr(response, 'status_code') or response.status_code != 200:
-        if 'error_description' in response_json and response_json.get("error_description") == "Invalid user credentials" :
+        if 'error_description' in response_json and response_json.get("error_description") == "Invalid user credentials":
             logger.error(response_json.get("error_description"))
-        else :
+        else:
             logger.error('Failed to connect, make sure you have a certified IP or are connected on a valid VPN.')
         sys.exit(1)
 
@@ -67,13 +67,13 @@ def refresh_access_token():
     logger.info('Refreshing keycloak token...')
     response = requests.post(url, data=payload, headers=headers, proxies=APIConfig.proxies, verify=APIConfig.verify,
                              timeout=APIConfig.timeout)
-    if response.text.find("No refresh token") != -1 :
+    if response.text.find("No refresh token") != -1:
         ask_access_token()
-    else :
+    else:
         APIConfig.access_token = response.json()['access_token']
         APIConfig.refresh_token = response.json()['refresh_token']
     if response.status_code != 200 and APIConfig.access_token == "":
-        logger.error('Response status :' + str(response.status_code) + "," + response.text)
+        logger.error('Response status:' + str(response.status_code) + "," + response.text)
         exit(1)
 
 

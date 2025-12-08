@@ -1,6 +1,6 @@
 class SolrQuery:
     """
-        Configuration class for Solr query
+    Configuration class for Solr query
     """
 
     def __init__(self):

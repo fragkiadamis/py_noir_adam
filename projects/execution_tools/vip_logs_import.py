@@ -10,8 +10,9 @@ from src.utils.log_utils import get_logger
 app = typer.Typer()
 logger = get_logger()
 
+
 @app.callback()
-def explain():
+def explain() -> None:
     """
     Vip log improts project command-line interface.
     Commands:
@@ -22,20 +23,22 @@ def explain():
         uv run main.py vip_logs_import execute
     """
 
+
 @app.command()
 def execute() -> None:
     workflow_ids = get_items_from_input_file("inputs.txt")
 
     for workflow_id in workflow_ids:
         response = get("/datasets/vip/execution/" + workflow_id + "/stdout")
-        if response.status_code == 200 :
+        if response.status_code == 200:
             log_response(response, workflow_id)
-        else :
+        else:
             logger.error("An error has occurred while trying to download " + workflow_id + " logs.")
 
-def log_response(response : Response, workflow_id: str) -> None:
-    if response.content.__len__() > 100 :
-        error_file_path = ConfigPath.outputPath / "imported_logs" / (workflow_id + ".txt")
+
+def log_response(response: Response, workflow_id: str) -> None:
+    if response.content.__len__() > 100:
+        error_file_path = ConfigPath.output_path / "imported_logs" / (workflow_id + ".txt")
         create_file_path(error_file_path)
 
         FileWriter.open_files(error_file_path)

@@ -29,15 +29,15 @@ class FileWriter:
                 f = file_path.open("r+", encoding="utf-8")
                 cls.files[file_path] = f
 
-                #Execution serialization specific code
+                # Execution serialization specific code
                 type = file_path.parent.name
                 match type:
                     case "tracking_file":
-                        cls.files[ConfigPath.trackingFilePath] = f
+                        cls.files[ConfigPath.tracking_file_path] = f
                     case "WIP_file":
-                        cls.files[ConfigPath.wipFilePath] = f
+                        cls.files[ConfigPath.wip_file_path] = f
                     case "save_file":
-                        cls.files[ConfigPath.saveFilePath] = f
+                        cls.files[ConfigPath.save_file_path] = f
 
     @classmethod
     def replace_content(cls, file_path: Path, text: str):
@@ -54,7 +54,7 @@ class FileWriter:
 
     @classmethod
     def update_content_first_matching_line_start(cls, file_path: Path, line_start: str, text: str, csv: bool = False):
-        """Update the first line matching a regex. CSV option to keep value if corresponding value in text arg is empty, only works with , separator."""
+        """Update the first line matching a regex. CSV option to keep value if corresponding value in text arg is empty, only works with, separator."""
         regex = re.compile(rf"^{line_start}")
         start_pos = 0
         if file_path in cls.files:
@@ -66,7 +66,7 @@ class FileWriter:
                 line = f.readline().rstrip("\n")
 
                 if not line:
-                    break #EOF
+                    break # EOF
 
                 if regex.match(line):
                     start_pos = pos

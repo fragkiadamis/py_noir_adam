@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict
+from pathlib import Path
 
 import requests
 
@@ -29,7 +29,7 @@ def get_dataset(dataset_id: str):
     return response.json()
 
 
-def download_dataset(dataset_id, file_format, output_folder, unzip=False, silent=False):
+def download_dataset(dataset_id: str, file_format: str, output_folder: Path, unzip: bool = False, silent: bool = False) -> None:
     """ Download dataset [dataset_id] as [file_format] into [output_folder]
     :param dataset_id:
     :param file_format:
@@ -44,10 +44,9 @@ def download_dataset(dataset_id, file_format, output_folder, unzip=False, silent
     path = ENDPOINT_DATASET + '/download/' + str(dataset_id)
     response = get(path, params={'format': file_format})
     download_file(output_folder, response, unzip)
-    return
 
 
-def download_datasets(dataset_ids, file_format, output_folder, unzip=False):
+def download_datasets(dataset_ids, file_format, output_folder, unzip=False) -> None:
     """ Download datasets [dataset_ids] as [file_format] into [output_folder]
     :param dataset_ids:
     :param file_format:
@@ -58,7 +57,6 @@ def download_datasets(dataset_ids, file_format, output_folder, unzip=False):
     if len(dataset_ids) > 50:
         logger.error('Cannot download more than 50 datasets at once. Please use the --search_text option instead to download '
               'the datasets one by one.')
-        return
     logger.info('Downloading datasets %s' % dataset_ids)
     file_format = 'nii' if file_format == 'nifti' else 'dcm'
     dataset_ids = ','.join([str(dataset_id) for dataset_id in dataset_ids])
@@ -66,10 +64,9 @@ def download_datasets(dataset_ids, file_format, output_folder, unzip=False):
     params = dict(datasetIds=dataset_ids, format=file_format)
     response = post(path, params=params, files=params, stream=True)
     download_file(output_folder, response, unzip=unzip)
-    return
 
 
-def download_dataset_by_study(study_id, file_format, output_folder):
+def download_dataset_by_study(study_id, file_format, output_folder) -> None:
     """ Download datasets from study [study_id] as [file_format] into [output_folder]
     :param study_id:
     :param file_format:
@@ -80,8 +77,7 @@ def download_dataset_by_study(study_id, file_format, output_folder):
     file_format = 'nii' if file_format == 'nifti' else 'dcm'
     path = ENDPOINT_DATASET + '/massiveDownloadByStudy'
     response = get(path, params={'studyId': study_id, 'format': file_format})
-    download_file(output_folder, response)
-    return
+    download_file(output_folder, response, unzip=True)
 
 
 def find_dataset_ids_by_subject_id(subject_id):
@@ -95,7 +91,7 @@ def find_dataset_ids_by_subject_id(subject_id):
     return response.json()
 
 
-def find_datasets_by_examination_id(examination_id, output : bool = False) :
+def find_datasets_by_examination_id(examination_id, output: bool = False):
     """ Get all datasets from subjet [subject_id]
     :param examination_id:
     :param output:
@@ -144,7 +140,7 @@ def get_dicom_metadata_by_dataset_id(dataset_id):
     return response.json()
 
 
-def download_dataset_by_subject(subject_id, file_format, output_folder):
+def download_dataset_by_subject(subject_id, file_format, output_folder) -> None:
     """ Download all datasets from a subject [subject_id] as [file_format] into [output_folder]
     :param subject_id:
     :param file_format:
@@ -153,10 +149,9 @@ def download_dataset_by_subject(subject_id, file_format, output_folder):
     """
     dataset_ids = find_dataset_ids_by_subject_id(subject_id)
     download_datasets(dataset_ids, file_format, output_folder)
-    return
 
 
-def download_dataset_by_subject_id_study_id(subject_id, study_id, file_format, output_folder):
+def download_dataset_by_subject_id_study_id(subject_id, study_id, file_format, output_folder) -> None:
     """ Download all datasets from a subject [subject_id] and study [study_id] as [file_format] into [output_folder]
     :param subject_id:
     :param study_id:
@@ -166,7 +161,6 @@ def download_dataset_by_subject_id_study_id(subject_id, study_id, file_format, o
     """
     dataset_ids = find_dataset_ids_by_subject_id_study_id(subject_id, study_id)
     download_datasets(dataset_ids, file_format, output_folder)
-    return
 
 
 def get_examination(examination_id: str):
@@ -190,7 +184,7 @@ def get_dataset_processing(dataset_processing_id: str):
     return response.json()
 
 
-def download_dataset_processing(dataset_processing_ids, output_folder, result_only=False, unzip=False):
+def download_dataset_processing(dataset_processing_ids, output_folder, result_only=False, unzip=False) -> None:
     """ Download datasets [dataset_ids] as [file_format] into [output_folder]
     :param dataset_processing_ids:
     :param output_folder:
@@ -201,16 +195,15 @@ def download_dataset_processing(dataset_processing_ids, output_folder, result_on
     if len(dataset_processing_ids) > 50:
         logger.error('Cannot download more than 50 datasets at once. Please use the --search_text option instead to download '
               'the datasets one by one.')
-        return
+
     logger.info(f'Downloading dataset {len(dataset_processing_ids)} processing: {dataset_processing_ids}')
     path = ENDPOINT_DATASET_PROCESSING + '/massiveDownloadByProcessingIds'
     params = dict(resultOnly=str(result_only).lower())
     response = post(path, params=params, json=dataset_processing_ids, stream=True)
     download_file(output_folder, response, unzip=unzip)
-    return
 
 
-def upload_dataset_processing(dataset_processing, non_ohif_request=True):
+def upload_dataset_processing(dataset_processing, non_ohif_request=True) -> bool:
     """ Upload dataset processing [dataset_processing_path]
     :param dataset_processing:
     :param non_ohif_request:

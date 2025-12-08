@@ -1,8 +1,9 @@
+from src.API.api_service import get
+from src.utils.log_utils import get_logger
+
 """
 Define methods for Shanoir studies MS subject API call
 """
-from src.API.api_service import get
-from src.utils.log_utils import get_logger
 
 ENDPOINT = '/studies/subjects'
 

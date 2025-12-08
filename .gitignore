@@ -16,12 +16,12 @@ wheels/
 .idea
 
 # API variables
-config/config.conf
+config.conf
 
 # Resources
 input
 output
-resource
+resources
 
 # Patient information
 *.csv

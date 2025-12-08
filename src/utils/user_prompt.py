@@ -1,3 +1,7 @@
+from src.utils.log_utils import get_logger
+
+logger = get_logger()
+
 def ask_yes_no(question: str) -> bool:
     while True:
         answer = input(f"{question} (y/n): ").strip().lower()
@@ -5,4 +9,4 @@ def ask_yes_no(question: str) -> bool:
             return True
         if answer in ("n", "no"):
             return False
-        print("Please answer 'y' or 'n'.")
+        logger.info("Please answer 'y' or 'n'.")
