@@ -1,7 +1,7 @@
 import typer
 
 from src.API.api_service import get
-from src.utils.download_utils import start_download
+from src.utils.download_utils import start_one_file_download
 from src.utils.file_utils import get_items_from_input_file
 from src.utils.log_utils import get_logger
 
@@ -34,6 +34,6 @@ def execute():
     for resource_id in resource_ids:
         response = get("/datasets/carmin-data/path/" + resource_id + "?action=content&converterId=5&format=dcm")
         if response.status_code == 200:
-            start_download(response, "CarminAPI_" + resource_id)
+            start_one_file_download(response, "CarminAPI_" + resource_id + ".zip")
         else:
             logger.error("An error has occurred while trying to get resource {} from Shanoir.", resource_id)

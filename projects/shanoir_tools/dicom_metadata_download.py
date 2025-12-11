@@ -1,7 +1,7 @@
 import typer
 
 from src.API.api_service import post
-from src.utils.download_utils import start_download
+from src.utils.download_utils import start_one_file_download
 from src.utils.file_utils import get_items_from_input_file
 from src.utils.log_utils import get_logger
 
@@ -35,6 +35,6 @@ def execute() -> None:
 
     response = post("/datasets/datasets/dicomMetadataExtraction", json = datasets_ids, params = {"metadataKeys":metadata_keys})
     if response.status_code == 200:
-        start_download(response, "dicom_metadata")
+        start_one_file_download(response, "dicom_metadata.csv")
     else:
         logger.error("An error has occured while trying to download the metadata csv.")

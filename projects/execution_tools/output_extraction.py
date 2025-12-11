@@ -2,7 +2,6 @@ import typer
 
 from src.API.api_service import post
 from src.utils.config_utils import ConfigPath
-from src.utils.download_utils import start_download
 from src.utils.log_utils import get_logger
 
 app = typer.Typer()
