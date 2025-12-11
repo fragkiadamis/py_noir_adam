@@ -33,7 +33,7 @@ def execute() -> None:
     datasets_ids = get_items_from_input_file("inputs.txt")
     metadata_keys = get_items_from_input_file("inputs_bis.txt")
 
-    response = post("/datasets/datasets/dicomMetadataExtraction", data = {"datasetIds":datasets_ids, "metadataKeys":metadata_keys})
+    response = post("/datasets/datasets/dicomMetadataExtraction", json = datasets_ids, params = {"metadataKeys":metadata_keys})
     if response.status_code == 200:
         start_download(response, "dicom_metadata")
     else:

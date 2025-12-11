@@ -6,7 +6,7 @@ logger = get_logger()
 
 
 def start_download(response: Response, output_name: str) -> None:
-    if response.content.__len__() > 100:
+    if response.content.__len__() > 10:
         ConfigPath.output_path.mkdir(parents=True, exist_ok=True)
         with open(ConfigPath.output_path / (output_name + ".zip"), "wb") as file:
             for chunk in response.iter_content(chunk_size=8192):  # Download in chunks
