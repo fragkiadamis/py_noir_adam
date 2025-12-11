@@ -11,7 +11,7 @@ import projects.execution_serializer.sims as sims
 import projects.execution_serializer.flair as flair
 import projects.execution_serializer.pmap as pmap
 import projects.execution_serializer.t2stir as t2stir
-import projects.execution_serializer.siena as siena
+import projects.execution_serializer.sienax as sienax
 import projects.execution_serializer.ecan as ecan
 
 import projects.execution_tools.carmin_api_test as carmin
@@ -31,7 +31,7 @@ app.add_typer(sims.app, name="sims")
 app.add_typer(flair.app, name="flair")
 app.add_typer(pmap.app, name="pmap")
 app.add_typer(t2stir.app, name="t2stir")
-app.add_typer(siena.app, name="siena")
+app.add_typer(sienax.app, name="sienax")
 app.add_typer(ecan.app, name="ecan")
 
 # Execution tools
@@ -58,7 +58,7 @@ def explain() -> None:
     * - flair: runs the Comete_FLAIR processing pipeline.
     * - pmap: runs the Comete_PMAP processing pipeline.
     * - t2stir: runs the Comete_T2STIR processing pipeline.
-    * - siena: runs the Siena processing pipeline.
+    * - sienax: runs the Sienax processing pipeline.
     * - ecan: runs the eCAN pipeline.
     *
     * Execution tools:
@@ -76,7 +76,6 @@ def explain() -> None:
     ---
     Built for automating dataset execution and processing in Shanoir-NG.
     """
-
 
 if __name__ == "__main__":
     app()
