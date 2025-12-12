@@ -14,10 +14,13 @@ logger = get_logger()
 @app.callback()
 def explain() -> None:
     """
+    \b
     Vip log improts project command-line interface.
+
     Commands:
     --------
     * `execute` — download the VIP logs according to the workflow ids written in `input/inputs.txt`:
+
     Usage:
     -----
         uv run main.py vip_logs_import execute

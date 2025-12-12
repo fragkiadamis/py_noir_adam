@@ -134,7 +134,9 @@ def generate_json(output_dir: Path) -> List[Dict]:
 @app.callback()
 def explain() -> None:
     """
+    \b
     eCAN project command-line interface.
+
     Commands:
     --------
     * `execute-pipeline` — runs the eCAN pipeline for subjects listed in `ecan_subject_id_list.csv` (ignored):
@@ -142,7 +144,9 @@ def explain() -> None:
         - Filters the datasets (keep the oldest examination, >=50 slices, )
         - Generates JSON executions for the SIMS/3.0 pipeline.
         - Launches executions or resumes incomplete runs.
-        --- Auxiliary debug functions ---
+
+    Auxiliary debug functions:
+    -------------------------
     * `populate-orthanc` — populates the CHU Nantes Orthanc PACS with the processed output and the input datasets
         - Download the processed output alongside the input dataset
         - Inspect DICOM files for inconsistencies and fixes them
@@ -156,6 +160,7 @@ def explain() -> None:
     * `import-shanoir` — Imports data from Orthanc to shanoir
         - Get further processed outputs from shanoir
         - Upload the processed output to shanoir
+
     Usage:
     -----
         uv run main.py ecan execute

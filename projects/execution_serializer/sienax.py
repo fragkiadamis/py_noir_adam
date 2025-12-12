@@ -17,22 +17,25 @@ logger = get_logger()
 @app.callback()
 def explain() -> None:
     """
-    Siena project command-line interface.
+    \b
+    Sienax project command-line interface.
+
     Commands:
     --------
-    * `execute` — runs the Siena pipeline for examinations listed in `input/inputs.txt`:
+    * `execute` — runs the Sienax pipeline for examinations listed in `input/comete.txt`:
         - Retrieves datasets for each examination ID.
         - Generates JSON executions for the Siena/1.3 pipeline.
         - Launches executions or resumes incomplete runs.
+
     Usage:
     -----
-        uv run main.py siena execute
+        uv run main.py sienax execute
     """
 
 @app.command()
 def execute() -> None:
     """
-    Run the Siena processing pipeline
+    Run the Sienax processing pipeline
     """
     initiate_working_files("Siena")
     init_serialization(generate_json)
@@ -95,12 +98,12 @@ def generate_json(_: Optional[Path] = None) -> List[Dict]:
 
             execution = {
                 "identifier":value["identifier"],
-                "name": "siena_1_3_exam_{}_{}".format(key, datetime.now(timezone.utc).strftime('%F_%H%M%S%f')[:-3]),
-                "pipelineIdentifier": "Siena/1.3",
+                "name": "sienax_1_3_exam_{}_{}".format(key, datetime.now(timezone.utc).strftime('%F_%H%M%S%f')[:-3]),
+                "pipelineIdentifier": "Sienax/1.3",
                 "inputParameters": {},
                 "datasetParameters": [
                     {
-                        "name": "t1_archive",
+                        "name": "T1_archive",
                         "groupBy": "DATASET",
                         "exportFormat": "nii",
                         "datasetIds": value["T1MPRAGE"],
