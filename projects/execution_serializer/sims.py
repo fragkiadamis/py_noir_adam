@@ -3,6 +3,7 @@ import loguru
 import pandas as pd
 import typer
 import re
+import numpy as np
 
 from pathlib import Path
 from typing import Optional, Sequence, Any, List, Dict, Set
@@ -113,7 +114,8 @@ def format_all_json() -> None:
     formatted_dfs = [format_output_to_tsv_by_series(json_path) for json_path in json_paths]
 
     df = pd.concat(formatted_dfs)
-    sims_output_dir = (ConfigPath.output_path / "sims").mkdir(parents=True, exist_ok=True)
+    sims_output_dir = ConfigPath.output_path / "sims"
+    sims_output_dir.mkdir(parents=True, exist_ok=True)
     df.to_csv(sims_output_dir / "formatted_output_SIMS.tsv", sep='\t', index=False)
 
 
@@ -211,30 +213,48 @@ def format_output_to_tsv_by_series(json_path: Path) -> Optional[pd.DataFrame]:
         "volume.shanoirId"
     ]
 
-    existing_first_cols = [c for c in first_cols if c in df.columns]
+    #Remove duplicate volume (bug from SIMS)
+    if "volume.shanoirId" in df.columns:
+        df["volume.shanoirId"] = df["volume.shanoirId"].apply(lambda x: str(x) if isinstance(x, list) else x)
+        df = df.drop_duplicates(subset=['volume.shanoirId', 'volume.serieId'])
+    else:
+        df = df.drop_duplicates(subset=['volume.serieId'])
 
+    #Group by serieId
+    existing_first_cols = [c for c in first_cols if c in df.columns]
     df = df.groupby(['volume.serieId']).agg(dict({key: list_unique_str_reduce for key in existing_first_cols}))
 
+     #Exploding by serieId
     if "volume.shanoirId" in df.columns:
-       df["volume.shanoirId"] = df["volume.shanoirId"].str.split(",")
-       df = df.explode("volume.shanoirId").reset_index(drop=True)
+        df["volume.shanoirId"] = df["volume.shanoirId"].str.split(",")
+        df = df.explode("volume.shanoirId").reset_index(drop=True)
 
     reorder_cols = [col for col in df.columns if col in first_cols]
     df = df[reorder_cols]
 
     return df
 
-
 def list_unique_str_reduce(elements: Sequence[Any]) -> Sequence[Any]:
-    """
-    Convert a list of element to a unique sorted element list of str.
-    Ignore empty strings and pd.NA elements.
-    If the result is a list of one element, convert it to a string.
-    """
-    agg_list = sorted(List(Set([str(e) for e in elements if (e != "") and (e is not None)])))
+    valid_elements = []
+    for e in elements:
+        # Skip array-like objects first (before any boolean checks)
+        if isinstance(e, (np.ndarray, pd.Series, list)):
+            continue
+        # Now safe to check for NA/None
+        if pd.isna(e):
+            continue
+        # Skip if empty string
+        if isinstance(e, str) and e == "":
+            continue
+        valid_elements.append(e)
+    if elements.name == "volume.serieId":
+        agg_list = list(set([str(e) for e in valid_elements]))
+    else :
+        agg_list = list([str(e) for e in valid_elements])
+
     if len(agg_list) == 0:
         return ""
     elif len(agg_list) == 1:
-        return agg_list[0]
+        return str(agg_list[0])
     else:
         return agg_list
