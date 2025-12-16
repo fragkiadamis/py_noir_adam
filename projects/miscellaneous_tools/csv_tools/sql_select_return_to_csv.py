@@ -49,7 +49,7 @@ def execute() -> None:
     data = rows[1:]
 
     # Write CSV file
-    with open(ConfigPath.outputPath / "output.csv", "w", newline="") as f:
+    with open(ConfigPath.output_path / "output.csv", "w", newline="") as f:
         writer = csv.writer(f, delimiter=';')
         writer.writerow(header)
         writer.writerows(data)
