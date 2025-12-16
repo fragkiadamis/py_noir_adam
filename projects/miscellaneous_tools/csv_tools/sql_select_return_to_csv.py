@@ -29,7 +29,7 @@ def execute() -> None:
     """
     Run the SQL Select return to csv conversion
     """
-    file = open(ConfigPath.inputPath / "inputs.txt", "r")
+    file = open(ConfigPath.input_path / "inputs.txt", "r")
     content = file.read()
     lines = content.strip().splitlines()
 
