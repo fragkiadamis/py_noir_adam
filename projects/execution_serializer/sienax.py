@@ -82,15 +82,15 @@ def generate_json(_: Optional[Path] = None) -> List[Dict]:
                 df.to_csv(ConfigPath.tracking_file_path, index=False)
                 examinations[exam_id] = {}
                 examinations[exam_id]["studyId"] = study_id
-                examinations[exam_id]["T1MPRAGE"] = []
+                examinations[exam_id]["T1"] = []
                 examinations[exam_id]["identifier"] = identifier + 1
                 identifier += 1
 
-            if "T1MPRAGE" in dataset["updatedMetadata"]["name"]:
-                examinations[exam_id]["T1MPRAGE"].append(ds_id)
+            if dataset["updatedMetadata"] and dataset["updatedMetadata"]["name"] and ("T1" in dataset["updatedMetadata"]["name"]):
+                examinations[exam_id]["T1"].append(ds_id)
 
     for key, value in examinations.items():
-        if value["T1MPRAGE"]:
+        if value["T1"]:
             values = {"executable": True}
             for col, val in values.items():
                 df.loc[value["identifier"], col] = val
@@ -106,7 +106,7 @@ def generate_json(_: Optional[Path] = None) -> List[Dict]:
                         "name": "T1_archive",
                         "groupBy": "DATASET",
                         "exportFormat": "nii",
-                        "datasetIds": value["T1MPRAGE"],
+                        "datasetIds": value["T1"],
                         "converterId": 2
                     },
                 ],
