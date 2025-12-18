@@ -37,7 +37,7 @@ def execute() -> None:
     """
     Run the Sienax processing pipeline
     """
-    initiate_working_files("Siena")
+    initiate_working_files("sienax")
     init_serialization(generate_json)
 
 def generate_json(_: Optional[Path] = None) -> List[Dict]:
