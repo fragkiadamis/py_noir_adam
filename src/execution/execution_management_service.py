@@ -21,7 +21,6 @@ items = []
 nb_processed_items = 0
 processed_item_ids = []
 start_events = {}
-monitoring = {}
 monitoring_lock = threading.Lock()
 file_lock = threading.Lock()
 
@@ -63,7 +62,6 @@ def manage_threading_execution():
     tracking_json_paths = list(ConfigPath.tracking_file_path.parent.glob("*.json"))
     df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
     for json_path in tracking_json_paths:
-        print(json_path.name)
         identifier = json_path.name.split(".")[0]
         row_index = df.index[df["identifier"] == identifier].tolist()
         with open(json_path, "r") as json_file:
@@ -78,10 +76,10 @@ def manage_threading_execution():
 
 
 def thread_execution(item: Dict) -> None:
-    global nb_processed_items, processed_item_ids, monitoring_lock, monitoring
+    global nb_processed_items, processed_item_ids, monitoring_lock
     pause_message_event = threading.Event()
     check_pause_schedule(pause_message_event)
-    meta, tracking_json = {}, None
+    meta, monitoring, tracking_json = {}, {}, Path()
 
     try:
         execution = create_execution(item)
