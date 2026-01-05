@@ -1,4 +1,3 @@
-import os
 import shutil
 import json
 import threading
@@ -22,7 +21,6 @@ items = []
 nb_processed_items = 0
 processed_item_ids = []
 start_events = {}
-monitoring = {}
 monitoring_lock = threading.Lock()
 file_lock = threading.Lock()
 
@@ -56,35 +54,50 @@ def manage_threading_execution():
             start_events[item["identifier"]] = start_event
             executor.submit(thread_execution_with_start_signal, item, start_event)
             start_event.wait()
-            time.sleep(1) # Required, to avoid concurrency issues
+            time.sleep(1)  # Required, to avoid concurrency issues
 
     logger.info("Executions ended.")
 
+    # Save execution meta to the tracking .csv file.
+    tracking_json_paths = list(ConfigPath.tracking_file_path.parent.glob("*.json"))
+    df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
+    for json_path in tracking_json_paths:
+        identifier = json_path.name.split(".")[0]
+        row_index = df.index[df["identifier"] == identifier].tolist()
+        with open(json_path, "r") as json_file:
+            values = json.load(json_file)
+        for col, val in values.items():
+            df.loc[row_index, col] = val
+    df.to_csv(ConfigPath.tracking_file_path, index=False)
+
+    # Delete JSON tracking files
+    for p in ConfigPath.tracking_file_path.parent.glob("*.json"):
+        p.unlink(missing_ok=True)
+
 
 def thread_execution(item: Dict) -> None:
-    global nb_processed_items, processed_item_ids, monitoring_lock, file_lock, monitoring
+    global nb_processed_items, processed_item_ids, monitoring_lock
     pause_message_event = threading.Event()
     check_pause_schedule(pause_message_event)
+    meta, monitoring, tracking_json = {}, {}, Path()
 
     try:
         execution = create_execution(item)
+        start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         if execution["id"] is not None:
+            tracking_json = ConfigPath.tracking_file_path.parent / f"{item['identifier']}.json"
             monitoring = get_execution_monitoring(execution["id"])
             status = '"Running"'
 
-            with monitoring_lock:
-                df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
-                row_index = df.index[df["identifier"] == str(item["identifier"])].tolist()
-                values = {
-                    "execution_requested": True,
-                    "execution_id": execution["id"],
-                    "execution_workflow_id": str(monitoring["identifier"]),
-                    "execution_start_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "execution_status": status.replace("\"",""),
-                }
-                for col, val in values.items():
-                    df.loc[row_index, col] = val
-                df.to_csv(ConfigPath.tracking_file_path, index=False)
+            meta = {
+                "execution_requested": True,
+                "execution_id": execution["id"],
+                "execution_workflow_id": str(monitoring["identifier"]),
+                "execution_start_time": start_time,
+            }
+            with open(tracking_json, 'w') as json_file:
+                json.dump(meta, json_file)
+
             logger.info("Execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']) + " is created.")
             count_down = 12
 
@@ -103,34 +116,27 @@ def thread_execution(item: Dict) -> None:
 
                 count_down -= 1
                 if count_down == 1 and status == '"Running"':
-                    logger.info("Status for execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']) + " is " + status)
+                    logger.info("Status for execution " + str(item["identifier"]) + ", " + str(
+                        monitoring['identifier']) + " is " + status)
                     count_down = 12
 
             if status == '"Finished"':
                 logger.info("Success for execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']))
             else:
                 logger.info("Failure for execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']))
-            with monitoring_lock:
-                df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
-                row_index = df.index[df["identifier"] == str(item["identifier"])].tolist()
-                values = {
-                    "execution_status": status.replace("\"",""),
-                    "execution_end_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                }
-                for col, val in values.items():
-                    df.loc[row_index, col] = val
-                df.to_csv(ConfigPath.tracking_file_path, index=False)
+
+            meta["execution_status"] = status.replace("\"", "")
+            meta["execution_end_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(tracking_json, 'w') as json_file:
+                json.dump(meta, json_file)
             logger.info("%s out of %s items processed." % (nb_processed_items + 1, total_items_to_process))
     except:
         with monitoring_lock:
             logger.error("Exception for execution " + str(item["identifier"] + ", " + str(monitoring['identifier'])))
-            df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
-            row_index = df.index[df["identifier"] == str(item["identifier"])].tolist()
-            values = {"execution_status": "PyNoir_exception"}
-            for col, val in values.items():
-                df.loc[row_index, col] = val
-            df.to_csv(ConfigPath.tracking_file_path, index=False)
-            logger.info("%s out of %s items processed." % (nb_processed_items + 1, total_items_to_process))
+            meta["execution_status"] = "PyNoir_exception"
+            meta["execution_end_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(tracking_json, 'w') as json_file:
+                json.dump(meta, json_file)
 
     item_processed_increment(item)
     with file_lock:
@@ -155,8 +161,8 @@ def start_executions(resume: bool = False) -> None:
     shutil.copy(ConfigPath.wip_file_path, initial_file)
 
     manage_threading_execution()
-    os.unlink(ConfigPath.wip_file_path)
-    os.unlink(ConfigPath.save_file_path)
+    ConfigPath.wip_file_path.unlink()
+    ConfigPath.save_file_path.unlink()
 
 
 def read_items_from_json_file(resume: bool):
@@ -164,7 +170,8 @@ def read_items_from_json_file(resume: bool):
         return get_items_from_json_file()
     except:
         if resume:
-            logger.info("Resume script is impossible, monitoring file is corrupted. Delete monitoring file... please relaunch executions.")
+            logger.info(
+                "Resume script is impossible, monitoring file is corrupted. Delete monitoring file... please relaunch executions.")
             Path.unlink(ConfigPath.wip_file_path)
         else:
             logger.error("Items to process are wrong. Please verify the json file shaping.")

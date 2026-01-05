@@ -12,7 +12,7 @@ from src.shanoir_object.dataset.dataset_service import get_examination, download
 from src.shanoir_object.solr_query.solr_query_model import SolrQuery
 from src.shanoir_object.solr_query.solr_query_service import solr_search
 from src.utils.config_utils import APIConfig, ConfigPath
-from src.utils.dicom_utils import fetch_datasets_from_json, upload_to_pacs_rest, assign_label_to_pacs_study, \
+from src.utils.dicom_utils import fetch_processed_datasets, upload_to_pacs_rest, assign_label_to_pacs_study, \
     inspect_and_fix_study_tags, upload_to_pacs_dicom, get_patient_ids_from_pacs, get_orthanc_study_details, \
     delete_studies_from_pacs, purge_pacs_studies, download_from_pacs_rest, upload_processed_dataset
 from src.utils.log_utils import get_logger
@@ -65,6 +65,9 @@ def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict
         for key in list(exam_items.keys()):
             for ds in exam_items[key][:]:
                 dataset_download_path = download_dir / subject / ds["id"]
+                # Use this if no need to download again the files.
+                # if dataset_download_path.exists():
+                #     filtered_datasets.append(ds)
                 dataset_download_path.mkdir(parents=True, exist_ok=True)
                 download_dataset(ds["id"], "dcm", dataset_download_path, unzip=True)
                 first_file = next(p for p in dataset_download_path.iterdir() if p.is_file())
@@ -112,8 +115,8 @@ def generate_json(output_dir: Path) -> List[Dict]:
         dt = datetime.now().strftime('%F_%H%M%S%f')[:-3]
         executions.append({
             "identifier": idx,
-            "name": f"landmarkDetection_0_4_exam_{dataset['examinationId']}_{dt}",
-            "pipelineIdentifier": "landmarkDetection/0.4",
+            "name": f"landmarkDetection_0_7_exam_{dataset['examinationId']}_{dt}",
+            "pipelineIdentifier": "landmarkDetection/0.7",
             "studyIdentifier": dataset["studyId"],
             "inputParameters": {},
             "outputProcessing": "",
@@ -183,7 +186,7 @@ def execute() -> None:
 def populate_orthanc() -> None:
     initiate_working_files("ecan")
     vip_output = ConfigPath.output_path / "ecan" / "vip_output"
-    fetch_datasets_from_json(vip_output)
+    fetch_processed_datasets(vip_output)
     inspect_and_fix_study_tags(vip_output)
     upload_to_pacs_rest(vip_output) # RESTAPI or DICOM WEB STORE --> upload_to_pacs_dicom(vip_output)
     assign_label_to_pacs_study()
