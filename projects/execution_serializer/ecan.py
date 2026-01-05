@@ -28,10 +28,10 @@ def query_datasets(subject_name_list: List) -> defaultdict[Any, defaultdict[Any,
     query = SolrQuery()
     query.size = 100000
     query.expert_mode = True
-    query.search_text = f"subjectName: ({subject_name_list[0]}"
+    query.search_text = f'subjectName: ("{subject_name_list[0]}"'
     for subject in subject_name_list[1:]:
-        query.search_text = query.search_text + " OR " + subject
-    query.search_text = query.search_text + ") AND datasetName: *TOF*"
+        query.search_text += f' OR "{subject}"'
+    query.search_text += ') AND datasetName:*TOF*'
     result = solr_search(query).json()
 
     subjects_datasets = defaultdict(lambda: defaultdict(list))
