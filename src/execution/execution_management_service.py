@@ -142,7 +142,7 @@ def thread_execution(item: Dict) -> None:
     with file_lock:
         with open(ConfigPath.wip_file_path, "w", encoding="utf-8") as f:
             json.dump(items, f, indent=2)
-        shutil.copy(ConfigPath.wip_file_path.name, ConfigPath.save_file_path.name)
+        shutil.copy(ConfigPath.wip_file_path, ConfigPath.save_file_path)
 
 
 def start_executions(resume: bool = False) -> None:
