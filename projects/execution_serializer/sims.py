@@ -92,6 +92,7 @@ def generate_json(_: Optional[Path] = None) -> List[Dict]:
             "processingType": "SEGMENTATION",
             "refreshToken": APIConfig.refresh_token,
             "client": APIConfig.clientId,
+            "sorting": "subject, exam, acquisition",
             "datasetParameters": [
                 {
                     "datasetIds": [dataset["id"] for dataset in datasets],
@@ -116,6 +117,7 @@ def format_all_json() -> None:
     df = pd.concat(formatted_dfs)
     sims_output_dir = ConfigPath.output_path / "sims"
     sims_output_dir.mkdir(parents=True, exist_ok=True)
+
     df.to_csv(sims_output_dir / "formatted_output_SIMS.tsv", sep='\t', index=False)
 
 
@@ -123,7 +125,7 @@ def list_output_json_available() -> List[Path]:
     """List available JSON output available in input_dir_path."""
     result = []
 
-    for file_path in ConfigPath.input_path.rglob("*"):
+    for file_path in (ConfigPath.input_path / "SIMS_output").rglob("*"):
         if file_path.is_file():
             if re.search(r"\.json", str(file_path)):
                 result.append(file_path)
@@ -196,12 +198,14 @@ def format_output_to_tsv_by_series(json_path: Path) -> Optional[pd.DataFrame]:
         "volume.burnedInAnnotation",
         "volume.contrast",
         "volume.contrastAgent",
+        "volume.contrastAgentAlgoConfidence",
         "volume.contrastAgentDICOM",
         "volume.derivedSequence",
         "volume.dimension",
         "volume.extraType",
         "volume.name",
         "volume.organ",
+        "volume.organAlgoConfidence",
         "volume.organDICOM",
         "volume.sequenceList",
         "volume.sequence",
