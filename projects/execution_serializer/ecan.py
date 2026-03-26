@@ -41,55 +41,80 @@ def query_datasets(subject_name_list: List) -> defaultdict[Any, defaultdict[Any,
     return subjects_datasets
 
 
-def find_oldest_exams(subjects_datasets: defaultdict[Any, defaultdict[Any, List]]) -> None:
-    for subject, exam_items in subjects_datasets.items():
-        if len(exam_items.keys()) > 1:
-            oldest_exam, oldest_date = None, None
-            for exam_id in exam_items.keys():
-                exam = get_examination(exam_id)
-                date_str = exam["examinationDate"].replace("Z", "").split("+")[0]
-                exam_date = datetime.fromisoformat(date_str)
-
-                if not oldest_exam or (exam_date < oldest_date):
-                    oldest_exam = exam
-                    oldest_date = exam_date
-
-            for exam_id in list(exam_items.keys()):
-                if exam_id != str(oldest_exam["id"]):
-                    del exam_items[exam_id]
-
-
 def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict[Any, List]], download_dir: Path) -> List:
     filtered_datasets = []
     for idx, (subject, exam_items) in enumerate(subjects_datasets.items(), start=1):
         for key in list(exam_items.keys()):
             for ds in exam_items[key][:]:
-                dataset_download_path = download_dir / subject / ds["id"]
+                dataset_download_path = download_dir / subject / str(ds["examinationId"]) / ds["id"]
                 # Use this if no need to download again the files.
                 # if dataset_download_path.exists():
                 #     filtered_datasets.append(ds)
                 dataset_download_path.mkdir(parents=True, exist_ok=True)
                 download_dataset(ds["id"], "dcm", dataset_download_path, unzip=True)
                 first_file = next(p for p in dataset_download_path.iterdir() if p.is_file())
-                slice_thickness = pydicom.dcmread(first_file, stop_before_pixels=True)['SliceThickness'].value
+                slice_thickness = pydicom.dcmread(first_file).get('SliceThickness')
                 num_of_slices = sum(1 for p in dataset_download_path.iterdir() if p.is_file() and p.suffix == ".dcm")
-                if num_of_slices > 50 and slice_thickness < 10:
+                if num_of_slices > 50 and (slice_thickness is not None and slice_thickness < 10):
                     filtered_datasets.append(ds)
                 else:
                     shutil.rmtree(dataset_download_path)
+                    if not any(dataset_download_path.parent.iterdir()):
+                        dataset_download_path.parent.rmdir()
 
     return filtered_datasets
+
+
+def keep_one_acquisition(download_dir: Path, filtered_datasets: List) -> List:
+    deleted_ids = set()
+    for subject_dir in download_dir.iterdir():
+        for exam_dir in subject_dir.iterdir():
+            dataset_dirs = sorted([d for d in exam_dir.iterdir() if d.is_dir()], key=lambda d: int(d.name))
+            if len(dataset_dirs) > 1:
+                for d in dataset_dirs[1:]:
+                    logger.info(f"Deleting: {d}")
+                    deleted_ids.add(d.name)
+                    shutil.rmtree(d)
+
+    return [ds for ds in filtered_datasets if str(ds["id"]) not in deleted_ids]
+
+
+def keep_oldest_examination(download_dir: Path, filtered_datasets: List) -> List:
+    deleted_exam_ids = set()
+    for subject_dir in download_dir.iterdir():
+        exam_dirs = [d for d in subject_dir.iterdir() if d.is_dir()]
+        if len(exam_dirs) <= 1:
+            continue
+
+        oldest_exam_id, oldest_date = None, None
+        for exam_dir in exam_dirs:
+            exam = get_examination(exam_dir.name)
+            date_str = exam["examinationDate"].replace("Z", "").split("+")[0]
+            exam_date = datetime.fromisoformat(date_str)
+            if oldest_date is None or exam_date < oldest_date:
+                oldest_exam_id = exam_dir.name
+                oldest_date = exam_date
+
+        for exam_dir in exam_dirs:
+            if exam_dir.name != oldest_exam_id:
+                logger.info(f"Deleting examination: {exam_dir}")
+                deleted_exam_ids.add(exam_dir.name)
+                shutil.rmtree(exam_dir)
+
+    return [ds for ds in filtered_datasets if str(ds["examinationId"]) not in deleted_exam_ids]
 
 
 def generate_json(output_dir: Path) -> List[Dict]:
     ican_list = [*get_items_from_input_file("ican_subset.txt")]
     angptl6_list = [*get_items_from_input_file("angptl6_subset.txt")]
-    subject_name_list = [*ican_list, *angptl6_list]
+    ucan_list = [*get_items_from_input_file("ucan_subset.txt")]
+    subject_name_list = [*ican_list, *angptl6_list, *ucan_list]
 
     executions = []
     subjects_datasets = query_datasets(subject_name_list)
-    find_oldest_exams(subjects_datasets)
     filtered_datasets = download_and_filter_datasets(subjects_datasets, output_dir)
+    filtered_datasets = keep_one_acquisition(output_dir, filtered_datasets)
+    filtered_datasets = keep_oldest_examination(output_dir, filtered_datasets)
 
     logger.info("Building json content...")
     for idx, dataset in enumerate(filtered_datasets, start=1):
@@ -105,6 +130,7 @@ def generate_json(output_dir: Path) -> List[Dict]:
             "label": (
                 "ICAN" if dataset["subjectName"] in ican_list else
                 "ANGPTL16" if dataset["subjectName"] in angptl6_list else
+                "UCAN" if dataset["subjectName"] in ucan_list else
                 None
             )
         }
