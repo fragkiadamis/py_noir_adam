@@ -2,7 +2,6 @@ import typer
 
 from src.API.api_service import post
 from src.utils.config_utils import ConfigPath
-from src.utils.download_utils import start_download
 from src.utils.log_utils import get_logger
 
 app = typer.Typer()
@@ -12,6 +11,7 @@ logger = get_logger()
 @app.callback()
 def explain() -> None:
     """
+    \b
     Output extraction project command-line interface.
     Status:
     ------
@@ -37,6 +37,6 @@ def execute() -> None:
     with open(ConfigPath.input_path / "input.json", "r") as file:
         response = post("/datasets/datasetProcessing/complexMassiveDownload", data = file, stream=True)
     if response.status_code == 200:
-        start_download(response, "extraction", "Output_extraction")
+        logger.info(f"The download is sucessfully prepared. Please log in to the Shanoir instances and check the jobs.")
     else:
-        logger.error("An error has occurred while trying to download processing outputs.")
+        logger.error("An error has occurred while trying to set up processing outputs download.")

@@ -35,7 +35,7 @@ class ConfigPath(object):
         cls.root_path = Path(config.get('Path', 'root'))
         cls.input_path = cls.root_path / "input"
         cls.resources_path = cls.root_path / "resources"
-        cls.output_path = cls.resources_path / "output"
+        cls.output_path = cls.root_path / "output"
         cls.tracking_file_path = cls.resources_path / "tracking_file"
         cls.wip_file_path = cls.resources_path / "wip_file"
         cls.save_file_path = cls.resources_path / "save_file"
@@ -44,7 +44,7 @@ class ConfigPath(object):
         self.root_path = Path(config.get('Path', 'root'))
         self.input_path = self.root_path / "input"
         self.resources_path = self.root_path / "resources"
-        self.output_path = self.resources_path / "output"
+        self.output_path = self.root_path / "output"
         self.tracking_file_path = self.resources_path / "tracking_file"
         self.wip_file_path = self.resources_path / "WIP_file"
         self.save_file_path = self.resources_path / "save_file"

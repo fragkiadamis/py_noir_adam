@@ -11,7 +11,7 @@ import projects.execution_serializer.sims as sims
 import projects.execution_serializer.flair as flair
 import projects.execution_serializer.pmap as pmap
 import projects.execution_serializer.t2stir as t2stir
-import projects.execution_serializer.siena as siena
+import projects.execution_serializer.sienax as sienax
 import projects.execution_serializer.ecan as ecan
 
 import projects.execution_tools.carmin_api_test as carmin
@@ -22,6 +22,8 @@ import projects.execution_tools.vip_logs_import as vip_logs_import
 
 import projects.shanoir_tools.dicom_metadata_download as dicom_metadata_download
 
+import projects.miscellaneous_tools.csv_tools.sql_select_return_to_csv as sql_to_csv
+
 app = typer.Typer()
 
 # Execution serializers
@@ -29,7 +31,7 @@ app.add_typer(sims.app, name="sims")
 app.add_typer(flair.app, name="flair")
 app.add_typer(pmap.app, name="pmap")
 app.add_typer(t2stir.app, name="t2stir")
-app.add_typer(siena.app, name="siena")
+app.add_typer(sienax.app, name="sienax")
 app.add_typer(ecan.app, name="ecan")
 
 # Execution tools
@@ -42,9 +44,13 @@ app.add_typer(vip_logs_import.app, name="vip_logs_import")
 # Execution tools
 app.add_typer(dicom_metadata_download.app, name="dicom_metadata_download")
 
+#Miscellaneous tools
+app.add_typer(sql_to_csv.app, name="sql_to_csv")
+
 @app.callback()
 def explain() -> None:
     """
+    \b
     **The py_noir app list (Check `uv run [app_name] --help` for more information):
     *
     * Execution serializers:
@@ -52,7 +58,7 @@ def explain() -> None:
     * - flair: runs the Comete_FLAIR processing pipeline.
     * - pmap: runs the Comete_PMAP processing pipeline.
     * - t2stir: runs the Comete_T2STIR processing pipeline.
-    * - siena: runs the Siena processing pipeline.
+    * - sienax: runs the Sienax processing pipeline.
     * - ecan: runs the eCAN pipeline.
     *
     * Execution tools:
@@ -64,10 +70,12 @@ def explain() -> None:
     *
     * Shanoir tools (not related to executions):
     * - dicom_metadata_download: download dicom metadata gathered into a csv file according to metadata keys and dataset ids.
+    *
+    * Miscellaneous tools (not related to Shanoir):
+    * - sql_to_csv: convert a SQL Select return to a csv file
     ---
     Built for automating dataset execution and processing in Shanoir-NG.
     """
-
 
 if __name__ == "__main__":
     app()

@@ -22,9 +22,13 @@ SEQUENCE_TAG = (0x0040,0x0275)
 SEQUENCE_ITEM_TAG = (0x0040,0x0008)
 
 
-def fetch_datasets_from_json(output_dir: Path) -> None:
+def fetch_processed_datasets(output_dir: Path) -> None:
     df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
-    dataset_pairs_list = [{"input_dataset_id": row["dataset_id"], "execution_id": row["execution_id"]} for _, row in df.iterrows()]
+    df["processing_id"] = pd.Series(dtype="Int64")
+    dataset_pairs_list = [{
+        "input_dataset_id": row["dataset_id"],
+        "execution_id": row["execution_id"]
+    } for _, row in df.iterrows() if row["execution_status"] == "Finished"]
 
     processing_ids_list = []
     for dataset_pair in dataset_pairs_list:
@@ -38,7 +42,7 @@ def fetch_datasets_from_json(output_dir: Path) -> None:
             continue
 
         processing_ids_list.append(processing_id)
-        df["processing_id"] = df["dataset_id"].map({dataset_pair["input_dataset_id"]: processing_id})
+        df.loc[df["dataset_id"] == dataset_pair["input_dataset_id"], "processing_id"] = processing_id
         df.to_csv(ConfigPath.tracking_file_path, index=False)
 
     output_dir.mkdir(parents=True, exist_ok=True)
