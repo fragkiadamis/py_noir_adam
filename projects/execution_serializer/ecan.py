@@ -14,7 +14,8 @@ from src.shanoir_object.solr_query.solr_query_service import solr_search
 from src.utils.config_utils import APIConfig, ConfigPath
 from src.utils.dicom_utils import fetch_processed_datasets, upload_to_pacs_rest, assign_label_to_pacs_study, \
     inspect_and_fix_study_tags, upload_to_pacs_dicom, get_patient_ids_from_pacs, get_orthanc_study_details, \
-    delete_studies_from_pacs, purge_pacs_studies, download_from_pacs_rest, upload_processed_dataset
+    delete_studies_from_pacs, purge_pacs_studies, download_from_pacs_rest, upload_processed_dataset, \
+    create_series_export, check_dicom_consistency
 from src.utils.log_utils import get_logger
 from src.utils.file_utils import get_items_from_input_file, initiate_working_files
 from src.utils.serializer_utils import init_serialization
@@ -235,19 +236,25 @@ def populate_orthanc() -> None:
 
 
 @app.command()
+def import_shanoir() -> None:
+    initiate_working_files("ecan")
+    orthanc_output = ConfigPath.output_path / "ecan" / "orthanc_output"
+    download_from_pacs_rest(orthanc_output)
+    check_dicom_consistency(orthanc_output)
+    upload_processed_dataset(orthanc_output)
+
+
+@app.command()
 def debug_orthanc() -> None:
     initiate_working_files("ecan")
     get_patient_ids_from_pacs()
     get_orthanc_study_details()
-
-    # ------------------- DANGER ZONE -------------------
-    # delete_studies_from_pacs()
-    # purge_pacs_studies()
+    create_series_export()
 
 
-@app.command()
-def import_shanoir() -> None:
-    initiate_working_files("ecan")
-    orthanc_output = ConfigPath.output_path / "ecan" / "orthanc_output"
-    # download_from_pacs_rest(orthanc_output) # for REST API
-    upload_processed_dataset(orthanc_output)
+# ------------------- DANGER ZONE -------------------
+# @app.command()
+# def delete_studies() -> None:
+#     delete_studies_from_pacs()
+#     purge_pacs_studies()
+# ------------------- DANGER ZONE -------------------

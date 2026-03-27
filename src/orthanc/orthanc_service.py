@@ -97,6 +97,25 @@ def upload_study_to_orthanc(files: List[Path]) -> Tuple[int, int, Optional[Dict[
     return total_files, successful_uploads, last_response_json
 
 
+def get_all_orthanc_series() -> List | None:
+    """
+    Retrieve all Orthanc series IDs.
+
+    Returns:
+        List or None: the Orthanc series IDs if found, otherwise None.
+    """
+    try:
+        response = orthanc_request("get", "series")
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logger.warning(f"Failed to get series (status {response.status_code})")
+            return None
+    except Exception as e:
+        logger.error(f"Error getting Orthanc series IDs: {e}")
+        return None
+
+
 def get_all_orthanc_studies() -> List | None:
     """
         Retrieve all Orthanc studies.
@@ -301,6 +320,31 @@ def get_orthanc_patients() -> List | None:
     except Exception as e:
         logger.error(f"Error getting patients: {e}")
         return None
+
+
+def download_orthanc_series(series_id: str, download_path: Path, unzip: bool = True):
+    try:
+        output_file = os.path.join(download_path, f"{series_id}.zip")
+        response = orthanc_request("get", f"series/{series_id}/archive")
+        if response.status_code == 200:
+            with open(output_file, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            logger.info(f"Downloaded series {series_id} to {output_file}")
+
+            if unzip:
+                extract_dir = os.path.join(download_path, series_id)
+                os.makedirs(extract_dir, exist_ok=True)
+                with zipfile.ZipFile(output_file, "r") as zip_ref:
+                    zip_ref.extractall(extract_dir)
+                logger.info(f"Extracted series {series_id} to {extract_dir}")
+                os.remove(output_file)
+                logger.debug(f"Removed archive {output_file}")
+        else:
+            logger.warning(f"Failed to download series {series_id} (status {response.status_code})")
+    except Exception as e:
+        logger.error(f"Error downloading series {series_id}: {e}")
 
 
 def get_orthanc_patient_meta(patient_id: str) -> Dict | None:
