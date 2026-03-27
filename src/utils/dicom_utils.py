@@ -57,7 +57,6 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
         mr_files = [os.path.join(processing_input_dir, f) for f in os.listdir(processing_input_dir) if f.endswith(".dcm")]
         seg_file = os.path.join(processing_output_dir, [f for f in os.listdir(processing_output_dir) if "seg" in f][0])
 
-        is_inconsistent = False
         # Gather all FrameOfReferenceUIDs in your MR instances
         uids = {}
         for file_path in mr_files:
@@ -68,16 +67,11 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
 
         good_uid = None
         if len(uids.keys()) > 1:
-            is_inconsistent = True
-            logger.info("Found FrameOfReferenceUIDs:")
-            for k, v in uids.items():
-                logger.info(f"  {k} → {len(v)} instances")
+            subject_name = pydicom.dcmread(mr_files[0]).PatientName
+            logger.info(f"{subject_name} --> inconsistencies were found in MR FrameOfReferenceUID.")
 
             # Pick the "good" UID (e.g. the most frequent one)
             good_uid = max(uids, key=lambda k: len(uids[k]))
-            logger.info(f"\nChosen UID: {good_uid}")
-
-            # For the MR instances with the good UID
             for file_path in mr_files:
                 ds = pydicom.dcmread(file_path)
                 if getattr(ds, "FrameOfReferenceUID", None) != good_uid:
@@ -89,12 +83,10 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
         # Fix the SEG as well
         seg = pydicom.dcmread(seg_file)
         if seg.FrameOfReferenceUID != good_uid:
-            is_inconsistent = True
+            subject_name = seg.PatientName
+            logger.info(f"{subject_name} --> inconsistencies were found between MR and SEG FrameOfReferenceUID.")
             seg.FrameOfReferenceUID = good_uid
             seg.save_as(seg_file)
-
-        if is_inconsistent:
-            logger.info(f"Inconsistencies were found in FrameOfReferenceUID.")
 
         # Remove empty or malformed nested DICOM sequences
         for file_path in mr_files:

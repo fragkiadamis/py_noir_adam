@@ -41,6 +41,18 @@ def query_datasets(subject_name_list: List) -> defaultdict[Any, defaultdict[Any,
     return subjects_datasets
 
 
+def filter_datasets_by_study(subjects_datasets: defaultdict, study_name: str) -> defaultdict:
+    for subject, exam_items in subjects_datasets.items():
+        for key in list(exam_items.keys()):
+            exam_items[key] = [
+                ds for ds in exam_items[key]
+                if ds.get("studyName") == study_name
+            ]
+            if not exam_items[key]:
+                del exam_items[key]
+    return subjects_datasets
+
+
 def download_and_filter_datasets(subjects_datasets: defaultdict[Any, defaultdict[Any, List]], download_dir: Path) -> List:
     filtered_datasets = []
     for idx, (subject, exam_items) in enumerate(subjects_datasets.items(), start=1):
@@ -105,57 +117,60 @@ def keep_oldest_examination(download_dir: Path, filtered_datasets: List) -> List
 
 
 def generate_json(output_dir: Path) -> List[Dict]:
-    ican_list = [*get_items_from_input_file("ican_subset.txt")]
-    angptl6_list = [*get_items_from_input_file("angptl6_subset.txt")]
-    ucan_list = [*get_items_from_input_file("ucan_subset.txt")]
-    subject_name_list = [*ican_list, *angptl6_list, *ucan_list]
+    sources = [
+        ("ican_subset.txt", "ICAN", "ICAN"),
+        ("angptl6_subset.txt", "ICAN", "ANGPTL6"),
+        ("ucan_subset.txt", "UCAN", "UCAN"),
+    ]
 
-    executions = []
-    subjects_datasets = query_datasets(subject_name_list)
-    filtered_datasets = download_and_filter_datasets(subjects_datasets, output_dir)
-    filtered_datasets = keep_one_acquisition(output_dir, filtered_datasets)
-    filtered_datasets = keep_oldest_examination(output_dir, filtered_datasets)
+    idx, executions = 0, []
+    for filename, study_name, batch_label in sources:
+        subject_list = [*get_items_from_input_file(filename)]
+        if not subject_list:
+            continue
 
-    logger.info("Building json content...")
-    for idx, dataset in enumerate(filtered_datasets, start=1):
-        df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
-        values = {
-            "identifier": idx,
-            "dataset_id": dataset["id"],
-            "examination_id": dataset["examinationId"],
-            "subject_id": dataset["subjectId"],
-            "subject_name": dataset["subjectName"],
-            "get_from_shanoir": True,
-            "executable": True,
-            "label": (
-                "ICAN" if dataset["subjectName"] in ican_list else
-                "ANGPTL16" if dataset["subjectName"] in angptl6_list else
-                "UCAN" if dataset["subjectName"] in ucan_list else
-                None
-            )
-        }
-        for col, val in values.items():
-            df.loc[idx - 1, col] = val
-        df.to_csv(ConfigPath.tracking_file_path, index=False)
+        subjects_datasets = query_datasets(subject_list)
+        filtered_datasets = filter_datasets_by_study(subjects_datasets, study_name)
+        filtered_datasets = download_and_filter_datasets(filtered_datasets, output_dir)
+        filtered_datasets = keep_one_acquisition(output_dir, filtered_datasets)
+        filtered_datasets = keep_oldest_examination(output_dir, filtered_datasets)
 
-        dt = datetime.now().strftime('%F_%H%M%S%f')[:-3]
-        executions.append({
-            "identifier": idx,
-            "name": f"landmarkDetection_0_7_exam_{dataset['examinationId']}_{dt}",
-            "pipelineIdentifier": "landmarkDetection/0.7",
-            "studyIdentifier": dataset["studyId"],
-            "inputParameters": {},
-            "outputProcessing": "",
-            "processingType": "SEGMENTATION",
-            "refreshToken": APIConfig.refresh_token,
-            "client": APIConfig.clientId,
-            "datasetParameters": [{
-                "datasetIds": [dataset["id"]],
-                "groupBy": "EXAMINATION",
-                "name": "dicom_input_zip",
-                "exportFormat": "dcm"
-            }],
-        })
+        logger.info(f"Building json content for label {batch_label}...")
+        for dataset in filtered_datasets:
+            idx += 1
+            df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
+            values = {
+                "identifier": idx,
+                "dataset_id": dataset["id"],
+                "examination_id": dataset["examinationId"],
+                "subject_id": dataset["subjectId"],
+                "subject_name": dataset["subjectName"],
+                "get_from_shanoir": True,
+                "executable": True,
+                "label": batch_label,
+            }
+            for col, val in values.items():
+                df.loc[idx - 1, col] = val
+            df.to_csv(ConfigPath.tracking_file_path, index=False)
+
+            dt = datetime.now().strftime('%F_%H%M%S%f')[:-3]
+            executions.append({
+                "identifier": idx,
+                "name": f"landmarkDetection_0_7_exam_{dataset['examinationId']}_{dt}",
+                "pipelineIdentifier": "landmarkDetection/0.7",
+                "studyIdentifier": dataset["studyId"],
+                "inputParameters": {},
+                "outputProcessing": "",
+                "processingType": "SEGMENTATION",
+                "refreshToken": APIConfig.refresh_token,
+                "client": APIConfig.clientId,
+                "datasetParameters": [{
+                    "datasetIds": [dataset["id"]],
+                    "groupBy": "EXAMINATION",
+                    "name": "dicom_input_zip",
+                    "exportFormat": "dcm"
+                }],
+            })
 
     return executions
 
