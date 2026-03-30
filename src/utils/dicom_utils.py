@@ -493,6 +493,7 @@ def get_orthanc_study_details() -> None:
         frame_of_refs: List[Dict[str, str]] = []
         for series_id in study.get("Series", []):
             series = get_orthanc_series_metadata(series_id)
+            modality = series.get("MainDicomTags", {}).get("Modality", "")
             instance_id = series.get("Instances", [None])[0]
 
             if not instance_id:
@@ -501,6 +502,9 @@ def get_orthanc_study_details() -> None:
             instance = get_orthanc_instance_metadata(instance_id)
             series_description = instance.get("SeriesDescription", "Unnamed Series")
             frame_uid = instance.get("FrameOfReferenceUID")
+
+            if modality in ("SEG", "SR"):
+                logger.info(f"  [{modality}] {series_description} | Series ID: {series_id}")
 
             if frame_uid:
                 frame_of_refs.append({series_description: frame_uid})
