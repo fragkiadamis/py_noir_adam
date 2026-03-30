@@ -11,7 +11,7 @@ from pynetdicom import AE, StoragePresentationContexts
 from src.orthanc.orthanc_service import set_orthanc_study_label, upload_study_to_orthanc, \
     delete_orthanc_study, get_orthanc_patients, get_orthanc_patient_meta, get_all_orthanc_studies, \
     get_study_orthanc_id_by_uid, download_orthanc_study, get_orthanc_study_metadata, get_orthanc_series_metadata, \
-    get_orthanc_instance_metadata, download_orthanc_series, get_all_orthanc_series
+    get_orthanc_instance_metadata, download_orthanc_series, get_all_orthanc_series, find_orthanc_series_by_uid
 from src.shanoir_object.dataset.dataset_service import find_processed_dataset_ids_by_input_dataset_id, \
     download_dataset_processing, upload_dataset_processing, sync_study_instance_uid
 from src.utils.config_utils import ConfigPath, OrthancConfig
@@ -216,16 +216,27 @@ def sync_examination_study_instance_uids() -> None:
 
 
 def download_from_pacs_rest(download_dir: Path) -> None:
-    df = pd.read_csv(ConfigPath.input_path / "series_export_test.csv", dtype=str)
+    df = pd.read_csv(ConfigPath.input_path / "series_export.csv", dtype=str)
     downloaded_mr_series = set()
     for _, row in df.iterrows():
-        series_id = row["ID"]
+        series_instance_uid = row["SeriesInstanceUID"]
         patient_name = row["PatientName"]
-        parent_study_id = row["ParentStudy"]
+        study_instance_uid = row["StudyInstanceUID"]
         series_download_path = download_dir / patient_name
         series_download_path.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Downloading series {series_id} for patient {patient_name}...")
+
+        series_id = find_orthanc_series_by_uid(series_instance_uid)
+        if series_id is None:
+            logger.warning(f"Series not found for SeriesInstanceUID {series_instance_uid}, skipping.")
+            continue
+
+        logger.info(f"Downloading series {series_instance_uid} for patient {patient_name}...")
         download_orthanc_series(series_id, series_download_path)
+
+        parent_study_id = get_study_orthanc_id_by_uid(study_instance_uid)
+        if parent_study_id is None:
+            logger.warning(f"Could not resolve study Orthanc ID for StudyInstanceUID {study_instance_uid}, skipping MR input download.")
+            continue
 
         study_meta = get_orthanc_study_metadata(parent_study_id)
         if study_meta is None:

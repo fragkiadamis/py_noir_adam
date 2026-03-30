@@ -181,6 +181,33 @@ def get_orthanc_study_metadata(orthanc_study_id: str) -> Dict[str, str] | None:
         return None
 
 
+def find_orthanc_series_by_uid(series_instance_uid: str) -> str | None:
+    """
+    Find the Orthanc internal series ID by SeriesInstanceUID.
+
+    Args:
+        series_instance_uid (str): DICOM SeriesInstanceUID.
+
+    Returns:
+        str or None: Orthanc internal series ID if found, otherwise None.
+    """
+    try:
+        response = orthanc_request("post", "tools/find", json={
+            "Level": "Series",
+            "Query": {"SeriesInstanceUID": series_instance_uid}
+        })
+        if response.status_code == 200:
+            results = response.json()
+            if results:
+                return results[0]
+            logger.warning(f"No series found for SeriesInstanceUID '{series_instance_uid}'")
+        else:
+            logger.warning(f"Failed to find series for SeriesInstanceUID '{series_instance_uid}' (status {response.status_code})")
+    except Exception as e:
+        logger.error(f"Error finding series for SeriesInstanceUID '{series_instance_uid}': {e}")
+    return None
+
+
 def get_orthanc_series_metadata(orthanc_series_id: str) -> Dict[str, str] | None:
     """
     Retrieve metadata for a series from Orthanc.
