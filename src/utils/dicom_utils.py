@@ -13,7 +13,7 @@ from src.orthanc.orthanc_service import set_orthanc_study_label, upload_study_to
     get_study_orthanc_id_by_uid, download_orthanc_study, get_orthanc_study_metadata, get_orthanc_series_metadata, \
     get_orthanc_instance_metadata, download_orthanc_series, get_all_orthanc_series
 from src.shanoir_object.dataset.dataset_service import find_processed_dataset_ids_by_input_dataset_id, \
-    download_dataset_processing, upload_dataset_processing
+    download_dataset_processing, upload_dataset_processing, sync_study_instance_uid
 from src.utils.config_utils import ConfigPath, OrthancConfig
 from src.utils.log_utils import get_logger
 
@@ -201,6 +201,18 @@ def assign_label_to_pacs_study() -> None:
         if row["orthanc_study_id"] is None:
             continue
         set_orthanc_study_label(row["orthanc_study_id"], row["label"])
+
+
+def sync_examination_study_instance_uids() -> None:
+    df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
+    examination_ids = df["examination_id"].dropna().unique().tolist()
+    logger.info(f"Syncing StudyInstanceUID for {len(examination_ids)} examination(s)...")
+    for examination_id in examination_ids:
+        try:
+            sync_study_instance_uid(examination_id)
+            logger.info(f"Synced StudyInstanceUID for examination {examination_id}")
+        except Exception as e:
+            logger.error(f"Failed to sync StudyInstanceUID for examination {examination_id}: {e}")
 
 
 def download_from_pacs_rest(download_dir: Path) -> None:
