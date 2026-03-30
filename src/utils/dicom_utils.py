@@ -504,7 +504,8 @@ def get_orthanc_study_details() -> None:
             frame_uid = instance.get("FrameOfReferenceUID")
 
             if modality in ("SEG", "SR"):
-                logger.info(f"  [{modality}] {series_description} | Series ID: {series_id}")
+                instance_uid = instance.get("SOPInstanceUID", "N/A")
+                logger.info(f"  [{modality}] {series_description} | Series ID: {series_id} | Instance UID: {instance_uid}")
 
             if frame_uid:
                 frame_of_refs.append({series_description: frame_uid})
