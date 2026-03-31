@@ -3,7 +3,7 @@ from pathlib import Path
 
 import requests
 
-from src.API.api_service import get, download_file, post
+from src.API.api_service import get, download_file, post, put
 from src.utils.log_utils import get_logger
 
 """
@@ -171,6 +171,15 @@ def get_examination(examination_id: str):
     path = ENDPOINT_EXAMINATION + '/' + examination_id
     response = get(path)
     return response.json()
+
+
+def sync_study_instance_uid(examination_id: str) -> None:
+    """ Sync StudyInstanceUID from PACS for examination [examination_id]
+    :param examination_id:
+    :return:
+    """
+    path = ENDPOINT_EXAMINATION + '/' + examination_id + '/studyInstanceUID'
+    put(path, raise_for_status=True)
 
 
 def get_dataset_processing(dataset_processing_id: str):

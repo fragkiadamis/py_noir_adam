@@ -1,76 +1,36 @@
-import os
-from datetime import datetime
 from pathlib import Path
-from typing import List, Dict
+from typing import List
 
-import pandas as pd
 import pydicom
-from pynetdicom import AE, StoragePresentationContexts
 
-from src.orthanc.orthanc_service import set_orthanc_study_label, upload_study_to_orthanc, \
-    delete_orthanc_study, get_orthanc_patients, get_orthanc_patient_meta, get_all_orthanc_studies, \
-    get_study_orthanc_id_by_uid, download_orthanc_study, get_orthanc_study_metadata, get_orthanc_series_metadata, \
-    get_orthanc_instance_metadata
-from src.shanoir_object.dataset.dataset_service import find_processed_dataset_ids_by_input_dataset_id, \
-    download_dataset_processing, upload_dataset_processing
-from src.utils.config_utils import ConfigPath, OrthancConfig
 from src.utils.log_utils import get_logger
 
 logger = get_logger()
 
-SEQUENCE_TAG = (0x0040,0x0275)
-SEQUENCE_ITEM_TAG = (0x0040,0x0008)
-
-
-def fetch_processed_datasets(output_dir: Path) -> None:
-    df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
-    df["processing_id"] = pd.Series(dtype="Int64")
-    dataset_pairs_list = [{
-        "input_dataset_id": row["dataset_id"],
-        "execution_id": row["execution_id"]
-    } for _, row in df.iterrows() if row["execution_status"] == "Finished"]
-
-    processing_ids_list = []
-    for dataset_pair in dataset_pairs_list:
-        processing_list = find_processed_dataset_ids_by_input_dataset_id(dataset_pair["input_dataset_id"])
-        processing_id = next(
-            (item["id"] for item in processing_list if str(item["parentId"]) == dataset_pair["execution_id"]),
-            None  # default if no match is found
-        )
-
-        if processing_id is None:
-            continue
-
-        processing_ids_list.append(processing_id)
-        df.loc[df["dataset_id"] == dataset_pair["input_dataset_id"], "processing_id"] = processing_id
-        df.to_csv(ConfigPath.tracking_file_path, index=False)
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-    download_dataset_processing(processing_ids_list, output_dir, unzip=True)
+SEQUENCE_TAG = (0x0040, 0x0275)
+SEQUENCE_ITEM_TAG = (0x0040, 0x0008)
 
 
 def inspect_and_fix_study_tags(input_dir: Path) -> None:
-    for processing in os.listdir(input_dir):
-        processing_dir = os.path.join(input_dir, processing)
-        processing_input_dir = os.path.join(processing_dir, [item for item in os.listdir(processing_dir) if "output" not in item][0])
-        processing_output_dir = os.path.join(processing_dir, "output")
-        mr_files = [os.path.join(processing_input_dir, f) for f in os.listdir(processing_input_dir) if f.endswith(".dcm")]
-        seg_file = os.path.join(processing_output_dir, [f for f in os.listdir(processing_output_dir) if "seg" in f][0])
+    for processing_dir in input_dir.iterdir():
+        if not processing_dir.is_dir():
+            continue
 
-        # Gather all FrameOfReferenceUIDs in your MR instances
+        processing_input_dir = next(d for d in processing_dir.iterdir() if d.is_dir() and "output" not in d.name)
+        processing_output_dir = processing_dir / "output"
+        mr_files = list(processing_input_dir.glob("*.dcm"))
+        seg_file = next(processing_output_dir.glob("*seg*"))
+
         uids = {}
         for file_path in mr_files:
             ds = pydicom.dcmread(file_path, stop_before_pixels=True)
             uid = getattr(ds, "FrameOfReferenceUID", None)
             if uid:
-                uids.setdefault(uid, []).append(os.path.basename(file_path).split(".")[0])
+                uids.setdefault(uid, []).append(file_path.stem)
 
-        good_uid = None
         if len(uids.keys()) > 1:
             subject_name = pydicom.dcmread(mr_files[0]).PatientName
             logger.info(f"{subject_name} --> inconsistencies were found in MR FrameOfReferenceUID.")
-
-            # Pick the "good" UID (e.g. the most frequent one)
             good_uid = max(uids, key=lambda k: len(uids[k]))
             for file_path in mr_files:
                 ds = pydicom.dcmread(file_path)
@@ -80,7 +40,6 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
         else:
             good_uid = list(uids.keys())[0]
 
-        # Fix the SEG as well
         seg = pydicom.dcmread(seg_file)
         if seg.FrameOfReferenceUID != good_uid:
             subject_name = seg.PatientName
@@ -88,27 +47,21 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
             seg.FrameOfReferenceUID = good_uid
             seg.save_as(seg_file)
 
-        # Remove empty or malformed nested DICOM sequences
         for file_path in mr_files:
             ds = pydicom.dcmread(file_path, stop_before_pixels=False)
 
-            # Skip if the target sequence tag is missing
             if SEQUENCE_TAG not in ds:
                 ds.save_as(file_path)
                 continue
 
             cleaned = False
             for item in ds[SEQUENCE_TAG].value:
-                # Ensure the sub-sequence exists
                 if SEQUENCE_ITEM_TAG not in item:
                     continue
                 found_item = item[(0x0040, 0x0008)]
-
-                # Skip if it's not actually a sequence
                 if found_item.VR != "SQ":
                     continue
-
-                # Remove if the sequence is empty or malformed
+                # Remove empty or malformed nested sequences
                 if len(found_item.value) < 2 and len(found_item.value[0]) == 0:
                     del item[SEQUENCE_ITEM_TAG]
                     cleaned = True
@@ -116,179 +69,160 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
                 ds.save_as(file_path)
 
 
-def upload_to_pacs_rest(dataset_path: Path) -> None:
-    total_file_count, dicom_count, studies_count = 0, 0, 0
-    df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
-    for study_path in dataset_path.iterdir():
-        logger.info(f"Uploading orthanc study: {study_path.name}")
-        dcm_files = list(study_path.rglob("*.dcm"))
+def _check_seg_references(ds: pydicom.Dataset, input_sop_uids: set, input_series_uid: str, subject_name: str, out_name: str) -> int:
+    issues = 0
+    ref_series_seq = getattr(ds, "ReferencedSeriesSequence", None)
+    if ref_series_seq is None:
+        logger.warning(f"[{subject_name}] [SEG] {out_name}: missing ReferencedSeriesSequence.")
+        return 1
 
-        total_files, successful_uploads, response_json = upload_study_to_orthanc(dcm_files)
-        total_file_count += total_files
-        dicom_count += successful_uploads
+    for series_item in ref_series_seq:
+        ref_series_uid = str(getattr(series_item, "SeriesInstanceUID", ""))
+        if ref_series_uid != input_series_uid:
+            logger.warning(
+                f"[{subject_name}] [SEG] {out_name}: ReferencedSeriesSequence.SeriesInstanceUID mismatch. "
+                f"Input={input_series_uid}, Referenced={ref_series_uid}"
+            )
+            issues += 1
 
-        parent_study_orthanc_id = None
-        if response_json and "ParentStudy" in response_json:
-            parent_study_orthanc_id = response_json["ParentStudy"]
-            studies_count += 1
-
-        processing_id = study_path.name.split("_")[1]
-        df.loc[df["processing_id"] == processing_id, "orthanc_study_id"] = parent_study_orthanc_id
-        df.loc[df["processing_id"] == processing_id, "study_instance_uid"] = pydicom.dcmread(dcm_files[0]).StudyInstanceUID
-        df.to_csv(ConfigPath.tracking_file_path, index=False)
-
-    logger.info(f"Total studies uploaded: {studies_count}")
-    if dicom_count == total_file_count:
-        logger.info(f"SUCCESS: {dicom_count} DICOM file(s) successfully imported.")
-    else:
-        logger.warning(f"WARNING: Only {dicom_count}/{total_file_count} files imported successfully.")
-
-
-def upload_to_pacs_dicom(dataset_path: Path) -> None:
-    # Initialize AE
-    ae = AE(ae_title=OrthancConfig.client_ae_title)
-    ae.acse_timeout = 30
-    ae.network_timeout = 30
-
-    # Add requested presentation contexts for common DICOM storage classes
-    for context in StoragePresentationContexts:
-        ae.add_requested_context(context.abstract_syntax)
-
-    # Associate with PACS
-    assoc = ae.associate(
-        OrthancConfig.domain,
-        int(OrthancConfig.dicom_server_port),
-        ae_title=OrthancConfig.pacs_ae_title
-    )
-
-    if not assoc.is_established:
-        logger.error("Failed to associate with PACS server.")
-        return
-
-    df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
-    for study_path in dataset_path.iterdir():
-        logger.info(f"Uploading orthanc study: {study_path.name}")
-        dcm_files = list(study_path.rglob("*.dcm"))
-
-        logger.info(f"Found {len(dcm_files)} DICOM file(s) to upload.")
-        for dcm_file in dcm_files:
-            try:
-                ds = pydicom.dcmread(dcm_file)
-                status = assoc.send_c_store(ds)
-                if status and status.Status == 0x0000:
-                    logger.info(f"Successfully sent {dcm_file}")
-                else:
-                    logger.warning(f"Failed to send {dcm_file}, status: {status}")
-            except Exception as e:
-                logger.error(f"Error sending {dcm_file}: {e}")
-
-        study_instance_uid = pydicom.dcmread(dcm_files[0]).StudyInstanceUID
-        parent_study_orthanc_id = get_study_orthanc_id_by_uid(study_instance_uid)
-        processing_id = study_path.name.split("_")[1]
-        df.loc[df["processing_id"] == processing_id, "orthanc_study_id"] = parent_study_orthanc_id
-        df.loc[df["processing_id"] == processing_id, "study_instance_uid"] = study_instance_uid
-        df.to_csv(ConfigPath.tracking_file_path, index=False)
-
-    # Release the association
-    assoc.release()
-    logger.info("C-STORE upload completed.")
-
-
-def assign_label_to_pacs_study() -> None:
-    df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
-    for _, row in df.iterrows():
-        if row["orthanc_study_id"] is None:
-            continue
-        set_orthanc_study_label(row["orthanc_study_id"], row["label"])
-
-
-def download_from_pacs_rest(download_dir: Path) -> None:
-    df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
-    download_dir.mkdir(parents=True, exist_ok=True)
-    for _, row in df.iterrows():
-        download_orthanc_study(row["orthanc_study_id"], download_dir)
-
-
-def delete_studies_from_pacs() -> None:
-    df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
-    orthanc_study_ids = df["orthanc_study_id"]
-    for orthanc_study_id in orthanc_study_ids:
-        delete_orthanc_study(orthanc_study_id)
-
-
-def upload_processed_dataset(dataset_path: Path) -> None:
-    for dcm_path in dataset_path.rglob("*.dcm"):
-        ds = pydicom.dcmread(dcm_path)
-
-        if ds.Modality not in ("SR", "SEG"):
+        # SEG uses ReferencedInstanceSequence (not ReferencedSOPSequence like SR)
+        ref_instance_seq = getattr(series_item, "ReferencedInstanceSequence", None)
+        if ref_instance_seq is None:
+            logger.warning(f"[{subject_name}] [SEG] {out_name}: missing ReferencedInstanceSequence inside ReferencedSeriesSequence.")
+            issues += 1
             continue
 
-        with open(dcm_path, "rb") as f:
-            dicom_bytes = f.read()
-        success = upload_dataset_processing(dicom_bytes)
-        if success:
-            logger.info(f"Successfully uploaded {dcm_path.name} to Shanoir.")
-        else:
-            logger.warning(f"Failed to upload {dcm_path.name} to Shanoir.")
+        for sop_item in ref_instance_seq:
+            ref_sop = str(getattr(sop_item, "ReferencedSOPInstanceUID", ""))
+            if ref_sop not in input_sop_uids:
+                logger.warning(
+                    f"[{subject_name}] [SEG] {out_name}: ReferencedSOPInstanceUID '{ref_sop}' "
+                    f"not found among input SOPInstanceUIDs."
+                )
+                issues += 1
+
+    return issues
 
 
-def get_patient_ids_from_pacs() -> None:
-    """
-    Delete all studies in a dataset from the Orthanc PACS server.
-    """
-    patient_list = get_orthanc_patients()
-    logger.info("------------------------------------ START ------------------------------------")
-    for patient_id in patient_list:
-        patient_meta = get_orthanc_patient_meta(patient_id)
-        logger.info(f"Name: {patient_meta['MainDicomTags']['PatientName']}, ID: {patient_meta['MainDicomTags']['PatientID']}")
-        logger.info("*" * 90)
-    logger.info(f"Total number of patients: {len(patient_list)}")
-    logger.info("------------------------------------ END ------------------------------------")
+def _check_sr_references(ds: pydicom.Dataset, input_sop_uids: set, input_series_uid: str, subject_name: str, out_name: str) -> int:
+    issues = 0
+    evidence_seq = getattr(ds, "CurrentRequestedProcedureEvidenceSequence", None)
+    if evidence_seq is None:
+        logger.warning(f"[{subject_name}] [SR] {out_name}: missing CurrentRequestedProcedureEvidenceSequence.")
+        return 1
+
+    # SR nests series under evidence[0] → series[0]
+    evidence_item = evidence_seq[0]
+    series_seq = getattr(evidence_item, "ReferencedSeriesSequence", None)
+    if series_seq is None:
+        logger.warning(f"[{subject_name}] [SR] {out_name}: missing ReferencedSeriesSequence inside CurrentRequestedProcedureEvidenceSequence.")
+        return 1
+
+    series_item = series_seq[0]
+    ref_series_uid = str(getattr(series_item, "SeriesInstanceUID", ""))
+    if ref_series_uid != input_series_uid:
+        logger.warning(
+            f"[{subject_name}] [SR] {out_name}: ReferencedSeriesSequence.SeriesInstanceUID mismatch. "
+            f"Input={input_series_uid}, Referenced={ref_series_uid}"
+        )
+        issues += 1
+
+    # SR uses ReferencedSOPSequence (not ReferencedInstanceSequence like SEG)
+    sop_seq = getattr(series_item, "ReferencedSOPSequence", None)
+    if sop_seq is None:
+        logger.warning(f"[{subject_name}] [SR] {out_name}: missing ReferencedSOPSequence inside ReferencedSeriesSequence.")
+        return issues + 1
+
+    for sop_item in sop_seq:
+        ref_sop = str(getattr(sop_item, "ReferencedSOPInstanceUID", ""))
+        if ref_sop not in input_sop_uids:
+            logger.warning(
+                f"[{subject_name}] [SR] {out_name}: ReferencedSOPInstanceUID '{ref_sop}' "
+                f"not found among input SOPInstanceUIDs."
+            )
+            issues += 1
+
+    return issues
 
 
-def purge_pacs_studies() -> None:
-    """
-    Purge all studies in a dataset from the Orthanc PACS server.
-    """
-    orthanc_studies_ids = get_all_orthanc_studies()
-    for orthanc_study_id in orthanc_studies_ids:
-        delete_orthanc_study(orthanc_study_id)
+def _get_series_modality(series_dir: Path) -> str | None:
+    for f in series_dir.rglob("*.dcm"):
+        return str(getattr(pydicom.dcmread(f, stop_before_pixels=True), "Modality", None))
+    return None
 
 
-def get_orthanc_study_details() -> None:
-    """
-    Retrieve and log Orthanc study details, including FrameOfReferenceUIDs per series.
-    """
-    studies_ids = get_all_orthanc_studies()
-    logger.info("------------------------------------ START ------------------------------------")
-    for study_id in studies_ids:
-        study = get_orthanc_study_metadata(study_id)
-        orthanc_date = datetime.strptime(study["LastUpdate"], "%Y%m%dT%H%M%S")
+def check_dicom_consistency(input_dir: Path) -> None:
+    total_issues = 0
 
-        patient_name = study["PatientMainDicomTags"].get("PatientName", "Unknown")
-        study_uid = study["MainDicomTags"].get("StudyInstanceUID", "N/A")
-        labels = study.get("Labels", [])
+    for patient_dir in input_dir.iterdir():
+        if not patient_dir.is_dir():
+            continue
 
-        logger.info(f"{orthanc_date} | {patient_name} | {study_uid} | {labels}")
+        mr_files: List[Path] = []
+        seg_files: List[Path] = []
+        sr_files: List[Path] = []
 
-        frame_of_refs: List[Dict[str, str]] = []
-        for series_id in study.get("Series", []):
-            series = get_orthanc_series_metadata(series_id)
-            instance_id = series.get("Instances", [None])[0]
-
-            if not instance_id:
+        for series_dir in patient_dir.iterdir():
+            if not series_dir.is_dir():
                 continue
+            modality = _get_series_modality(series_dir)
+            if modality == "MR":
+                mr_files = list(series_dir.rglob("*.dcm"))
+            elif modality == "SEG":
+                seg_files = list(series_dir.rglob("*.dcm"))
+            elif modality == "SR":
+                sr_files = list(series_dir.rglob("*.dcm"))
+            else:
+                logger.debug(f"[{patient_dir.name}] Series {series_dir.name}: unhandled modality '{modality}', skipping.")
 
-            instance = get_orthanc_instance_metadata(instance_id)
-            series_description = instance.get("SeriesDescription", "Unnamed Series")
-            frame_uid = instance.get("FrameOfReferenceUID")
+        if not mr_files:
+            logger.warning(f"[{patient_dir.name}]: no MR series found, skipping consistency check.")
+            continue
+        if not seg_files and not sr_files:
+            logger.warning(f"[{patient_dir.name}]: no SEG or SR series found, skipping consistency check.")
+            continue
 
-            if frame_uid:
-                frame_of_refs.append({series_description: frame_uid})
+        input_study_uid = None
+        input_series_uid = None
+        input_sop_uids: set = set()
 
-        for ref in frame_of_refs:
-            for series_desc, uid in ref.items():
-                logger.info(f"{series_desc}: {uid}")
+        for mr_file in mr_files:
+            ds = pydicom.dcmread(mr_file, stop_before_pixels=True)
+            sop = getattr(ds, "SOPInstanceUID", None)
+            if sop:
+                input_sop_uids.add(str(sop))
+            if input_study_uid is None:
+                input_study_uid = str(getattr(ds, "StudyInstanceUID", ""))
+            if input_series_uid is None:
+                input_series_uid = str(getattr(ds, "SeriesInstanceUID", ""))
 
-        logger.info("*" * 90)
-    logger.info("------------------------------------ END ------------------------------------")
+        patient_issues = 0
+
+        for output_file in seg_files + sr_files:
+            ds = pydicom.dcmread(output_file, stop_before_pixels=True)
+            modality = str(getattr(ds, "Modality", "UNKNOWN"))
+            out_name = output_file.name
+
+            out_study_uid = str(getattr(ds, "StudyInstanceUID", ""))
+            if out_study_uid != input_study_uid:
+                logger.warning(
+                    f"[{patient_dir.name}] [{modality}] {out_name}: StudyInstanceUID mismatch. "
+                    f"Input={input_study_uid}, Output={out_study_uid}"
+                )
+                patient_issues += 1
+
+            if modality == "SEG":
+                patient_issues += _check_seg_references(ds, input_sop_uids, input_series_uid, patient_dir.name, out_name)
+            elif modality == "SR":
+                patient_issues += _check_sr_references(ds, input_sop_uids, input_series_uid, patient_dir.name, out_name)
+
+        if patient_issues == 0:
+            logger.info(f"[{patient_dir.name}] Consistency check OK.")
+        else:
+            logger.warning(f"[{patient_dir.name}] Consistency check: {patient_issues} issue(s) found.")
+            total_issues += patient_issues
+
+    if total_issues == 0:
+        logger.info("All patients passed DICOM consistency check.")
+    else:
+        logger.warning(f"DICOM consistency check complete: {total_issues} total issue(s) found.")
