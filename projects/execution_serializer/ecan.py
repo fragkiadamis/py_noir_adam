@@ -321,6 +321,7 @@ def debug_orthanc() -> None:
 # ------------------- DANGER ZONE -------------------
 # @app.command()
 # def delete_studies() -> None:
+#     initiate_working_files("ecan")
 #     delete_studies_from_pacs()
 #     purge_pacs_studies()
 # ------------------- DANGER ZONE -------------------
