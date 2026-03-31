@@ -234,46 +234,26 @@ def generate_json(output_dir: Path) -> List[Dict]:
 def explain() -> None:
     """
     \b
-    eCAN project command-line interface.
+    eCAN pipeline CLI.
 
     Commands:
-    --------
-    * `execute-pipeline` — runs the eCAN pipeline for subjects listed in `ecan_subject_id_list.csv` (ignored):
-        - Retrieves datasets for each subject ID.
-        - Filters the datasets (keep the oldest examination, >=50 slices, )
-        - Generates JSON executions for the SIMS/3.0 pipeline.
-        - Launches executions or resumes incomplete runs.
-
-    Auxiliary debug functions:
-    -------------------------
-    * `populate-orthanc` — populates the CHU Nantes Orthanc PACS with the processed output and the input datasets
-        - Download the processed output alongside the input dataset
-        - Inspect DICOM files for inconsistencies and fixes them
-        - Upload the processed output along the input dataset to an orthanc instance
-        - Assign labels to the orthanc studies
-    * `debug-orthanc` — Runs functions for the environment of CHU Nantes to inspect the Orthanc PACS
-        - Get and log patients from the Orthanc instance
-        - Get and log studies from the Orthanc instance
-        - Delete uploaded studies from ecan.csv tracking file
-        - Purge Orthanc instance
-    * `import-shanoir` — Imports data from Orthanc to shanoir
-        - Get further processed outputs from shanoir
-        - Upload the processed output to shanoir
+      execute            — query TOF datasets, filter (oldest exam, oldest acquisition, >=50 slices, <10mm), launch VIP executions
+      populate-orthanc   — download VIP output, remove MIP slices, fix DICOM tags, upload to Orthanc, assign Orthanc label
+      delete-mip-orthanc — delete MIP instances from already-uploaded Orthanc studies
+      import-shanoir     — sync UIDs, download from Orthanc, check DICOM consistency, upload SEG/SR to Shanoir
+      debug-orthanc      — log patients, study details, MR series instance counts
 
     Usage:
-    -----
-        uv run main.py ecan execute
-        uv run main.py ecan populate-orthanc
-        uv run main.py ecan debug-orthanc
-        uv run main.py ecan import-shanoir
+      uv run main.py ecan execute
+      uv run main.py ecan populate-orthanc
+      uv run main.py ecan delete-mip-orthanc
+      uv run main.py ecan import-shanoir
+      uv run main.py ecan debug-orthanc
     """
 
 
 @app.command()
 def execute() -> None:
-    """
-    Run the eCAN processing pipeline
-    """
     initiate_working_files("ecan")
     init_serialization(generate_json, kwargs={"output_dir": ConfigPath.output_path / "ecan" / "shanoir_output"})
 
@@ -302,9 +282,6 @@ def import_shanoir() -> None:
 
 @app.command()
 def delete_mip_orthanc() -> None:
-    """
-    For each uploaded Orthanc study, delete the first MR instance if it is a MIP.
-    """
     initiate_working_files("ecan")
     delete_mip_first_instances()
 
