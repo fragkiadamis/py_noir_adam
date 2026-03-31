@@ -181,6 +181,34 @@ def get_orthanc_study_metadata(orthanc_study_id: str) -> Dict[str, str] | None:
         return None
 
 
+def find_orthanc_instances_by_image_type(series_instance_uid: str, image_type_pattern: str) -> list[str]:
+    """
+    Find Orthanc instance IDs within a series whose ImageType matches *image_type_pattern*
+    (supports DICOM wildcard '*').
+
+    Args:
+        series_instance_uid (str): DICOM SeriesInstanceUID to search within.
+        image_type_pattern (str): Wildcard pattern, e.g. '*PROJECTION*'.
+
+    Returns:
+        list[str]: Orthanc instance IDs matching the query (may be empty).
+    """
+    try:
+        response = orthanc_request("post", "tools/find", json={
+            "Level": "Instance",
+            "Query": {
+                "SeriesInstanceUID": series_instance_uid,
+                "ImageType": image_type_pattern,
+            }
+        })
+        if response.status_code == 200:
+            return response.json()
+        logger.warning(f"tools/find failed for pattern '{image_type_pattern}' (status {response.status_code})")
+    except Exception as e:
+        logger.error(f"Error querying instances by ImageType: {e}")
+    return []
+
+
 def find_orthanc_series_by_uid(series_instance_uid: str) -> str | None:
     """
     Find the Orthanc internal series ID by SeriesInstanceUID.
@@ -302,6 +330,29 @@ def set_orthanc_study_label(study_id: str, label: str) -> bool:
             return False
     except Exception as e:
         logger.error(f"Error assigning label '{label}' to study {study_id}: {e}")
+        return False
+
+
+def delete_orthanc_instance(instance_id: str) -> bool:
+    """
+    Delete a single instance from Orthanc.
+
+    Args:
+        instance_id (str): Orthanc instance ID.
+
+    Returns:
+        bool: True if successfully deleted, False otherwise.
+    """
+    try:
+        response = orthanc_request("delete", f"instances/{instance_id}")
+        if response.status_code == 200:
+            logger.info(f"Deleted instance {instance_id}")
+            return True
+        else:
+            logger.warning(f"Failed to delete instance '{instance_id}' (status {response.status_code})")
+            return False
+    except Exception as e:
+        logger.error(f"Error deleting instance '{instance_id}': {e}")
         return False
 
 

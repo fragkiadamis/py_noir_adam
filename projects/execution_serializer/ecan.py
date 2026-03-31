@@ -15,10 +15,12 @@ from src.utils.config_utils import APIConfig, ConfigPath
 from src.utils.dicom_utils import fetch_processed_datasets, upload_to_pacs_rest, assign_label_to_pacs_study, \
     inspect_and_fix_study_tags, upload_to_pacs_dicom, get_patient_ids_from_pacs, get_orthanc_study_details, \
     delete_studies_from_pacs, purge_pacs_studies, sync_examination_study_instance_uids, download_from_pacs_rest, \
-    upload_processed_dataset, create_series_export, check_dicom_consistency
+    upload_processed_dataset, create_series_export, check_dicom_consistency, log_mr_series_instance_counts, \
+    delete_mip_first_instances
 from src.utils.log_utils import get_logger
 from src.utils.file_utils import get_items_from_input_file, initiate_working_files
 from src.utils.serializer_utils import init_serialization
+from src.utils.mip_detector import delete_first_slice_if_mip
 
 app = typer.Typer()
 logger = get_logger()
@@ -229,6 +231,7 @@ def populate_orthanc() -> None:
     initiate_working_files("ecan")
     vip_output = ConfigPath.output_path / "ecan" / "vip_output"
     fetch_processed_datasets(vip_output)
+    delete_first_slice_if_mip(vip_output)
     inspect_and_fix_study_tags(vip_output)
     upload_to_pacs_rest(vip_output) # for REST API
     # upload_to_pacs_dicom(vip_output) # For dicom web store
@@ -246,11 +249,21 @@ def import_shanoir() -> None:
 
 
 @app.command()
+def delete_mip_orthanc() -> None:
+    """
+    For each uploaded Orthanc study, delete the first MR instance if it is a MIP.
+    """
+    initiate_working_files("ecan")
+    delete_mip_first_instances()
+
+
+@app.command()
 def debug_orthanc() -> None:
     initiate_working_files("ecan")
     get_patient_ids_from_pacs()
     get_orthanc_study_details()
-    create_series_export()
+    log_mr_series_instance_counts()
+    # create_series_export()
 
 
 # ------------------- DANGER ZONE -------------------

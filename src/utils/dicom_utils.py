@@ -9,11 +9,13 @@ import pydicom
 from pynetdicom import AE, StoragePresentationContexts
 
 from src.orthanc.orthanc_service import set_orthanc_study_label, upload_study_to_orthanc, \
-    delete_orthanc_study, get_orthanc_patients, get_orthanc_patient_meta, get_all_orthanc_studies, \
-    get_study_orthanc_id_by_uid, download_orthanc_study, get_orthanc_study_metadata, get_orthanc_series_metadata, \
-    get_orthanc_instance_metadata, download_orthanc_series, get_all_orthanc_series, find_orthanc_series_by_uid
+    delete_orthanc_study, delete_orthanc_instance, get_orthanc_patients, get_orthanc_patient_meta, \
+    get_all_orthanc_studies, get_study_orthanc_id_by_uid, download_orthanc_study, get_orthanc_study_metadata, \
+    get_orthanc_series_metadata, get_orthanc_instance_metadata, download_orthanc_series, get_all_orthanc_series, \
+    find_orthanc_series_by_uid, find_orthanc_instances_by_image_type
 from src.shanoir_object.dataset.dataset_service import find_processed_dataset_ids_by_input_dataset_id, \
     download_dataset_processing, upload_dataset_processing, sync_study_instance_uid
+from src.utils.mip_detector import detect_mip_by_tags_dict
 from src.utils.config_utils import ConfigPath, OrthancConfig
 from src.utils.log_utils import get_logger
 
@@ -526,6 +528,99 @@ def get_orthanc_study_details() -> None:
                 logger.info(f"{series_desc}: {uid}")
 
         logger.info("*" * 90)
+    logger.info("------------------------------------ END ------------------------------------")
+
+
+def _find_first_orthanc_instance(instance_ids: list[str]) -> str:
+    """
+    From a sample of Orthanc instance IDs, return the one with the lowest
+    InstanceNumber.  Falls back to the first element if none have the tag.
+    """
+    best_id, best_num = instance_ids[0], float("inf")
+    for inst_id in instance_ids[:10]:
+        tags = get_orthanc_instance_metadata(inst_id)
+        if tags is None:
+            continue
+        try:
+            num = int(tags.get("InstanceNumber", float("inf")))
+        except (ValueError, TypeError):
+            continue
+        if num < best_num:
+            best_num, best_id = num, inst_id
+    return best_id
+
+
+_MIP_IMAGE_TYPE_PATTERNS = ["*PROJECTION*", "*MIP*", "*MAXIMUM*", "*MAX_IP*"]
+
+
+def delete_mip_first_instances() -> None:
+    """
+    For each study already uploaded to Orthanc (tracked in the CSV), query
+    each MR series for instances whose ImageType matches known MIP patterns
+    and delete them.
+    """
+    df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
+    rows_with_study = df[df["orthanc_study_id"].notna()]
+
+    for _, row in rows_with_study.iterrows():
+        orthanc_study_id = str(row["orthanc_study_id"])
+
+        study_meta = get_orthanc_study_metadata(orthanc_study_id)
+        if study_meta is None:
+            continue
+
+        patient_name = study_meta.get("PatientMainDicomTags", {}).get("PatientName", "Unknown")
+
+        for series_id in study_meta.get("Series", []):
+            series_meta = get_orthanc_series_metadata(series_id)
+            if series_meta is None:
+                continue
+            if series_meta.get("MainDicomTags", {}).get("Modality", "") != "MR":
+                continue
+
+            series_uid = series_meta.get("MainDicomTags", {}).get("SeriesInstanceUID", "")
+            if not series_uid:
+                continue
+
+            mip_instance_ids: set[str] = set()
+            for pattern in _MIP_IMAGE_TYPE_PATTERNS:
+                mip_instance_ids.update(find_orthanc_instances_by_image_type(series_uid, pattern))
+
+            for instance_id in mip_instance_ids:
+                logger.info(f"{patient_name} — deleting MIP instance {instance_id} from series {series_uid}.")
+                delete_orthanc_instance(instance_id)
+
+
+def log_mr_series_instance_counts() -> None:
+    """
+    Log the number of instances for every MR series in Orthanc.
+    """
+    all_series_ids = get_all_orthanc_series()
+    if not all_series_ids:
+        logger.error("No series found in Orthanc.")
+        return
+
+    study_cache: Dict[str, Dict] = {}
+    logger.info("------------------------------------ START ------------------------------------")
+    for series_id in all_series_ids:
+        series_meta = get_orthanc_series_metadata(series_id)
+        if series_meta is None:
+            continue
+
+        tags = series_meta.get("MainDicomTags", {})
+        if tags.get("Modality", "") != "MR":
+            continue
+
+        n_instances = len(series_meta.get("Instances", []))
+        series_description = tags.get("SeriesDescription", "N/A")
+
+        parent_study_id = series_meta.get("ParentStudy", "")
+        if parent_study_id not in study_cache:
+            study_cache[parent_study_id] = get_orthanc_study_metadata(parent_study_id) or {}
+        patient_name = study_cache[parent_study_id].get("PatientMainDicomTags", {}).get("PatientName", "Unknown")
+
+        logger.info(f"{patient_name} | {series_description} | instances: {n_instances}")
+
     logger.info("------------------------------------ END ------------------------------------")
 
 
