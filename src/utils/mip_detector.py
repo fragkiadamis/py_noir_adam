@@ -1,15 +1,3 @@
-"""
-DICOM MIP Detector
-==================
-Determines whether the first slice of a DICOM series is a Maximum Intensity
-Projection (MIP).
-
-Detection strategy (multi-signal approach):
-  1. DICOM tag checks — ImageType, SeriesDescription, ProtocolName
-  2. Pixel statistics — MIPs have elevated mean intensity, long bright tails
-  3. Histogram shape — MIPs show a characteristic bimodal or right-skewed distribution
-"""
-
 import os
 import re
 from pathlib import Path
@@ -36,15 +24,17 @@ def _check_tag_string(value: str | None) -> bool:
 
 
 def detect_mip_by_tags_dict(tags: dict) -> tuple[bool, list[str]]:
-    """
-    Tag-based MIP detection from a plain dict, e.g. from Orthanc's
-    /instances/{id}/tags?simplify endpoint.
-    ImageType is a backslash-separated string in that context.
-    """
     evidence = []
 
     image_type_raw = tags.get("ImageType", "")
-    for val in (image_type_raw.split("\\") if isinstance(image_type_raw, str) else []):
+    # Orthanc returns multi-value CS tags as backslash-separated strings
+    if isinstance(image_type_raw, list):
+        image_type_vals = image_type_raw
+    elif isinstance(image_type_raw, str):
+        image_type_vals = image_type_raw.split("\\")
+    else:
+        image_type_vals = []
+    for val in image_type_vals:
         if val.upper() in _IMAGE_TYPE_MIP_VALUES or _MIP_KEYWORDS.search(val):
             evidence.append(f"ImageType contains '{val}'")
 
@@ -58,21 +48,11 @@ def detect_mip_by_tags_dict(tags: dict) -> tuple[bool, list[str]]:
 def detect_mip_by_tags(ds: pydicom.Dataset) -> tuple[bool, list[str]]:
     evidence = []
 
-    image_type = getattr(ds, "ImageType", [])
-    print(image_type)
-    for val in image_type:
+    for val in getattr(ds, "ImageType", []):
         if str(val).upper() in _IMAGE_TYPE_MIP_VALUES or _MIP_KEYWORDS.search(str(val)):
             evidence.append(f"ImageType contains '{val}'")
 
-    series_desc = getattr(ds, "SeriesDescription", None)
-    if _check_tag_string(series_desc):
-        evidence.append(f"SeriesDescription = '{series_desc}'")
-
-    protocol = getattr(ds, "ProtocolName", None)
-    if _check_tag_string(protocol):
-        evidence.append(f"ProtocolName = '{protocol}'")
-
-    for attr in ("RequestedProcedureDescription", "PerformedProcedureStepDescription"):
+    for attr in ("SeriesDescription", "ProtocolName", "RequestedProcedureDescription", "PerformedProcedureStepDescription"):
         val = getattr(ds, attr, None)
         if _check_tag_string(val):
             evidence.append(f"{attr} = '{val}'")
@@ -112,7 +92,9 @@ def detect_mip_by_pixels(ds: pydicom.Dataset) -> tuple[bool, dict]:
     if data_range == 0:
         return False, stats
 
+    # How far the mean sits between min and max (0–1); MIPs skew bright
     norm_mean = (stats["mean"] - stats["min"]) / data_range
+    # Ratio of the bright tail above median relative to the full range
     bright_tail_ratio = (
         (stats["p99"] - stats["median"]) / (stats["max"] - stats["min"])
         if stats["max"] != stats["median"] else 0.0
@@ -130,7 +112,6 @@ def detect_mip_by_pixels(ds: pydicom.Dataset) -> tuple[bool, dict]:
 
 
 def _load_sorted_dcm_paths(folder: Path) -> list[tuple[str, pydicom.Dataset]]:
-    """Return (filepath, dataset) pairs from *folder*, sorted by InstanceNumber."""
     items = []
     for fpath in folder.iterdir():
         if not os.path.isfile(fpath):
@@ -153,10 +134,6 @@ def _load_sorted_dcm_paths(folder: Path) -> list[tuple[str, pydicom.Dataset]]:
 
 
 def delete_first_slice_if_mip(vip_output: Path) -> None:
-    """
-    Load the series in *folder*, check if the first slice is a MIP, and delete
-    it if so.  Returns True if a file was deleted.
-    """
     for processing in vip_output.iterdir():
         if not processing.is_dir():
             continue
@@ -167,11 +144,9 @@ def delete_first_slice_if_mip(vip_output: Path) -> None:
 
         first_path, first_ds = items[0]
         tag_hit, tag_evidence = detect_mip_by_tags(first_ds)
-        print(tag_hit, tag_evidence)
         pixel_hit, _ = detect_mip_by_pixels(first_ds)
 
-        is_mip = tag_hit or pixel_hit
-        if not is_mip:
+        if not (tag_hit or pixel_hit):
             continue
 
         confidence = "high" if (tag_hit and pixel_hit) else "medium" if tag_hit else "low"
@@ -180,4 +155,4 @@ def delete_first_slice_if_mip(vip_output: Path) -> None:
             f"{patient_name} — first slice is a MIP ({confidence} confidence, "
             f"evidence: {tag_evidence}).\nDeleting: {first_path}"
         )
-        # os.remove(first_path)
+        os.remove(first_path)

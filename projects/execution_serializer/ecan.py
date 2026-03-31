@@ -8,15 +8,16 @@ import pandas as pd
 import typer
 import pydicom
 
-from src.shanoir_object.dataset.dataset_service import get_examination, download_dataset
+from src.shanoir_object.dataset.dataset_service import get_examination, download_dataset, \
+    find_processed_dataset_ids_by_input_dataset_id, download_dataset_processing, \
+    upload_dataset_processing, sync_study_instance_uid
 from src.shanoir_object.solr_query.solr_query_model import SolrQuery
 from src.shanoir_object.solr_query.solr_query_service import solr_search
 from src.utils.config_utils import APIConfig, ConfigPath
-from src.utils.dicom_utils import fetch_processed_datasets, upload_to_pacs_rest, assign_label_to_pacs_study, \
-    inspect_and_fix_study_tags, upload_to_pacs_dicom, get_patient_ids_from_pacs, get_orthanc_study_details, \
-    delete_studies_from_pacs, purge_pacs_studies, sync_examination_study_instance_uids, download_from_pacs_rest, \
-    upload_processed_dataset, create_series_export, check_dicom_consistency, log_mr_series_instance_counts, \
-    delete_mip_first_instances
+from src.utils.dicom_utils import inspect_and_fix_study_tags, check_dicom_consistency
+from src.utils.pacs_utils import upload_to_pacs_rest, upload_to_pacs_dicom, assign_label_to_pacs_study, \
+    download_from_pacs_rest, delete_studies_from_pacs, purge_pacs_studies, delete_mip_first_instances, \
+    get_patient_ids_from_pacs, get_orthanc_study_details, log_mr_series_instance_counts, create_series_export
 from src.utils.log_utils import get_logger
 from src.utils.file_utils import get_items_from_input_file, initiate_working_files
 from src.utils.serializer_utils import init_serialization
@@ -24,6 +25,57 @@ from src.utils.mip_detector import delete_first_slice_if_mip
 
 app = typer.Typer()
 logger = get_logger()
+
+
+def _fetch_processed_datasets(output_dir: Path) -> None:
+    df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
+    df["processing_id"] = pd.Series(dtype="Int64")
+    dataset_pairs_list = [{
+        "input_dataset_id": row["dataset_id"],
+        "execution_id": row["execution_id"]
+    } for _, row in df.iterrows() if row["execution_status"] == "Finished"]
+
+    processing_ids_list = []
+    for dataset_pair in dataset_pairs_list:
+        processing_list = find_processed_dataset_ids_by_input_dataset_id(dataset_pair["input_dataset_id"])
+        processing_id = next(
+            (item["id"] for item in processing_list if str(item["parentId"]) == dataset_pair["execution_id"]),
+            None
+        )
+        if processing_id is None:
+            continue
+        processing_ids_list.append(processing_id)
+        df.loc[df["dataset_id"] == dataset_pair["input_dataset_id"], "processing_id"] = processing_id
+        df.to_csv(ConfigPath.tracking_file_path, index=False)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    download_dataset_processing(processing_ids_list, output_dir, unzip=True)
+
+
+def _sync_examination_study_instance_uids() -> None:
+    df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
+    examination_ids = df["examination_id"].dropna().unique().tolist()
+    logger.info(f"Syncing StudyInstanceUID for {len(examination_ids)} examination(s)...")
+    for examination_id in examination_ids:
+        try:
+            sync_study_instance_uid(examination_id)
+            logger.info(f"Synced StudyInstanceUID for examination {examination_id}")
+        except Exception as e:
+            logger.error(f"Failed to sync StudyInstanceUID for examination {examination_id}: {e}")
+
+
+def _upload_processed_dataset(orthanc_output: Path) -> None:
+    for dcm_path in orthanc_output.rglob("*.dcm"):
+        ds = pydicom.dcmread(dcm_path)
+        if ds.Modality not in ("SR", "SEG"):
+            continue
+        with open(dcm_path, "rb") as f:
+            dicom_bytes = f.read()
+        success = upload_dataset_processing(dicom_bytes)
+        if success:
+            logger.info(f"Successfully uploaded {dcm_path.name} to Shanoir.")
+        else:
+            logger.warning(f"Failed to upload {dcm_path.name} to Shanoir.")
 
 
 def query_datasets(subject_name_list: List) -> defaultdict[Any, defaultdict[Any, List]]:
@@ -230,7 +282,7 @@ def execute() -> None:
 def populate_orthanc() -> None:
     initiate_working_files("ecan")
     vip_output = ConfigPath.output_path / "ecan" / "vip_output"
-    fetch_processed_datasets(vip_output)
+    _fetch_processed_datasets(vip_output)
     delete_first_slice_if_mip(vip_output)
     inspect_and_fix_study_tags(vip_output)
     upload_to_pacs_rest(vip_output) # for REST API
@@ -242,10 +294,10 @@ def populate_orthanc() -> None:
 def import_shanoir() -> None:
     initiate_working_files("ecan")
     orthanc_output = ConfigPath.output_path / "ecan" / "orthanc_output"
-    sync_examination_study_instance_uids()
+    _sync_examination_study_instance_uids()
     download_from_pacs_rest(orthanc_output)
     check_dicom_consistency(orthanc_output)
-    upload_processed_dataset(orthanc_output)
+    _upload_processed_dataset(orthanc_output)
 
 
 @app.command()
