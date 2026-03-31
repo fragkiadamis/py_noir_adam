@@ -283,10 +283,15 @@ def import_shanoir() -> None:
 
 
 @app.command()
-def sync_resources() -> None:
+def sync_tracking_file() -> None:
     initiate_working_files("ecan")
     vip_output = ConfigPath.output_path / "ecan" / "vip_output"
     update_tracking_ids(vip_output)
+
+
+@app.command()
+def purge_orthanc_mips() -> None:
+    initiate_working_files("ecan")
     delete_mip_first_instances()
 
 
