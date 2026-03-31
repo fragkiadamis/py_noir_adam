@@ -11,7 +11,7 @@ from src.orthanc.orthanc_service import set_orthanc_study_label, upload_study_to
     get_all_orthanc_studies, get_study_orthanc_id_by_uid, download_orthanc_study, \
     get_orthanc_study_metadata, get_orthanc_series_metadata, get_orthanc_instance_metadata, \
     download_orthanc_series, get_all_orthanc_series, find_orthanc_series_by_uid, \
-    find_orthanc_instances_by_image_type
+    find_orthanc_instances_by_image_type, find_orthanc_studies_by_patient_name
 from src.utils.config_utils import ConfigPath, OrthancConfig
 from src.utils.log_utils import get_logger
 
@@ -217,11 +217,14 @@ def get_orthanc_study_details() -> None:
 
             instance = get_orthanc_instance_metadata(instance_id)
             series_description = instance.get("SeriesDescription", "Unnamed Series")
+            series_uid = series.get("MainDicomTags", {}).get("SeriesInstanceUID", "N/A")
             frame_uid = instance.get("FrameOfReferenceUID")
 
             if modality in ("SEG", "SR"):
                 instance_uid = instance.get("SOPInstanceUID", "N/A")
-                logger.info(f"  [{modality}] {series_description} | Series ID: {series_id} | Instance UID: {instance_uid}")
+                logger.info(f"  [{modality}] {series_description} | Series ID: {series_id} | Series UID: {series_uid} | Instance UID: {instance_uid}")
+            else:
+                logger.info(f"  [{modality}] {series_description} | Series ID: {series_id} | Series UID: {series_uid}")
 
             if frame_uid:
                 frame_of_refs.append({series_description: frame_uid})
@@ -313,3 +316,41 @@ def create_series_export() -> None:
     ])
     df.to_csv(output_csv, index=False)
     logger.info(f"Wrote {len(rows)} series to {output_csv}")
+
+
+def update_tracking_ids(vip_output: Path) -> None:
+    df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
+
+    for processing_dir in vip_output.iterdir():
+        if not processing_dir.is_dir():
+            continue
+
+        input_dir = next(d for d in processing_dir.iterdir() if d.is_dir() and "output" not in d.name)
+        first_dcm = next(input_dir.glob("*.dcm"), None)
+        if first_dcm is None:
+            continue
+
+        ds = pydicom.dcmread(first_dcm, stop_before_pixels=True)
+        dicom_patient_name = str(ds.PatientName)
+        series_instance_uid = str(getattr(ds, "SeriesInstanceUID", ""))
+        path_patient_name = "_".join(first_dcm.stem.split("_")[:3])
+        if "AIC_01_0002" in path_patient_name or "AIC_01_0002" in dicom_patient_name:
+            continue
+
+        study_ids = find_orthanc_studies_by_patient_name(dicom_patient_name)
+        if not study_ids:
+            logger.warning(f"{path_patient_name} — no Orthanc study found for PatientName '{dicom_patient_name}'")
+            continue
+
+        orthanc_study_id = study_ids[0]
+        study_meta = get_orthanc_study_metadata(orthanc_study_id)
+        if study_meta is None:
+            continue
+
+        study_instance_uid = study_meta.get("MainDicomTags", {}).get("StudyInstanceUID", "")
+        df.loc[df["subject_name"] == path_patient_name, "orthanc_study_id"] = orthanc_study_id
+        df.loc[df["subject_name"] == path_patient_name, "study_instance_uid"] = study_instance_uid
+        df.loc[df["subject_name"] == path_patient_name, "series_instance_uid"] = series_instance_uid
+        logger.info(f"{path_patient_name} — orthanc_study_id={orthanc_study_id}, study_instance_uid={study_instance_uid}, series_instance_uid={series_instance_uid}")
+
+    df.to_csv(ConfigPath.tracking_file_path, index=False)

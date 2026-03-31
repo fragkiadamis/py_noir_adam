@@ -17,11 +17,13 @@ from src.utils.config_utils import APIConfig, ConfigPath
 from src.utils.dicom_utils import inspect_and_fix_study_tags, check_dicom_consistency
 from src.utils.pacs_utils import upload_to_pacs_rest, upload_to_pacs_dicom, assign_label_to_pacs_study, \
     download_from_pacs_rest, delete_studies_from_pacs, purge_pacs_studies, delete_mip_first_instances, \
-    get_patient_ids_from_pacs, get_orthanc_study_details, log_mr_series_instance_counts, create_series_export
+    get_patient_ids_from_pacs, get_orthanc_study_details, log_mr_series_instance_counts, create_series_export, \
+    update_tracking_ids
 from src.utils.log_utils import get_logger
 from src.utils.file_utils import get_items_from_input_file, initiate_working_files
 from src.utils.serializer_utils import init_serialization
 from src.utils.mip_detector import delete_first_slice_if_mip
+from src.orthanc.orthanc_service import find_orthanc_studies_by_patient_name, get_orthanc_study_metadata
 
 app = typer.Typer()
 logger = get_logger()
@@ -281,8 +283,10 @@ def import_shanoir() -> None:
 
 
 @app.command()
-def delete_mip_orthanc() -> None:
+def sync_resources() -> None:
     initiate_working_files("ecan")
+    vip_output = ConfigPath.output_path / "ecan" / "vip_output"
+    update_tracking_ids(vip_output)
     delete_mip_first_instances()
 
 
