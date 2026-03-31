@@ -204,7 +204,7 @@ def get_orthanc_study_details() -> None:
         study_uid = study["MainDicomTags"].get("StudyInstanceUID", "N/A")
         labels = study.get("Labels", [])
 
-        logger.info(f"{orthanc_date} | {patient_name} | {study_uid} | {labels}")
+        logger.info(f"{orthanc_date} | {patient_name} | {study_id} | {study_uid} | {labels}")
 
         frame_of_refs: List[Dict[str, str]] = []
         for series_id in study.get("Series", []):
