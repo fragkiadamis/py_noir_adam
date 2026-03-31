@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import List
 
@@ -13,19 +12,21 @@ SEQUENCE_ITEM_TAG = (0x0040, 0x0008)
 
 
 def inspect_and_fix_study_tags(input_dir: Path) -> None:
-    for processing in os.listdir(input_dir):
-        processing_dir = os.path.join(input_dir, processing)
-        processing_input_dir = os.path.join(processing_dir, [item for item in os.listdir(processing_dir) if "output" not in item][0])
-        processing_output_dir = os.path.join(processing_dir, "output")
-        mr_files = [os.path.join(processing_input_dir, f) for f in os.listdir(processing_input_dir) if f.endswith(".dcm")]
-        seg_file = os.path.join(processing_output_dir, [f for f in os.listdir(processing_output_dir) if "seg" in f][0])
+    for processing_dir in input_dir.iterdir():
+        if not processing_dir.is_dir():
+            continue
+
+        processing_input_dir = next(d for d in processing_dir.iterdir() if d.is_dir() and "output" not in d.name)
+        processing_output_dir = processing_dir / "output"
+        mr_files = list(processing_input_dir.glob("*.dcm"))
+        seg_file = next(processing_output_dir.glob("*seg*"))
 
         uids = {}
         for file_path in mr_files:
             ds = pydicom.dcmread(file_path, stop_before_pixels=True)
             uid = getattr(ds, "FrameOfReferenceUID", None)
             if uid:
-                uids.setdefault(uid, []).append(os.path.basename(file_path).split(".")[0])
+                uids.setdefault(uid, []).append(file_path.stem)
 
         if len(uids.keys()) > 1:
             subject_name = pydicom.dcmread(mr_files[0]).PatientName
@@ -146,8 +147,7 @@ def _check_sr_references(ds: pydicom.Dataset, input_sop_uids: set, input_series_
 
 def _get_series_modality(series_dir: Path) -> str | None:
     for f in series_dir.rglob("*.dcm"):
-        ds = pydicom.dcmread(series_dir / f, stop_before_pixels=True)
-        return str(getattr(ds, "Modality", None))
+        return str(getattr(pydicom.dcmread(f, stop_before_pixels=True), "Modality", None))
     return None
 
 
@@ -155,16 +155,15 @@ def check_dicom_consistency(input_dir: Path) -> None:
     total_issues = 0
 
     for patient_dir in input_dir.iterdir():
-        if not os.path.isdir(patient_dir):
+        if not patient_dir.is_dir():
             continue
 
         mr_files: List[Path] = []
         seg_files: List[Path] = []
         sr_files: List[Path] = []
 
-        for series_id in patient_dir.iterdir():
-            series_dir = patient_dir / series_id
-            if not os.path.isdir(series_dir):
+        for series_dir in patient_dir.iterdir():
+            if not series_dir.is_dir():
                 continue
             modality = _get_series_modality(series_dir)
             if modality == "MR":
@@ -174,7 +173,7 @@ def check_dicom_consistency(input_dir: Path) -> None:
             elif modality == "SR":
                 sr_files = list(series_dir.rglob("*.dcm"))
             else:
-                logger.debug(f"[{patient_dir.name}] Series {series_id}: unhandled modality '{modality}', skipping.")
+                logger.debug(f"[{patient_dir.name}] Series {series_dir.name}: unhandled modality '{modality}', skipping.")
 
         if not mr_files:
             logger.warning(f"[{patient_dir.name}]: no MR series found, skipping consistency check.")

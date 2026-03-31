@@ -1,4 +1,3 @@
-import os
 import re
 from pathlib import Path
 
@@ -114,7 +113,7 @@ def detect_mip_by_pixels(ds: pydicom.Dataset) -> tuple[bool, dict]:
 def _load_sorted_dcm_paths(folder: Path) -> list[tuple[str, pydicom.Dataset]]:
     items = []
     for fpath in folder.iterdir():
-        if not os.path.isfile(fpath):
+        if not fpath.is_file():
             continue
         try:
             ds = pydicom.dcmread(fpath, stop_before_pixels=False)
@@ -155,4 +154,4 @@ def delete_first_slice_if_mip(vip_output: Path) -> None:
             f"{patient_name} — first slice is a MIP ({confidence} confidence, "
             f"evidence: {tag_evidence}).\nDeleting: {first_path}"
         )
-        os.remove(first_path)
+        first_path.unlink()

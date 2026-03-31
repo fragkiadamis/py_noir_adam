@@ -1,5 +1,4 @@
 import base64
-import os.path
 import zipfile
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
@@ -178,7 +177,7 @@ def get_orthanc_instance_metadata(orthanc_instance_id: str) -> Dict[str, str] | 
 
 def download_orthanc_study(study_id: str, download_path: Path, unzip: bool = True):
     try:
-        output_file = os.path.join(download_path, f"{study_id}.zip")
+        output_file = download_path / f"{study_id}.zip"
         response = orthanc_request("get", f"studies/{study_id}/archive")
         if response.status_code == 200:
             with open(output_file, "wb") as f:
@@ -188,12 +187,12 @@ def download_orthanc_study(study_id: str, download_path: Path, unzip: bool = Tru
             logger.info(f"Downloaded study {study_id} to {output_file}")
 
             if unzip:
-                extract_dir = os.path.join(download_path, study_id)
-                os.makedirs(extract_dir, exist_ok=True)
+                extract_dir = download_path / study_id
+                extract_dir.mkdir(parents=True, exist_ok=True)
                 with zipfile.ZipFile(output_file, "r") as zip_ref:
                     zip_ref.extractall(extract_dir)
                 logger.info(f"Extracted study {study_id} to {extract_dir}")
-                os.remove(output_file)
+                output_file.unlink()
                 logger.debug(f"Removed archive {output_file}")
         else:
             logger.warning(f"Failed to download study {study_id} (status {response.status_code})")
@@ -256,7 +255,7 @@ def get_orthanc_patients() -> List | None:
 
 def download_orthanc_series(series_id: str, download_path: Path, unzip: bool = True):
     try:
-        output_file = os.path.join(download_path, f"{series_id}.zip")
+        output_file = download_path / f"{series_id}.zip"
         response = orthanc_request("get", f"series/{series_id}/archive")
         if response.status_code == 200:
             with open(output_file, "wb") as f:
@@ -266,12 +265,12 @@ def download_orthanc_series(series_id: str, download_path: Path, unzip: bool = T
             logger.info(f"Downloaded series {series_id} to {output_file}")
 
             if unzip:
-                extract_dir = os.path.join(download_path, series_id)
-                os.makedirs(extract_dir, exist_ok=True)
+                extract_dir = download_path / series_id
+                extract_dir.mkdir(parents=True, exist_ok=True)
                 with zipfile.ZipFile(output_file, "r") as zip_ref:
                     zip_ref.extractall(extract_dir)
                 logger.info(f"Extracted series {series_id} to {extract_dir}")
-                os.remove(output_file)
+                output_file.unlink()
                 logger.debug(f"Removed archive {output_file}")
         else:
             logger.warning(f"Failed to download series {series_id} (status {response.status_code})")
