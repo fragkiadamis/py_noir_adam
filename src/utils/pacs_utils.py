@@ -103,7 +103,7 @@ def assign_label_to_pacs_study() -> None:
 
 
 def download_from_pacs_rest(download_dir: Path) -> None:
-    df = pd.read_csv(ConfigPath.input_path / "series_export.csv", dtype=str)
+    df = pd.read_csv(ConfigPath.input_path / "series_export.csv", dtype=str, sep=";")
     downloaded_mr_series = set()
     for _, row in df.iterrows():
         series_instance_uid = row["SeriesInstanceUID"]
