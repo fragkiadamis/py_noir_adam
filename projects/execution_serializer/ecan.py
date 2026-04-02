@@ -305,10 +305,12 @@ def orthanc_remove_mips() -> None:
 
 @app.command()
 def debug_orthanc() -> None:
+    # get_patient_ids_from_pacs()
+    # get_orthanc_study_details()
+    # log_mr_series_instance_counts()
+
     initiate_working_files("ecan")
-    get_patient_ids_from_pacs()
-    get_orthanc_study_details()
-    log_mr_series_instance_counts()
+    get_orthanc_study_details_from_tracking()
     # create_series_export()
 
 

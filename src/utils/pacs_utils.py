@@ -237,6 +237,51 @@ def get_orthanc_study_details() -> None:
     logger.info("------------------------------------ END ------------------------------------")
 
 
+def get_orthanc_study_details_from_tracking() -> None:
+    df = pd.read_csv(ConfigPath.tracking_file_path, sep=",", dtype=str)
+    study_ids = df["orthanc_study_id"].dropna().unique().tolist()
+
+    logger.info("------------------------------------ START ------------------------------------")
+    for study_id in study_ids:
+        study = get_orthanc_study_metadata(study_id)
+        orthanc_date = datetime.strptime(study["LastUpdate"], "%Y%m%dT%H%M%S")
+        patient_name = study["PatientMainDicomTags"].get("PatientName", "Unknown")
+        study_uid = study["MainDicomTags"].get("StudyInstanceUID", "N/A")
+        labels = study.get("Labels", [])
+
+        logger.info(f"{orthanc_date} | {patient_name} | {study_id} | {study_uid} | {labels}")
+
+        frame_of_refs: List[Dict[str, str]] = []
+        for series_id in study.get("Series", []):
+            series = get_orthanc_series_metadata(series_id)
+            modality = series.get("MainDicomTags", {}).get("Modality", "")
+            instance_id = series.get("Instances", [None])[0]
+
+            if not instance_id:
+                continue
+
+            instance = get_orthanc_instance_metadata(instance_id)
+            series_description = instance.get("SeriesDescription", "Unnamed Series")
+            series_uid = series.get("MainDicomTags", {}).get("SeriesInstanceUID", "N/A")
+            frame_uid = instance.get("FrameOfReferenceUID")
+
+            if modality in ("SEG", "SR"):
+                instance_uid = instance.get("SOPInstanceUID", "N/A")
+                logger.info(f"  [{modality}] {series_description} | Series ID: {series_id} | Series UID: {series_uid} | Instance UID: {instance_uid}")
+            else:
+                logger.info(f"  [{modality}] {series_description} | Series ID: {series_id} | Series UID: {series_uid}")
+
+            if frame_uid:
+                frame_of_refs.append({series_description: frame_uid})
+
+        for ref in frame_of_refs:
+            for series_desc, uid in ref.items():
+                logger.info(f"{series_desc}: {uid}")
+
+        logger.info("*" * 90)
+    logger.info("------------------------------------ END ------------------------------------")
+
+
 def log_mr_series_instance_counts() -> None:
     all_series_ids = get_all_orthanc_series()
     if not all_series_ids:
