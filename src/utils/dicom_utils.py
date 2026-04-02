@@ -1,3 +1,6 @@
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 from typing import List
 
@@ -226,3 +229,29 @@ def check_dicom_consistency(input_dir: Path) -> None:
         logger.info("All patients passed DICOM consistency check.")
     else:
         logger.warning(f"DICOM consistency check complete: {total_issues} total issue(s) found.")
+
+
+def run_compliance_fixes(input_dir: Path, input_copy_dir: Path) -> None:
+    input_copy_dir.mkdir(exist_ok=True)
+    modified_datasets = 0
+    for processing_dir in input_dir.iterdir():
+        processing_dir_copy = input_copy_dir / processing_dir.name
+
+        input_dataset_dir = next(d for d in processing_dir.iterdir() if d.is_dir() and "output" not in d.name)
+        input_dataset_dir_copy = input_copy_dir / processing_dir.name / input_dataset_dir.name
+
+        shutil.copytree(processing_dir / "output", processing_dir_copy / "output", dirs_exist_ok=True)
+
+        compliance_script = Path(__file__).parent / "dicom_compliance.py"
+        cmd = [sys.executable, str(compliance_script), str(input_dataset_dir), str(input_dataset_dir_copy)]
+        with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) as proc:
+            for line in proc.stdout:
+                logger.info(line.rstrip())
+                if "DICOM files modified" in line:
+                    line_parts = line.split(" ")
+                    modified_datasets = modified_datasets + 1 if int(line_parts[-1]) > 0 else modified_datasets
+                    logger.info(f"Modified DICOM files in {input_dataset_dir_copy}")
+
+    logger.info(f"Modified DICOM datasets: {modified_datasets}")
+    shutil.rmtree(input_dir)
+    input_copy_dir.rename(input_dir)

@@ -14,11 +14,12 @@ from src.shanoir_object.dataset.dataset_service import get_examination, download
 from src.shanoir_object.solr_query.solr_query_model import SolrQuery
 from src.shanoir_object.solr_query.solr_query_service import solr_search
 from src.utils.config_utils import APIConfig, ConfigPath
+from src.utils.dicom_utils import run_compliance_fixes
 from src.utils.dicom_utils import inspect_and_fix_study_tags, check_dicom_consistency
 from src.utils.pacs_utils import upload_to_pacs_rest, upload_to_pacs_dicom, assign_label_to_pacs_study, \
     download_from_pacs_rest, delete_studies_from_pacs, purge_pacs_studies, delete_mip_first_instances, \
-    get_patient_ids_from_pacs, get_orthanc_study_details, log_mr_series_instance_counts, create_series_export, \
-    update_tracking_ids
+    get_patient_ids_from_pacs, get_orthanc_study_details, get_orthanc_study_details_from_tracking, \
+    log_mr_series_instance_counts, create_series_export, update_tracking_ids
 from src.utils.log_utils import get_logger
 from src.utils.file_utils import get_items_from_input_file, initiate_working_files
 from src.utils.serializer_utils import init_serialization
@@ -261,12 +262,19 @@ def execute() -> None:
 
 
 @app.command()
-def populate_orthanc() -> None:
+def dicom_compliance() -> None:
     initiate_working_files("ecan")
     vip_output = ConfigPath.output_path / "ecan" / "vip_output"
     _fetch_processed_datasets(vip_output)
     delete_first_slice_if_mip(vip_output)
     inspect_and_fix_study_tags(vip_output)
+    run_compliance_fixes(vip_output, vip_output.parent / "vip_output_corrected")
+
+
+@app.command()
+def populate_orthanc() -> None:
+    initiate_working_files("ecan")
+    vip_output = ConfigPath.output_path / "ecan" / "vip_output"
     upload_to_pacs_rest(vip_output) # for REST API
     # upload_to_pacs_dicom(vip_output) # For dicom web store
     assign_label_to_pacs_study()
@@ -290,7 +298,7 @@ def sync_tracking_file() -> None:
 
 
 @app.command()
-def purge_orthanc_mips() -> None:
+def orthanc_remove_mips() -> None:
     initiate_working_files("ecan")
     delete_mip_first_instances()
 
