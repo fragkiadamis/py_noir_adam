@@ -17,8 +17,7 @@ from src.utils.config_utils import APIConfig, ConfigPath
 from src.utils.dicom_utils import run_compliance_fixes
 from src.utils.dicom_utils import inspect_and_fix_study_tags, check_dicom_consistency
 from src.utils.pacs_utils import upload_to_pacs_rest, upload_to_pacs_dicom, assign_label_to_pacs_study, \
-    download_from_pacs_rest, delete_studies_from_pacs, delete_mip_first_instances, \
-    get_patient_ids_from_pacs, get_orthanc_study_details, \
+    download_from_pacs_rest, delete_studies_from_pacs, delete_mip_first_instances, get_orthanc_study_details, \
     log_mr_series_instance_counts, create_series_export, update_tracking_ids
 from src.utils.log_utils import get_logger
 from src.utils.file_utils import get_items_from_input_file, initiate_working_files
@@ -306,7 +305,6 @@ def orthanc_remove_mips() -> None:
 @app.command()
 def debug_orthanc() -> None:
     initiate_working_files("ecan")
-    get_patient_ids_from_pacs()
     get_orthanc_study_details(from_tracking=True)
     log_mr_series_instance_counts()
     # create_series_export()

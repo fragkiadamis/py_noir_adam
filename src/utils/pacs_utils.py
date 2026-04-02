@@ -183,17 +183,6 @@ def delete_mip_first_instances() -> None:
                 delete_orthanc_instance(instance_id)
 
 
-def get_patient_ids_from_pacs() -> None:
-    patient_list = get_orthanc_patients()
-    logger.info("------------------------------------ START ------------------------------------")
-    for patient_id in patient_list:
-        patient_meta = get_orthanc_patient_meta(patient_id)
-        logger.info(f"Name: {patient_meta['MainDicomTags']['PatientName']}, ID: {patient_meta['MainDicomTags']['PatientID']}")
-        logger.info("*" * 90)
-    logger.info(f"Total number of patients: {len(patient_list)}")
-    logger.info("------------------------------------ END ------------------------------------")
-
-
 def get_orthanc_study_details(from_tracking: bool = False) -> None:
     if from_tracking:
         df = pd.read_csv(ConfigPath.tracking_file_path, sep=",", dtype=str)
