@@ -139,14 +139,14 @@ def download_from_pacs_rest(download_dir: Path) -> None:
                 downloaded_mr_series.add(mr_series_id)
 
 
-def delete_studies_from_pacs() -> None:
-    df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
-    for orthanc_study_id in df["orthanc_study_id"]:
-        delete_orthanc_study(orthanc_study_id)
+def delete_studies_from_pacs(from_tracking: bool = False) -> None:
+    if from_tracking:
+        df = pd.read_csv(ConfigPath.tracking_file_path, sep=",", dtype=str)
+        study_ids = df["orthanc_study_id"].dropna().unique().tolist()
+    else:
+        study_ids = get_all_orthanc_studies()
 
-
-def purge_pacs_studies() -> None:
-    for orthanc_study_id in get_all_orthanc_studies():
+    for orthanc_study_id in study_ids:
         delete_orthanc_study(orthanc_study_id)
 
 
