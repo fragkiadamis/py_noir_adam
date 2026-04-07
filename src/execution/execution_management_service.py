@@ -2,6 +2,7 @@ import shutil
 import json
 import threading
 import time
+import math
 
 from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime
@@ -37,24 +38,39 @@ def check_pause_schedule(pause_message_event):
         pause_message_event.clear()
 
 
-def thread_execution_with_start_signal(item, start_event):
+def thread_execution_with_start_signal(partition, part_id, start_event):
     start_event.set()
-    thread_execution(item)
+    thread_execution(partition, part_id)
 
 
 def manage_threading_execution():
     global items
     global nb_processed_items
     global processed_item_ids
-    logger.info("Number of planned executions: " + str(len(items) - 1))
+
+    job_count = len(items) - 1
+
+    from itertools import groupby
+
+    # Sort and group by studyIdentifier, then split each group into chunks
+    partitions = [
+        group[i:i + ExecutionConfig.max_jobs_per_thread]
+        for _, g in groupby(sorted(items[1:], key=lambda x: x['studyIdentifier']), key=lambda x: x['studyIdentifier'])
+        for group in [list(g)]
+        for i in range(0, len(group), ExecutionConfig.max_jobs_per_thread)
+    ]
+
+    logger.info("Number of planned jobs among executions: " + str(job_count) + " jobs among " + str(len(partitions)) + " executions.")
     logger.info("Starting new executions...")
+
     with ThreadPoolExecutor(max_workers=ExecutionConfig.max_thread) as executor:
-        for item in items[1:]:
+        for i in range(len(partitions)):
             start_event = threading.Event()
-            start_events[item["identifier"]] = start_event
-            executor.submit(thread_execution_with_start_signal, item, start_event)
+            start_events[i] = start_event
+            executor.submit(thread_execution_with_start_signal, partitions[i], i, start_event)
             start_event.wait()
             time.sleep(1)  # Required, to avoid concurrency issues
+
 
     logger.info("Executions ended.")
 
@@ -75,17 +91,17 @@ def manage_threading_execution():
         p.unlink(missing_ok=True)
 
 
-def thread_execution(item: Dict) -> None:
+def thread_execution(partition: list[Dict], part_id: int) -> None:
     global nb_processed_items, processed_item_ids, monitoring_lock
     pause_message_event = threading.Event()
     check_pause_schedule(pause_message_event)
     meta, monitoring, tracking_json = {}, {}, Path()
 
     try:
-        execution = create_execution(item)
+        execution = create_execution(partition)
         start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         if execution["id"] is not None:
-            tracking_json = ConfigPath.tracking_file_path.parent / f"{item['identifier']}.json"
+            tracking_json = ConfigPath.tracking_file_path.parent / f"{part_id}.json"
             monitoring = get_execution_monitoring(execution["id"])
             status = '"Running"'
 
@@ -98,7 +114,7 @@ def thread_execution(item: Dict) -> None:
             with open(tracking_json, 'w') as json_file:
                 json.dump(meta, json_file)
 
-            logger.info("Execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']) + " is created.")
+            logger.info("Execution " + str(part_id) + ", " + str(monitoring['identifier']) + " is created.")
             count_down = 12
 
             while status == '"Running"':
@@ -116,29 +132,29 @@ def thread_execution(item: Dict) -> None:
 
                 count_down -= 1
                 if count_down == 1 and status == '"Running"':
-                    logger.info("Status for execution " + str(item["identifier"]) + ", " + str(
+                    logger.info("Status for execution " + str(part_id) + ", " + str(
                         monitoring['identifier']) + " is " + status)
                     count_down = 12
 
             if status == '"Finished"':
-                logger.info("Success for execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']))
+                logger.info("Success for execution " + str(part_id) + ", " + str(monitoring['identifier']))
             else:
-                logger.info("Failure for execution " + str(item["identifier"]) + ", " + str(monitoring['identifier']))
+                logger.info("Failure for execution " + str(part_id) + ", " + str(monitoring['identifier']))
 
             meta["execution_status"] = status.replace("\"", "")
             meta["execution_end_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with open(tracking_json, 'w') as json_file:
                 json.dump(meta, json_file)
-            logger.info("%s out of %s items processed." % (nb_processed_items + 1, total_items_to_process))
     except:
         with monitoring_lock:
-            logger.error("Exception for execution " + str(item["identifier"] + ", " + str(monitoring['identifier'])))
+            logger.error("Exception for execution " + str(part_id) + ", " + str(monitoring['identifier']))
             meta["execution_status"] = "PyNoir_exception"
             meta["execution_end_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with open(tracking_json, 'w') as json_file:
                 json.dump(meta, json_file)
 
-    item_processed_increment(item)
+    item_processed_increment(partition)
+    logger.info("%s out of %s items processed." % (nb_processed_items, total_items_to_process))
     with file_lock:
         with open(ConfigPath.wip_file_path, "w", encoding="utf-8") as f:
             json.dump(items, f, indent=2)
@@ -178,15 +194,18 @@ def read_items_from_json_file(resume: bool):
         exit()
 
 
-def item_processed_increment(item: dict):
+def item_processed_increment(partition: list[dict]):
     global items
     global nb_processed_items
     global processed_item_ids
 
-    item_id = item["identifier"]
-    items.remove(item)
-    nb_processed_items += 1
-    processed_item_ids.append(item_id)
+    partition_item_ids = []
+    for item in partition:
+        partition_item_ids.append(item["identifier"])
+        items.remove(item)
+
+    nb_processed_items += len(partition)
+    processed_item_ids.extend(partition_item_ids)
     items[0] = dict(nb_processed_items=nb_processed_items, processed_item_ids=processed_item_ids)
 
 

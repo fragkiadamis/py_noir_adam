@@ -91,17 +91,20 @@ class ExecutionConfig(object):
     Configuration class for project execution
     """
     max_thread: int = None
+    max_jobs_per_thread: int = None
     server_reboot_beginning_hour: int = None
     server_reboot_ending_hour: int = None
 
     @classmethod
     def init(cls, config: CustomConfigParser):
         cls.max_thread = int(config.get('Execution config', 'max_thread'))
+        cls.max_jobs_per_thread = int(config.get('Execution config', 'max_jobs_per_thread'))
         cls.server_reboot_beginning_hour = int(config.get('Execution config', 'server_reboot_beginning_hour'))
         cls.server_reboot_ending_hour = int(config.get('Execution config', 'server_reboot_ending_hour'))
 
     def __init__(self, config: CustomConfigParser):
         self.max_thread = int(config.get('Execution config', 'max_thread'))
+        self.max_jobs_per_thread = int(config.get('Execution config', 'max_jobs_per_thread'))
         self.server_reboot_beginning_hour = int(config.get('Execution config', 'server_reboot_beginning_hour'))
         self.server_reboot_ending_hour = int(config.get('Execution config', 'server_reboot_ending_hour'))
 
