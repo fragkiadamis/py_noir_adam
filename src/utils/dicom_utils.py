@@ -25,6 +25,7 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
         seg_file = next(processing_output_dir.glob("*seg*"))
 
         uids = {}
+        subject_name = pydicom.dcmread(mr_files[0]).PatientName
         for file_path in mr_files:
             ds = pydicom.dcmread(file_path, stop_before_pixels=True)
             uid = getattr(ds, "FrameOfReferenceUID", None)
@@ -32,7 +33,6 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
                 uids.setdefault(uid, []).append(file_path.stem)
 
         if len(uids.keys()) > 1:
-            subject_name = pydicom.dcmread(mr_files[0]).PatientName
             logger.info(f"{subject_name} --> inconsistencies were found in MR FrameOfReferenceUID.")
             good_uid = max(uids, key=lambda k: len(uids[k]))
             for file_path in mr_files:
@@ -45,7 +45,6 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
 
         seg = pydicom.dcmread(seg_file)
         if seg.FrameOfReferenceUID != good_uid:
-            subject_name = seg.PatientName
             logger.info(f"{subject_name} --> inconsistencies were found between MR and SEG FrameOfReferenceUID.")
             seg.FrameOfReferenceUID = good_uid
             seg.save_as(seg_file)
@@ -61,7 +60,7 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
             for item in ds[SEQUENCE_TAG].value:
                 if SEQUENCE_ITEM_TAG not in item:
                     continue
-                found_item = item[(0x0040, 0x0008)]
+                found_item = item[SEQUENCE_ITEM_TAG]
                 if found_item.VR != "SQ":
                     continue
                 # Remove empty or malformed nested sequences
