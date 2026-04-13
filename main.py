@@ -7,6 +7,7 @@ from src.utils.log_utils import set_logger
 load_config()
 set_logger(sys.argv[1])
 
+import projects.execution_serializer.sims_fake as sims_fake
 import projects.execution_serializer.sims as sims
 import projects.execution_serializer.flair as flair
 import projects.execution_serializer.pmap as pmap
@@ -28,6 +29,7 @@ app = typer.Typer()
 
 # Execution serializers
 app.add_typer(sims.app, name="sims")
+app.add_typer(sims_fake.app, name="sims_fake")
 app.add_typer(flair.app, name="flair")
 app.add_typer(pmap.app, name="pmap")
 app.add_typer(t2stir.app, name="t2stir")
@@ -54,6 +56,7 @@ def explain() -> None:
     **The py_noir app list (Check `uv run [app_name] --help` for more information):
     *
     * Execution serializers:
+    * - sims: runs the fake SIMS pipeline. Only for local dev/debug.
     * - sims: runs the SIMS processing pipeline.
     * - flair: runs the Comete_FLAIR processing pipeline.
     * - pmap: runs the Comete_PMAP processing pipeline.

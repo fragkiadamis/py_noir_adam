@@ -21,7 +21,7 @@ logger = get_logger()
 def explain() -> None:
     """
     \b
-    SIMS project command-line interface.
+    SIMS fake project command-line interface.
 
     Commands:
     --------
@@ -35,15 +35,15 @@ def explain() -> None:
 
     Usage:
     -----
-        uv run main.py sims execute
+        uv run main.py sims_fake execute
     """
 
 @app.command()
 def execute() -> None:
     """
-    Run the SIMS processing pipeline
+    Run the SIMS fake processing pipeline
     """
-    initiate_working_files("sims")
+    initiate_working_files("sims_fake")
     init_serialization(generate_json)
 
 
@@ -51,7 +51,7 @@ def generate_json(_: Optional[Path] = None) -> List[Dict]:
     identifier = 0
     executions = []
 
-    exam_ids_to_exec = get_items_from_input_file("sims.txt")
+    exam_ids_to_exec = get_items_from_input_file("comete.txt")
 
     logger.info("Getting datasets, building json content... ")
 
@@ -84,8 +84,8 @@ def generate_json(_: Optional[Path] = None) -> List[Dict]:
 
         execution = {
             "identifier":identifier,
-            "name": "SIMS_3_exam_{}_{}".format(exam_id, datetime.now(timezone.utc).strftime('%F')),
-            "pipelineIdentifier": "SIMS/3",
+            "name": "SIMS_fake_1_exam_{}_{}_post_processing".format(exam_id, datetime.now(timezone.utc).strftime('%F')),
+            "pipelineIdentifier": "SIMS-fake/1",
             "studyIdentifier": datasets[0]["studyId"],
             "inputParameters": {},
             "outputProcessing": "",

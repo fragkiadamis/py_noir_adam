@@ -93,7 +93,7 @@ def generate_json(_: Optional[Path] = None) -> List[Dict]:
                 examinations[exam_id]["T2"].append(ds_id)
 
     for key, value in examinations.items():
-        if value["T2"] and value["PMAP"]:
+        if len(value["T2"]) > 1 and len(value["PMAP"]) > 1:
             values = {"executable": True,}
             for col, val in values.items():
                 df.loc[value["identifier"], col] = val
@@ -102,8 +102,8 @@ def generate_json(_: Optional[Path] = None) -> List[Dict]:
             execution = {
                 "identifier":value["identifier"],
 
-                "name": "comete_pmap_01_exam_{}_{}".format(key, datetime.now(timezone.utc).strftime('%F_%H%M%S%f')[:-3]),
-                "pipelineIdentifier": "comete_sc_pmap_fusion/1.3",
+                "name": "comete_pmap_2_0_exam_{}_{}".format(key, datetime.now(timezone.utc).strftime('%F_%H%M%S%f')[:-3]),
+                "pipelineIdentifier": "comete_sc_pmap_fusion/2.0",
                 "inputParameters": {},
                 "datasetParameters": [
                     {
