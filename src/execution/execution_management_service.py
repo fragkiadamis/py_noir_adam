@@ -60,15 +60,20 @@ def manage_threading_execution():
         for i in range(0, len(group), ExecutionConfig.max_jobs_per_thread)
     ]
 
+    # partitions = [
+    #     items[i:i + ExecutionConfig.max_jobs_per_thread]
+    #     for i in range(1, len(items), ExecutionConfig.max_jobs_per_thread)
+    # ]
     logger.info("Number of planned jobs among executions: " + str(job_count) + " jobs among " + str(len(partitions)) + " executions.")
     logger.info("Starting new executions...")
 
     with ThreadPoolExecutor(max_workers=ExecutionConfig.max_thread) as executor:
         for i in range(len(partitions)):
-            start_event = threading.Event()
-            start_events[i] = start_event
-            executor.submit(thread_execution_with_start_signal, partitions[i], i, start_event)
-            start_event.wait()
+            #start_event = threading.Event()
+            #start_events[i] = start_event
+            executor.submit(thread_execution, partitions[i], i)
+            #executor.submit(thread_execution_with_start_signal, partitions[i], i, start_event)
+            #start_event.wait()
             time.sleep(1)  # Required, to avoid concurrency issues
 
 
