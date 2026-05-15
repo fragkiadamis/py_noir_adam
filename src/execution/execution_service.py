@@ -12,7 +12,7 @@ Define methods for Shanoir datasets MS execution API call
 logger = get_logger()
 
 
-def create_execution(execution: Dict):
+def create_execution(execution: list[Dict]):
     path = "/datasets/vip/execution/"
     response = post(path, {}, data=json.dumps(execution), raise_for_status=False)
     return response.json()
