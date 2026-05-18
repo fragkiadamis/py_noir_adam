@@ -13,6 +13,7 @@ import projects.execution_serializer.flair as flair
 import projects.execution_serializer.pmap as pmap
 import projects.execution_serializer.t2stir as t2stir
 import projects.execution_serializer.sienax as sienax
+import projects.execution_serializer.csa as csa
 import projects.execution_serializer.ecan as ecan
 
 import projects.execution_tools.carmin_api_test as carmin
@@ -34,6 +35,7 @@ app.add_typer(flair.app, name="flair")
 app.add_typer(pmap.app, name="pmap")
 app.add_typer(t2stir.app, name="t2stir")
 app.add_typer(sienax.app, name="sienax")
+app.add_typer(csa.app, name="csa")
 app.add_typer(ecan.app, name="ecan")
 
 # Execution tools
