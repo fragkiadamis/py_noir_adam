@@ -31,7 +31,7 @@ SOURCES = [
     {"label": "ICAN", "source": "subject_names", "file": "ican_subset.txt", "study_name": "ICAN"},
     {"label": "ANGPTL6", "source": "subject_names", "file": "angptl6_subset.txt", "study_name": "ICAN"},
     {"label": "UCAN", "source": "subject_names", "file": "ucan_subset.txt", "study_name": "UCAN"},
-    {"label": "RCAN", "source": "dataset_csv", "file": "rcan_tof_sans_aic.csv", "study_name": "RCAN"},
+    {"label": "RCAN", "source": "dataset_csv", "file": "rcan_tof_sans_aic_subset.csv", "study_name": "RCAN"},
 ]
 
 MANIFEST_COLUMNS = [
@@ -105,7 +105,6 @@ def resolve_sources() -> List[Dict]:
 
 
 def download_records(records: List[Dict], download_dir: Path) -> None:
-    """Download every record's DICOMs and write the download manifest. No QC."""
     download_dir.mkdir(parents=True, exist_ok=True)
     rows = []
     for ds in records:
@@ -123,7 +122,6 @@ def download_records(records: List[Dict], download_dir: Path) -> None:
 
 
 def _check_dicom_qc(path: Path):
-    """Per-dataset DICOM QC: keep series with >50 slices and SliceThickness <10mm."""
     dcm_files = [p for p in path.iterdir() if p.is_file() and p.suffix == ".dcm"] if path.exists() else []
     if not dcm_files:
         return False, "no DICOM files", 0, ""
@@ -144,7 +142,6 @@ def _check_dicom_qc(path: Path):
 
 
 def _mark_keep_one_acquisition(df: pd.DataFrame) -> None:
-    """Among still-valid rows, keep the lowest dataset_id per examination."""
     for exam_id, group in df[df["valid"] == "True"].groupby("examination_id"):
         ids = sorted(group["dataset_id"], key=lambda x: int(x))
         for did in ids[1:]:
@@ -153,7 +150,6 @@ def _mark_keep_one_acquisition(df: pd.DataFrame) -> None:
 
 
 def _mark_keep_oldest_examination(df: pd.DataFrame) -> None:
-    """Among still-valid rows, keep only the oldest examination per subject."""
     def parse(date_str: str) -> datetime:
         try:
             return datetime.fromisoformat(str(date_str).replace("Z", "").split("+")[0])
@@ -171,7 +167,6 @@ def _mark_keep_oldest_examination(df: pd.DataFrame) -> None:
 
 
 def validate_manifest() -> None:
-    """Flag non-conforming datasets in the manifest. Non-destructive."""
     manifest = ConfigPath.output_path / "ecan" / "download_manifest.csv"
     df = pd.read_csv(manifest, dtype=str)
     if df.empty:
