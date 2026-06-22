@@ -20,7 +20,11 @@ def explain():
     variants (IA/AI/NRI). One dataset is kept per examination, and the result is
     sorted by subject common name.
 
-    Writes two files back to the input path:
+    Writes two files back to the input path, both ";" separated with the same
+    columns as the source export:
+
+    - ``rcan_tof_sans_aic.csv`` — the full filtered, deduplicated table.
+    - ``rcan_tof_sans_aic_subset.csv`` — the first 400 rows of that table.
 
     Usage:
       uv run main.py stripe-rcan-csv execute -c "TOF SANS AIC"
@@ -59,9 +63,9 @@ def execute(
 
     logger.info(f"Wrote {len(deduped_df)} rows to {output_file}")
 
-    # Write the first 400 datasetIds, one per line, as a subset file.
-    subset_ids = deduped_df["datasetId"].head(400)
-    subset_file = ConfigPath.input_path / "rcan_tof_sans_aic_subset.txt"
-    subset_file.write_text("\n".join(subset_ids) + "\n")
+    # Write the first 400 rows as a subset, in the same format as the full file.
+    subset_df = deduped_df.head(400)
+    subset_file = ConfigPath.input_path / "rcan_tof_sans_aic_subset.csv"
+    subset_df.to_csv(subset_file, sep=";", index=False)
 
-    logger.info(f"Wrote {len(subset_ids)} datasetIds to {subset_file}")
+    logger.info(f"Wrote {len(subset_df)} rows to {subset_file}")
