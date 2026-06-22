@@ -28,10 +28,10 @@ app = typer.Typer()
 logger = get_logger()
 
 SOURCES = [
-    # {"label": "ICAN", "source": "subject_names", "file": "ican_subset.txt", "study_name": "ICAN"},
-    # {"label": "ANGPTL6", "source": "subject_names", "file": "angptl6_subset.txt", "study_name": "ICAN"},
+    {"label": "ICAN", "source": "subject_names", "file": "ican_subset.txt", "study_name": "ICAN"},
+    {"label": "ANGPTL6", "source": "subject_names", "file": "angptl6_subset.txt", "study_name": "ICAN"},
     {"label": "UCAN", "source": "subject_names", "file": "ucan_subset.txt", "study_name": "UCAN"},
-    # {"label": "RCAN", "source": "dataset_csv", "file": "rcan_tof_sans_aic.csv", "study_name": "RCAN"},
+    {"label": "RCAN", "source": "dataset_csv", "file": "rcan_tof_sans_aic.csv", "study_name": "RCAN"},
 ]
 
 MANIFEST_COLUMNS = [
