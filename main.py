@@ -78,6 +78,7 @@ def explain() -> None:
     *
     * Miscellaneous tools (not related to Shanoir):
     * - sql_to_csv: convert a SQL Select return to a csv file
+    * - stripe-rcan-csv: filter out datasets from the RCAN study and save them to a csv file.
     ---
     Built for automating dataset execution and processing in Shanoir-NG.
     """
