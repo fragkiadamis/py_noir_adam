@@ -24,10 +24,10 @@ def explain():
     columns as the source export:
 
     - ``rcan_tof_sans_aic.csv`` — the full filtered, deduplicated table.
-    - ``rcan_tof_sans_aic_subset.csv`` — the first 400 rows of that table.
+    - ``rcan_tof_sans_aic_subset.csv`` — the first ``--subset-size`` rows of that table.
 
     Usage:
-      uv run main.py stripe-rcan-csv execute -c "TOF SANS AIC"
+      uv run main.py stripe-rcan-csv execute -c "TOF SANS AIC" -n 400
     """
 
 
@@ -38,6 +38,12 @@ def execute(
         "--examination-comment",
         "-c",
         help="examinationComment to filter on (case-insensitive).",
+    ),
+    subset_size: int = typer.Option(
+        400,
+        "--subset-size",
+        "-n",
+        help="Number of rows to write to the subset file.",
     ),
 ) -> None:
     df = pd.read_csv(ConfigPath.input_path / "rcan_statistics.csv", dtype=str, sep=",")
@@ -63,8 +69,8 @@ def execute(
 
     logger.info(f"Wrote {len(deduped_df)} rows to {output_file}")
 
-    # Write the first 400 rows as a subset, in the same format as the full file.
-    subset_df = deduped_df.head(400)
+    # Write the first N rows as a subset, in the same format as the full file.
+    subset_df = deduped_df.head(subset_size)
     subset_file = ConfigPath.input_path / "rcan_tof_sans_aic_subset.csv"
     subset_df.to_csv(subset_file, sep=";", index=False)
 
