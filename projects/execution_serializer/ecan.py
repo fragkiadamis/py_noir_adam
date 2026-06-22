@@ -109,6 +109,10 @@ def download_records(records: List[Dict], download_dir: Path) -> None:
     rows = []
     for ds in records:
         path = download_dir / str(ds["subject_name"]) / str(ds["examination_id"]) / str(ds["dataset_id"])
+        if path.is_dir() and any(path.iterdir()):
+            logger.info(f"Dataset {ds['dataset_id']} already downloaded at {path}; skipping.")
+            rows.append({**ds, "download_path": str(path)})
+            continue
         path.mkdir(parents=True, exist_ok=True)
         download_dataset(ds["dataset_id"], "dcm", path, unzip=True)
         rows.append({**ds, "download_path": str(path)})
