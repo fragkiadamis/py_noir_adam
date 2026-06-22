@@ -379,8 +379,8 @@ def generate_json(_: Optional[Path] = None) -> List[Dict]:
         dt = datetime.now().strftime('%F_%H%M%S%f')[:-3]
         executions.append({
             "identifier": idx,
-            "name": f"landmarkDetection_0_7_exam_{dataset['examination_id']}_{dt}",
-            "pipelineIdentifier": "landmarkDetection/0.7",
+            "name": f"landmarkDetection_0_8_exam_{dataset['examination_id']}_{dt}",
+            "pipelineIdentifier": "landmarkDetection/0.8",
             "studyIdentifier": dataset["study_id"],
             "inputParameters": {},
             "outputProcessing": "",
