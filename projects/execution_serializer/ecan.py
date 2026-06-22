@@ -23,7 +23,6 @@ from src.utils.log_utils import get_logger
 from src.utils.file_utils import get_items_from_input_file, initiate_working_files
 from src.utils.serializer_utils import init_serialization
 from src.utils.mip_detector import delete_first_slice_if_mip
-from src.orthanc.orthanc_service import find_orthanc_studies_by_patient_name, get_orthanc_study_metadata
 
 app = typer.Typer()
 logger = get_logger()
