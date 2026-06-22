@@ -25,6 +25,7 @@ import projects.execution_tools.vip_logs_import as vip_logs_import
 import projects.shanoir_tools.dicom_metadata_download as dicom_metadata_download
 
 import projects.miscellaneous_tools.csv_tools.sql_select_return_to_csv as sql_to_csv
+import projects.miscellaneous_tools.csv_tools.rcan_csv as stripe_rcan_csv
 
 app = typer.Typer()
 
@@ -50,6 +51,7 @@ app.add_typer(dicom_metadata_download.app, name="dicom_metadata_download")
 
 #Miscellaneous tools
 app.add_typer(sql_to_csv.app, name="sql_to_csv")
+app.add_typer(stripe_rcan_csv.app, name="stripe-rcan-csv")
 
 @app.callback()
 def explain() -> None:
@@ -78,6 +80,7 @@ def explain() -> None:
     *
     * Miscellaneous tools (not related to Shanoir):
     * - sql_to_csv: convert a SQL Select return to a csv file
+    * - stripe-rcan-csv: filter out datasets from the RCAN study and save them to a csv file.
     ---
     Built for automating dataset execution and processing in Shanoir-NG.
     """

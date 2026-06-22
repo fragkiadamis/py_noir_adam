@@ -1,3 +1,6 @@
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 from typing import List
 
@@ -22,6 +25,7 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
         seg_file = next(processing_output_dir.glob("*seg*"))
 
         uids = {}
+        subject_name = pydicom.dcmread(mr_files[0]).PatientName
         for file_path in mr_files:
             ds = pydicom.dcmread(file_path, stop_before_pixels=True)
             uid = getattr(ds, "FrameOfReferenceUID", None)
@@ -29,7 +33,6 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
                 uids.setdefault(uid, []).append(file_path.stem)
 
         if len(uids.keys()) > 1:
-            subject_name = pydicom.dcmread(mr_files[0]).PatientName
             logger.info(f"{subject_name} --> inconsistencies were found in MR FrameOfReferenceUID.")
             good_uid = max(uids, key=lambda k: len(uids[k]))
             for file_path in mr_files:
@@ -42,7 +45,6 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
 
         seg = pydicom.dcmread(seg_file)
         if seg.FrameOfReferenceUID != good_uid:
-            subject_name = seg.PatientName
             logger.info(f"{subject_name} --> inconsistencies were found between MR and SEG FrameOfReferenceUID.")
             seg.FrameOfReferenceUID = good_uid
             seg.save_as(seg_file)
@@ -58,7 +60,7 @@ def inspect_and_fix_study_tags(input_dir: Path) -> None:
             for item in ds[SEQUENCE_TAG].value:
                 if SEQUENCE_ITEM_TAG not in item:
                     continue
-                found_item = item[(0x0040, 0x0008)]
+                found_item = item[SEQUENCE_ITEM_TAG]
                 if found_item.VR != "SQ":
                     continue
                 # Remove empty or malformed nested sequences
@@ -226,3 +228,29 @@ def check_dicom_consistency(input_dir: Path) -> None:
         logger.info("All patients passed DICOM consistency check.")
     else:
         logger.warning(f"DICOM consistency check complete: {total_issues} total issue(s) found.")
+
+
+def run_compliance_fixes(input_dir: Path, input_copy_dir: Path) -> None:
+    input_copy_dir.mkdir(exist_ok=True)
+    modified_datasets = 0
+    for processing_dir in input_dir.iterdir():
+        processing_dir_copy = input_copy_dir / processing_dir.name
+
+        input_dataset_dir = next(d for d in processing_dir.iterdir() if d.is_dir() and "output" not in d.name)
+        input_dataset_dir_copy = input_copy_dir / processing_dir.name / input_dataset_dir.name
+
+        shutil.copytree(processing_dir / "output", processing_dir_copy / "output", dirs_exist_ok=True)
+
+        compliance_script = Path(__file__).parent / "dicom_compliance.py"
+        cmd = [sys.executable, str(compliance_script), str(input_dataset_dir), str(input_dataset_dir_copy)]
+        with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) as proc:
+            for line in proc.stdout:
+                logger.info(line.rstrip())
+                if "DICOM files modified" in line:
+                    line_parts = line.split(" ")
+                    modified_datasets = modified_datasets + 1 if int(line_parts[-1]) > 0 else modified_datasets
+                    logger.info(f"Modified DICOM files in {input_dataset_dir_copy}")
+
+    logger.info(f"Modified DICOM datasets: {modified_datasets}")
+    shutil.rmtree(input_dir)
+    input_copy_dir.rename(input_dir)

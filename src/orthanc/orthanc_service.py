@@ -116,6 +116,20 @@ def get_orthanc_study_metadata(orthanc_study_id: str) -> Dict[str, str] | None:
         return None
 
 
+def find_orthanc_studies_by_patient_name(patient_name: str) -> list[str]:
+    try:
+        response = orthanc_request("post", "tools/find", json={
+            "Level": "Study",
+            "Query": {"PatientName": patient_name}
+        })
+        if response.status_code == 200:
+            return response.json()
+        logger.warning(f"tools/find failed for PatientName '{patient_name}' (status {response.status_code})")
+    except Exception as e:
+        logger.error(f"Error finding studies for PatientName '{patient_name}': {e}")
+    return []
+
+
 def find_orthanc_instances_by_image_type(series_instance_uid: str, image_type_pattern: str) -> list[str]:
     try:
         response = orthanc_request("post", "tools/find", json={

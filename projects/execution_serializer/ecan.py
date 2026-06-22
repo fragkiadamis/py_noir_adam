@@ -1,7 +1,7 @@
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Optional
 from collections import defaultdict
 
 import pandas as pd
@@ -14,10 +14,11 @@ from src.shanoir_object.dataset.dataset_service import get_examination, download
 from src.shanoir_object.solr_query.solr_query_model import SolrQuery
 from src.shanoir_object.solr_query.solr_query_service import solr_search
 from src.utils.config_utils import APIConfig, ConfigPath
+from src.utils.dicom_utils import run_compliance_fixes
 from src.utils.dicom_utils import inspect_and_fix_study_tags, check_dicom_consistency
 from src.utils.pacs_utils import upload_to_pacs_rest, upload_to_pacs_dicom, assign_label_to_pacs_study, \
-    download_from_pacs_rest, delete_studies_from_pacs, purge_pacs_studies, delete_mip_first_instances, \
-    get_patient_ids_from_pacs, get_orthanc_study_details, log_mr_series_instance_counts, create_series_export
+    download_from_pacs_rest, delete_studies_from_pacs, delete_mip_first_instances, get_orthanc_study_details, \
+    log_mr_series_instance_counts, create_series_export, update_tracking_ids
 from src.utils.log_utils import get_logger
 from src.utils.file_utils import get_items_from_input_file, initiate_working_files
 from src.utils.serializer_utils import init_serialization
@@ -25,6 +26,181 @@ from src.utils.mip_detector import delete_first_slice_if_mip
 
 app = typer.Typer()
 logger = get_logger()
+
+SOURCES = [
+    {"label": "ICAN", "source": "subject_names", "file": "ican_subset.txt", "study_name": "ICAN"},
+    {"label": "ANGPTL6", "source": "subject_names", "file": "angptl6_subset.txt", "study_name": "ICAN"},
+    {"label": "UCAN", "source": "subject_names", "file": "ucan_subset.txt", "study_name": "UCAN"},
+    {"label": "RCAN", "source": "dataset_csv", "file": "rcan_tof_sans_aic_subset.csv", "study_name": "RCAN"},
+]
+
+MANIFEST_COLUMNS = [
+    "dataset_id", "examination_id", "subject_id", "subject_name", "study_id",
+    "examination_date", "label", "download_path",
+    "num_slices", "slice_thickness", "valid", "reason",
+]
+
+
+def resolve_from_subject_names(file: str, study_name: str, label: str) -> List[Dict]:
+    subject_list = [*get_items_from_input_file(file)]
+    if not subject_list:
+        return []
+
+    subjects_datasets = filter_datasets_by_study(query_datasets(subject_list), study_name)
+    records = []
+    for subject, exam_items in subjects_datasets.items():
+        for exam_id, items in exam_items.items():
+            for ds in items:
+                records.append({
+                    "dataset_id": str(ds["id"]),
+                    "examination_id": str(ds["examinationId"]),
+                    "subject_id": str(ds["subjectId"]),
+                    "subject_name": ds["subjectName"],
+                    "study_id": str(ds["studyId"]),
+                    "examination_date": ds.get("examinationDate", ""),
+                    "label": label,
+                })
+
+    # Solr docs don't reliably carry the examination date; backfill it once per
+    # examination so the validate stage can run without any API calls.
+    for exam_id in {r["examination_id"] for r in records if not r["examination_date"]}:
+        try:
+            date = get_examination(exam_id)["examinationDate"].replace("Z", "").split("+")[0]
+        except Exception as e:
+            logger.warning(f"Could not fetch examinationDate for examination {exam_id}: {e}")
+            date = ""
+        for r in records:
+            if r["examination_id"] == exam_id:
+                r["examination_date"] = date
+
+    return records
+
+
+def resolve_from_dataset_csv(file: str, label: str) -> List[Dict]:
+    df = pd.read_csv(ConfigPath.input_path / file, dtype=str, sep=";")
+    return [{
+        "dataset_id": row["datasetId"],
+        "examination_id": row["examinationId"],
+        "subject_id": row["subjectId"],
+        "subject_name": row["commonName"],
+        "study_id": row["studyId"],
+        "examination_date": row.get("examinationDate", ""),
+        "label": label,
+    } for _, row in df.iterrows()]
+
+
+def resolve_sources() -> List[Dict]:
+    records: List[Dict] = []
+    for src in SOURCES:
+        if src["source"] == "subject_names":
+            resolved = resolve_from_subject_names(src["file"], src["study_name"], src["label"])
+        elif src["source"] == "dataset_csv":
+            resolved = resolve_from_dataset_csv(src["file"], src["label"])
+        else:
+            logger.warning(f"Unknown source type '{src['source']}' for label {src['label']}; skipping.")
+            continue
+        logger.info(f"Resolved {len(resolved)} dataset(s) for label {src['label']}.")
+        records += resolved
+    return records
+
+
+def download_records(records: List[Dict], download_dir: Path) -> None:
+    download_dir.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for ds in records:
+        path = download_dir / str(ds["subject_name"]) / str(ds["examination_id"]) / str(ds["dataset_id"])
+        path.mkdir(parents=True, exist_ok=True)
+        download_dataset(ds["dataset_id"], "dcm", path, unzip=True)
+        rows.append({**ds, "download_path": str(path)})
+        logger.info(f"Downloaded dataset {ds['dataset_id']} -> {path}")
+
+    df = pd.DataFrame(rows).reindex(columns=MANIFEST_COLUMNS)
+    manifest = ConfigPath.output_path / "ecan" / "download_manifest.csv"
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(manifest, index=False)
+    logger.info(f"Wrote download manifest with {len(df)} row(s) to {manifest}")
+
+
+def _check_dicom_qc(path: Path):
+    dcm_files = [p for p in path.iterdir() if p.is_file() and p.suffix == ".dcm"] if path.exists() else []
+    if not dcm_files:
+        return False, "no DICOM files", 0, ""
+
+    num_slices = len(dcm_files)
+    thickness = pydicom.dcmread(dcm_files[0]).get("SliceThickness")
+    if num_slices > 50 and thickness is not None and float(thickness) < 10:
+        return True, "", num_slices, thickness
+
+    reasons = []
+    if num_slices <= 50:
+        reasons.append(f"slices={num_slices}<=50")
+    if thickness is None:
+        reasons.append("no SliceThickness")
+    elif float(thickness) >= 10:
+        reasons.append(f"thickness={thickness}>=10")
+    return False, "; ".join(reasons), num_slices, thickness
+
+
+def _mark_keep_one_acquisition(df: pd.DataFrame) -> None:
+    for exam_id, group in df[df["valid"] == "True"].groupby("examination_id"):
+        ids = sorted(group["dataset_id"], key=lambda x: int(x))
+        for did in ids[1:]:
+            df.loc[df["dataset_id"] == did, ["valid", "reason"]] = \
+                ["False", f"duplicate acquisition (kept {ids[0]})"]
+
+
+def _mark_keep_oldest_examination(df: pd.DataFrame) -> None:
+    def parse(date_str: str) -> datetime:
+        try:
+            return datetime.fromisoformat(str(date_str).replace("Z", "").split("+")[0])
+        except Exception:
+            return datetime.max
+
+    for subject, group in df[df["valid"] == "True"].groupby("subject_name"):
+        exam_dates = {r["examination_id"]: parse(r["examination_date"]) for _, r in group.iterrows()}
+        if len(exam_dates) <= 1:
+            continue
+        oldest = min(exam_dates, key=exam_dates.get)
+        for did in group.loc[group["examination_id"] != oldest, "dataset_id"]:
+            df.loc[df["dataset_id"] == did, ["valid", "reason"]] = \
+                ["False", f"not oldest examination (kept {oldest})"]
+
+
+def validate_manifest() -> None:
+    manifest = ConfigPath.output_path / "ecan" / "download_manifest.csv"
+    df = pd.read_csv(manifest, dtype=str)
+    if df.empty:
+        logger.warning(f"Manifest {manifest} is empty; nothing to validate.")
+        return
+
+    for idx, row in df.iterrows():
+        valid, reason, num_slices, thickness = _check_dicom_qc(Path(row["download_path"]))
+        df.loc[idx, ["num_slices", "slice_thickness", "valid", "reason"]] = \
+            [num_slices, thickness, str(valid), reason]
+
+    _mark_keep_one_acquisition(df)
+    _mark_keep_oldest_examination(df)
+
+    rejected = df[df["valid"] != "True"]
+    for _, r in rejected.iterrows():
+        logger.info(
+            f"Non-conforming: dataset {r['dataset_id']} "
+            f"(subject {r['subject_name']}, exam {r['examination_id']}) -- {r['reason']}"
+        )
+
+    # Everything downstream only needs the manifest, so clear the environment:
+    # drop all downloaded DICOMs and keep only the conforming rows.
+    download_dir = ConfigPath.output_path / "ecan" / "shanoir_output"
+    if download_dir.exists():
+        shutil.rmtree(download_dir)
+        logger.info(f"Deleted downloaded data at {download_dir}")
+
+    kept = df[df["valid"] == "True"]
+    kept.to_csv(manifest, index=False)
+    logger.info(
+        f"Validated {len(df)} dataset(s): {len(kept)} conforming kept, "
+        f"{len(rejected)} non-conforming dropped. Manifest pruned at {manifest}"
+    )
 
 
 def _fetch_processed_datasets(output_dir: Path) -> None:
@@ -171,61 +347,48 @@ def keep_oldest_examination(download_dir: Path, filtered_datasets: List) -> List
     return [ds for ds in filtered_datasets if str(ds["examinationId"]) not in deleted_exam_ids]
 
 
-def generate_json(output_dir: Path) -> List[Dict]:
-    sources = [
-        ("ican_subset.txt", "ICAN", "ICAN"),
-        ("angptl6_subset.txt", "ICAN", "ANGPTL6"),
-        ("ucan_subset.txt", "UCAN", "UCAN"),
-    ]
+def generate_json(_: Optional[Path] = None) -> List[Dict]:
+    manifest = ConfigPath.output_path / "ecan" / "download_manifest.csv"
+    df = pd.read_csv(manifest, dtype=str)
+    valid_datasets = df[df["valid"] == "True"]
+    logger.info(f"Building json content for {len(valid_datasets)} validated dataset(s)...")
 
     idx, executions = 0, []
-    for filename, study_name, batch_label in sources:
-        subject_list = [*get_items_from_input_file(filename)]
-        if not subject_list:
-            continue
+    for _, dataset in valid_datasets.iterrows():
+        idx += 1
+        tracking_df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
+        values = {
+            "identifier": idx,
+            "dataset_id": dataset["dataset_id"],
+            "examination_id": dataset["examination_id"],
+            "subject_id": dataset["subject_id"],
+            "subject_name": dataset["subject_name"],
+            "get_from_shanoir": True,
+            "executable": True,
+            "label": dataset["label"],
+        }
+        for col, val in values.items():
+            tracking_df.loc[idx - 1, col] = val
+        tracking_df.to_csv(ConfigPath.tracking_file_path, index=False)
 
-        subjects_datasets = query_datasets(subject_list)
-        filtered_datasets = filter_datasets_by_study(subjects_datasets, study_name)
-        filtered_datasets = download_and_filter_datasets(filtered_datasets, output_dir)
-        filtered_datasets = keep_one_acquisition(output_dir, filtered_datasets)
-        filtered_datasets = keep_oldest_examination(output_dir, filtered_datasets)
-
-        logger.info(f"Building json content for label {batch_label}...")
-        for dataset in filtered_datasets:
-            idx += 1
-            df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
-            values = {
-                "identifier": idx,
-                "dataset_id": dataset["id"],
-                "examination_id": dataset["examinationId"],
-                "subject_id": dataset["subjectId"],
-                "subject_name": dataset["subjectName"],
-                "get_from_shanoir": True,
-                "executable": True,
-                "label": batch_label,
-            }
-            for col, val in values.items():
-                df.loc[idx - 1, col] = val
-            df.to_csv(ConfigPath.tracking_file_path, index=False)
-
-            dt = datetime.now().strftime('%F_%H%M%S%f')[:-3]
-            executions.append({
-                "identifier": idx,
-                "name": f"landmarkDetection_0_7_exam_{dataset['examinationId']}_{dt}",
-                "pipelineIdentifier": "landmarkDetection/0.7",
-                "studyIdentifier": dataset["studyId"],
-                "inputParameters": {},
-                "outputProcessing": "",
-                "processingType": "SEGMENTATION",
-                "refreshToken": APIConfig.refresh_token,
-                "client": APIConfig.clientId,
-                "datasetParameters": [{
-                    "datasetIds": [dataset["id"]],
-                    "groupBy": "EXAMINATION",
-                    "name": "dicom_input_zip",
-                    "exportFormat": "dcm"
-                }],
-            })
+        dt = datetime.now().strftime('%F_%H%M%S%f')[:-3]
+        executions.append({
+            "identifier": idx,
+            "name": f"landmarkDetection_0_8_exam_{dataset['examination_id']}_{dt}",
+            "pipelineIdentifier": "landmarkDetection/0.8",
+            "studyIdentifier": dataset["study_id"],
+            "inputParameters": {},
+            "outputProcessing": "",
+            "processingType": "SEGMENTATION",
+            "refreshToken": APIConfig.refresh_token,
+            "client": APIConfig.clientId,
+            "datasetParameters": [{
+                "datasetIds": [dataset["dataset_id"]],
+                "groupBy": "EXAMINATION",
+                "name": "dicom_input_zip",
+                "exportFormat": "dcm"
+            }],
+        })
 
     return executions
 
@@ -234,57 +397,63 @@ def generate_json(output_dir: Path) -> List[Dict]:
 def explain() -> None:
     """
     \b
-    eCAN project command-line interface.
+    eCAN pipeline CLI.
 
     Commands:
-    --------
-    * `execute-pipeline` — runs the eCAN pipeline for subjects listed in `ecan_subject_id_list.csv` (ignored):
-        - Retrieves datasets for each subject ID.
-        - Filters the datasets (keep the oldest examination, >=50 slices, )
-        - Generates JSON executions for the SIMS/3.0 pipeline.
-        - Launches executions or resumes incomplete runs.
-
-    Auxiliary debug functions:
-    -------------------------
-    * `populate-orthanc` — populates the CHU Nantes Orthanc PACS with the processed output and the input datasets
-        - Download the processed output alongside the input dataset
-        - Inspect DICOM files for inconsistencies and fixes them
-        - Upload the processed output along the input dataset to an orthanc instance
-        - Assign labels to the orthanc studies
-    * `debug-orthanc` — Runs functions for the environment of CHU Nantes to inspect the Orthanc PACS
-        - Get and log patients from the Orthanc instance
-        - Get and log studies from the Orthanc instance
-        - Delete uploaded studies from ecan.csv tracking file
-        - Purge Orthanc instance
-    * `import-shanoir` — Imports data from Orthanc to shanoir
-        - Get further processed outputs from shanoir
-        - Upload the processed output to shanoir
+      download           — resolve all sources (subject-name lists via Solr, dataset CSVs directly), download DICOMs, write download manifest (no QC)
+      validate           — read the manifest, apply DICOM QC + keep-oldest-exam/one-acquisition, flag non-conforming rows (non-destructive)
+      execute            — query TOF datasets, filter (oldest exam, oldest acquisition, >=50 slices, <10mm), launch VIP executions
+      populate-orthanc   — download VIP output, remove MIP slices, fix DICOM tags, upload to Orthanc, assign Orthanc label
+      delete-mip-orthanc — delete MIP instances from already-uploaded Orthanc studies
+      import-shanoir     — sync UIDs, download from Orthanc, check DICOM consistency, upload SEG/SR to Shanoir
+      debug-orthanc      — log patients, study details, MR series instance counts
 
     Usage:
-    -----
-        uv run main.py ecan execute
-        uv run main.py ecan populate-orthanc
-        uv run main.py ecan debug-orthanc
-        uv run main.py ecan import-shanoir
+      uv run main.py ecan download
+      uv run main.py ecan validate
+      uv run main.py ecan execute
+      uv run main.py ecan populate-orthanc
+      uv run main.py ecan delete-mip-orthanc
+      uv run main.py ecan import-shanoir
+      uv run main.py ecan debug-orthanc
     """
 
 
 @app.command()
-def execute() -> None:
-    """
-    Run the eCAN processing pipeline
-    """
+def download() -> None:
     initiate_working_files("ecan")
-    init_serialization(generate_json, kwargs={"output_dir": ConfigPath.output_path / "ecan" / "shanoir_output"})
+    download_dir = ConfigPath.output_path / "ecan" / "shanoir_output"
+    records = resolve_sources()
+    logger.info(f"Resolved {len(records)} dataset(s) across {len(SOURCES)} source(s).")
+    download_records(records, download_dir)
+
+
+@app.command()
+def validate() -> None:
+    initiate_working_files("ecan")
+    validate_manifest()
+
+
+@app.command()
+def execute() -> None:
+    initiate_working_files("ecan")
+    init_serialization(generate_json)
+
+
+@app.command()
+def dicom_compliance() -> None:
+    initiate_working_files("ecan")
+    vip_output = ConfigPath.output_path / "ecan" / "vip_output"
+    _fetch_processed_datasets(vip_output)
+    delete_first_slice_if_mip(vip_output)
+    inspect_and_fix_study_tags(vip_output)
+    run_compliance_fixes(vip_output, vip_output.parent / "vip_output_corrected")
 
 
 @app.command()
 def populate_orthanc() -> None:
     initiate_working_files("ecan")
     vip_output = ConfigPath.output_path / "ecan" / "vip_output"
-    _fetch_processed_datasets(vip_output)
-    delete_first_slice_if_mip(vip_output)
-    inspect_and_fix_study_tags(vip_output)
     upload_to_pacs_rest(vip_output) # for REST API
     # upload_to_pacs_dicom(vip_output) # For dicom web store
     assign_label_to_pacs_study()
@@ -301,10 +470,14 @@ def import_shanoir() -> None:
 
 
 @app.command()
-def delete_mip_orthanc() -> None:
-    """
-    For each uploaded Orthanc study, delete the first MR instance if it is a MIP.
-    """
+def sync_tracking_file() -> None:
+    initiate_working_files("ecan")
+    vip_output = ConfigPath.output_path / "ecan" / "vip_output"
+    update_tracking_ids(vip_output)
+
+
+@app.command()
+def orthanc_remove_mips() -> None:
     initiate_working_files("ecan")
     delete_mip_first_instances()
 
@@ -312,8 +485,7 @@ def delete_mip_orthanc() -> None:
 @app.command()
 def debug_orthanc() -> None:
     initiate_working_files("ecan")
-    get_patient_ids_from_pacs()
-    get_orthanc_study_details()
+    get_orthanc_study_details(from_tracking=True)
     log_mr_series_instance_counts()
     # create_series_export()
 
@@ -322,6 +494,5 @@ def debug_orthanc() -> None:
 # @app.command()
 # def delete_studies() -> None:
 #     initiate_working_files("ecan")
-#     delete_studies_from_pacs()
-#     purge_pacs_studies()
+#     delete_studies_from_pacs(from_tracking=True)
 # ------------------- DANGER ZONE -------------------
