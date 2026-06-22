@@ -83,10 +83,12 @@ def manage_threading_execution():
     tracking_json_paths = list(ConfigPath.tracking_file_path.parent.glob("*.json"))
     df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
     for json_path in tracking_json_paths:
-        identifier = json_path.name.split(".")[0]
-        row_index = df.index[df["identifier"] == identifier].tolist()
         with open(json_path, "r") as json_file:
-            values = json.load(json_file)
+            data = json.load(json_file)
+        # Each execution groups several datasets (jobs); they all share its meta.
+        identifiers = [str(i) for i in data["identifiers"]]
+        values = data["meta"]
+        row_index = df.index[df["identifier"].isin(identifiers)].tolist()
         for col, val in values.items():
             df.loc[row_index, col] = val
     df.to_csv(ConfigPath.tracking_file_path, index=False)
@@ -101,6 +103,7 @@ def thread_execution(partition: list[Dict], part_id: int) -> None:
     pause_message_event = threading.Event()
     check_pause_schedule(pause_message_event)
     meta, monitoring, tracking_json = {}, {}, Path()
+    partition_identifiers = [item["identifier"] for item in partition]
 
     try:
         execution = create_execution(partition)
@@ -117,7 +120,7 @@ def thread_execution(partition: list[Dict], part_id: int) -> None:
                 "execution_start_time": start_time,
             }
             with open(tracking_json, 'w') as json_file:
-                json.dump(meta, json_file)
+                json.dump({"identifiers": partition_identifiers, "meta": meta}, json_file)
 
             logger.info("Execution " + str(part_id) + ", " + str(monitoring['identifier']) + " is created.")
             count_down = 12
@@ -149,14 +152,14 @@ def thread_execution(partition: list[Dict], part_id: int) -> None:
             meta["execution_status"] = status.replace("\"", "")
             meta["execution_end_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with open(tracking_json, 'w') as json_file:
-                json.dump(meta, json_file)
+                json.dump({"identifiers": partition_identifiers, "meta": meta}, json_file)
     except:
         with monitoring_lock:
             logger.error("Exception for execution " + str(part_id) + ", " + str(monitoring['identifier']))
             meta["execution_status"] = "PyNoir_exception"
             meta["execution_end_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with open(tracking_json, 'w') as json_file:
-                json.dump(meta, json_file)
+                json.dump({"identifiers": partition_identifiers, "meta": meta}, json_file)
 
     item_processed_increment(partition)
     logger.info("%s out of %s items processed." % (nb_processed_items, total_items_to_process))
