@@ -238,4 +238,7 @@ def find_processed_dataset_ids_by_input_dataset_id(dataset_id):
     """
     path = ENDPOINT_DATASET_PROCESSING + '/inputDataset/' + dataset_id
     response = get(path)
+    # A dataset with no processings returns 204 No Content (empty body).
+    if response.status_code == 204 or not response.content:
+        return []
     return response.json()
