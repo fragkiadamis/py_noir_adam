@@ -39,6 +39,9 @@ TRACKING_COLUMNS = [
     "execution_end_time", "label", "processing_id",
 ]
 
+_DATE_KEYS = ("startDate", "processingDate", "creationDate", "importDate", "endDate")
+_PIPELINE_KEYS = ("pipelineIdentifier", "name", "comment")
+
 
 def resolve_from_subject_names(file: str, study_name: str, label: str) -> List[Dict]:
     subject_list = [*get_items_from_input_file(file)]
@@ -350,14 +353,7 @@ def keep_oldest_examination(download_dir: Path, filtered_datasets: List) -> List
     return [ds for ds in filtered_datasets if str(ds["examinationId"]) not in deleted_exam_ids]
 
 
-# Date / pipeline-label field names vary between the processing and
-# execution-monitoring payloads, so probe a few candidates in priority order.
-_DATE_KEYS = ("startDate", "processingDate", "creationDate", "importDate", "endDate")
-_PIPELINE_KEYS = ("pipelineIdentifier", "name", "comment")
-
-
 def _coerce_datetime(value: Any) -> Optional[datetime]:
-    """Parse epoch millis/seconds or an ISO-8601 string into a datetime."""
     if value in (None, "", "null"):
         return None
     if isinstance(value, (int, float)) or (isinstance(value, str) and value.isdigit()):
@@ -397,9 +393,6 @@ def _pipeline_text(processing: Dict, monitoring: Dict) -> str:
 
 
 def backfill_tracking_from_processings(days: int, pipeline_filter: str) -> None:
-    """Register processings that ran on the platform but are missing from the
-    tracking file, reconstructing each row from the download manifest and the
-    platform's processing/execution-monitoring payloads."""
     manifest = ConfigPath.output_path / "ecan" / "download_manifest.csv"
     df = pd.read_csv(manifest, dtype=str)
     datasets = df[df["valid"] == "True"] if "valid" in df.columns else df
