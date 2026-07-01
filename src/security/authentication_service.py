@@ -22,6 +22,8 @@ def ask_access_token():
     try:
         password = os.environ['shanoir_password'] if 'shanoir_password' in os.environ else getpass.getpass(
             prompt='Password for Shanoir user ' + APIConfig.username + ': ', stream=None)
+        otp = os.environ['shanoir_otp'] if 'shanoir_otp' in os.environ else input(
+            'One-time 2FA code for Shanoir user ' + APIConfig.username + ': ')
     except Exception as e:
         sys.exit(1)
 
@@ -32,6 +34,7 @@ def ask_access_token():
         'grant_type': 'password',
         'username': APIConfig.username,
         'password': password,
+        'totp': otp,
         'scope': 'offline_access'
     }
     # curl -d '{"client_id":"shanoir-uploader", "grant_type":"password", "username": "amasson", "password": "", "scope": "offline_access" }' -H "Content-Type: application/json" -X POST
