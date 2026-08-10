@@ -21,6 +21,11 @@ logger = get_logger()
 _MIP_IMAGE_TYPE_PATTERNS = ["*PROJECTION*", "*MIP*", "*MAXIMUM*", "*MAX_IP*"]
 
 
+def _normalize_patient_name(name: str) -> str:
+    """UCAN subjects are spelled with either hyphens or underscores; compare them the same way."""
+    return name.replace("-", "_").upper()
+
+
 def upload_to_pacs_rest(dataset_path: Path) -> None:
     total_file_count, dicom_count, studies_count = 0, 0, 0
     df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
@@ -184,18 +189,29 @@ def delete_mip_first_instances() -> None:
                 delete_orthanc_instance(instance_id)
 
 
-def get_orthanc_study_details(from_tracking: bool = False) -> None:
-    if from_tracking:
+def get_orthanc_study_details(from_tracking: bool = False, patient_names: tuple[str, ...] = None) -> None:
+    wanted = {_normalize_patient_name(n) for n in patient_names} if patient_names else None
+    if wanted:
+        # Restricting to explicit subjects: scan Orthanc rather than the tracking file,
+        # so subjects that were never tracked are still reported.
+        study_ids = get_all_orthanc_studies() or []
+        logger.info(f"Restricting the logs to {len(wanted)} subject(s): {', '.join(sorted(wanted))}")
+    elif from_tracking:
         df = pd.read_csv(ConfigPath.tracking_file_path, sep=",", dtype=str)
         study_ids = df["orthanc_study_id"].dropna().unique().tolist()
     else:
         study_ids = get_all_orthanc_studies()
 
+    seen = set()
     logger.info("------------------------------------ START ------------------------------------")
     for study_id in study_ids:
         study = get_orthanc_study_metadata(study_id)
         orthanc_date = datetime.strptime(study["LastUpdate"], "%Y%m%dT%H%M%S")
         patient_name = study["PatientMainDicomTags"].get("PatientName", "Unknown")
+        if wanted:
+            if _normalize_patient_name(patient_name) not in wanted:
+                continue
+            seen.add(_normalize_patient_name(patient_name))
         study_uid = study["MainDicomTags"].get("StudyInstanceUID", "N/A")
         labels = study.get("Labels", [])
 
@@ -229,15 +245,18 @@ def get_orthanc_study_details(from_tracking: bool = False) -> None:
                 logger.info(f"{series_desc}: {uid}")
 
         logger.info("*" * 90)
+    if wanted and wanted - seen:
+        logger.warning(f"No study found in Orthanc for: {', '.join(sorted(wanted - seen))}")
     logger.info("------------------------------------ END ------------------------------------")
 
 
-def log_mr_series_instance_counts() -> None:
+def log_mr_series_instance_counts(patient_names: tuple[str, ...] = None) -> None:
     all_series_ids = get_all_orthanc_series()
     if not all_series_ids:
         logger.error("No series found in Orthanc.")
         return
 
+    wanted = {_normalize_patient_name(n) for n in patient_names} if patient_names else None
     study_cache: Dict[str, Dict] = {}
     logger.info("------------------------------------ START ------------------------------------")
     for series_id in all_series_ids:
@@ -256,15 +275,12 @@ def log_mr_series_instance_counts() -> None:
         if parent_study_id not in study_cache:
             study_cache[parent_study_id] = get_orthanc_study_metadata(parent_study_id) or {}
         patient_name = study_cache[parent_study_id].get("PatientMainDicomTags", {}).get("PatientName", "Unknown")
+        if wanted and _normalize_patient_name(patient_name) not in wanted:
+            continue
 
         logger.info(f"{patient_name} | {series_description} | instances: {n_instances}")
 
     logger.info("------------------------------------ END ------------------------------------")
-
-
-def _normalize_patient_name(name: str) -> str:
-    """UCAN subjects are spelled with either hyphens or underscores; compare them the same way."""
-    return name.replace("-", "_").upper()
 
 
 def create_series_export(

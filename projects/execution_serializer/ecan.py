@@ -165,10 +165,13 @@ def download_campaign_results(
 
 
 @app.command()
-def debug_orthanc() -> None:
+def debug_orthanc(
+    subjects: str = typer.Option(None, help="Comma-separated subject names to log; defaults to every study in the tracking file."),
+) -> None:
     initiate_working_files("ecan")
-    get_orthanc_study_details(from_tracking=True)
-    log_mr_series_instance_counts()
+    names = tuple(s.strip() for s in subjects.split(",") if s.strip()) if subjects else None
+    get_orthanc_study_details(from_tracking=names is None, patient_names=names)
+    log_mr_series_instance_counts(names)
 
 
 # ------------------- DANGER ZONE -------------------
