@@ -141,7 +141,7 @@ def create_campaign_results(
 
 @app.command()
 def create_campaign_results_subjects(
-    subjects: str = typer.Option("UCAN-16-012,UCAN-16-047", help="Comma-separated subject names; hyphens and underscores are interchangeable."),
+    subjects: str = typer.Option("UCAN-16-012,UCAN-16-014", help="Comma-separated subject names; hyphens and underscores are interchangeable."),
     output: str = typer.Option("result_campaign_ucan_missing.csv", help="File name written under input/."),
     modalities: str = typer.Option("SR,SEG", help="Comma-separated modalities to keep, or 'all' for every series."),
 ) -> None:
