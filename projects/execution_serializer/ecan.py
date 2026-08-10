@@ -13,7 +13,7 @@ from src.utils.mip_detector import delete_first_slice_if_mip
 from projects.project_service.ecan import SOURCES, resolve_sources, \
     download_records, validate_manifest, generate_json, fetch_processed_datasets, \
     sync_examination_study_instance_uids, upload_processed_dataset, \
-    backfill_tracking_from_processings
+    backfill_tracking_from_processings, download_campaign_datasets
 
 app = typer.Typer()
 logger = get_logger()
@@ -35,6 +35,8 @@ def explain() -> None:
       debug-orthanc           — log patients, study details, MR series instance counts
       backfill-tracking       — reconcile ecan.csv by registering already-run processings (last N days) from the manifest
       create-campaign-results — export all Orthanc series of UCAN* subjects (excluding MILVUE) to input/result_campaign_ucan.csv
+      download-campaign-results — download the UCAN* datasets listed in resources/ecan.csv into output/UCAN_CAMPAIGN_RESULTS/<subject>/<examination>/<dataset>
+      create-campaign-results-subjects — same export as create-campaign-results, restricted to an explicit list of subjects
 
     Usage:
       uv run main.py ecan download
@@ -46,6 +48,8 @@ def explain() -> None:
       uv run main.py ecan debug-orthanc
       uv run main.py ecan backfill-tracking
       uv run main.py ecan create-campaign-results
+      uv run main.py ecan download-campaign-results
+      uv run main.py ecan create-campaign-results-subjects
     """
 
 
@@ -133,6 +137,31 @@ def create_campaign_results(
         patient_prefix="UCAN",
         excluded_description="MILVUE",
     )
+
+
+@app.command()
+def create_campaign_results_subjects(
+    subjects: str = typer.Option("UCAN-16-012,UCAN-16-047", help="Comma-separated subject names; hyphens and underscores are interchangeable."),
+    output: str = typer.Option("result_campaign_ucan_missing.csv", help="File name written under input/."),
+    modalities: str = typer.Option("SR,SEG", help="Comma-separated modalities to keep, or 'all' for every series."),
+) -> None:
+    """Export the Orthanc series of the given subjects only, in the 'result Campaign1' format."""
+    initiate_working_files("ecan")
+    kept = () if modalities.lower() == "all" else tuple(m.strip().upper() for m in modalities.split(",") if m.strip())
+    create_series_export(
+        output_csv=ConfigPath.input_path / output,
+        modalities=kept,
+        patient_names=tuple(s.strip() for s in subjects.split(",") if s.strip()),
+        excluded_description="MILVUE",
+    )
+
+
+@app.command()
+def download_campaign_results(
+    subject_prefix: str = typer.Option("UCAN", help="Only download datasets whose subject name starts with this prefix."),
+) -> None:
+    initiate_working_files("ecan")
+    download_campaign_datasets(ConfigPath.output_path / "UCAN_CAMPAIGN_RESULTS", subject_prefix)
 
 
 @app.command()

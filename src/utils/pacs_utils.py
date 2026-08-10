@@ -262,13 +262,20 @@ def log_mr_series_instance_counts() -> None:
     logger.info("------------------------------------ END ------------------------------------")
 
 
+def _normalize_patient_name(name: str) -> str:
+    """UCAN subjects are spelled with either hyphens or underscores; compare them the same way."""
+    return name.replace("-", "_").upper()
+
+
 def create_series_export(
     output_csv: Path = None,
     modalities: tuple[str, ...] = ("SR", "SEG"),
     patient_prefix: str = None,
+    patient_names: tuple[str, ...] = None,
     excluded_description: str = None,
 ) -> None:
     output_csv = output_csv or ConfigPath.input_path / "series_export_test.csv"
+    wanted = {_normalize_patient_name(n) for n in patient_names} if patient_names else None
 
     all_series_ids = get_all_orthanc_series()
     if not all_series_ids:
@@ -300,6 +307,8 @@ def create_series_export(
         patient_name = patient_tags.get("PatientName", "")
         if patient_prefix and not patient_name.upper().startswith(patient_prefix.upper()):
             continue
+        if wanted and _normalize_patient_name(patient_name) not in wanted:
+            continue
 
         series_description = tags.get("SeriesDescription", "")
         study_description = study_tags.get("StudyDescription", "")
@@ -329,6 +338,10 @@ def create_series_export(
     df.to_csv(output_csv, index=False, sep=";", quoting=csv.QUOTE_ALL)
     if skipped_description:
         logger.info(f"Skipped {skipped_description} series matching '{excluded_description}'")
+    if wanted:
+        missing = wanted - {_normalize_patient_name(r["PatientName"]) for r in rows}
+        if missing:
+            logger.warning(f"No series found in Orthanc for: {', '.join(sorted(missing))}")
     logger.info(f"Wrote {len(rows)} series to {output_csv}")
 
 

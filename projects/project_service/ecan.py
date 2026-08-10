@@ -1,4 +1,6 @@
+import re
 import shutil
+import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, List, Dict, Optional
@@ -10,7 +12,7 @@ import pydicom
 from src.execution.execution_service import get_execution_monitoring
 from src.shanoir_object.dataset.dataset_service import get_examination, download_dataset, \
     find_processed_dataset_ids_by_input_dataset_id, download_dataset_processing, \
-    upload_dataset_processing, sync_study_instance_uid
+    upload_dataset_processing, sync_study_instance_uid, get_dataset
 from src.shanoir_object.solr_query.solr_query_model import SolrQuery
 from src.shanoir_object.solr_query.solr_query_service import solr_search
 from src.utils.config_utils import APIConfig, ConfigPath
@@ -206,6 +208,80 @@ def validate_manifest() -> None:
     logger.info(
         f"Validated {len(df)} dataset(s): {len(kept)} conforming kept, "
         f"{len(rejected)} non-conforming dropped. Manifest pruned at {manifest}"
+    )
+
+
+def _find_acquisition_dir(root: Path, subject_id: str, examination_id: str) -> Optional[Path]:
+    """Locate the existing <subject>/<examination>/<acquisition> directory, matched on the ID suffixes."""
+    subject_dirs = [d for d in root.iterdir() if d.is_dir() and d.name.endswith(f"_{subject_id}")]
+    if len(subject_dirs) != 1:
+        logger.warning(f"Expected 1 subject directory ending in '_{subject_id}', found {len(subject_dirs)}.")
+        return None
+
+    exam_dirs = [d for d in subject_dirs[0].iterdir() if d.is_dir() and d.name.endswith(f"_{examination_id}")]
+    if len(exam_dirs) != 1:
+        logger.warning(f"Expected 1 examination directory ending in '_{examination_id}' under {subject_dirs[0].name}, found {len(exam_dirs)}.")
+        return None
+
+    acquisition_dirs = [d for d in exam_dirs[0].iterdir() if d.is_dir()]
+    if len(acquisition_dirs) != 1:
+        logger.warning(f"Expected 1 acquisition directory under {exam_dirs[0]}, found {len(acquisition_dirs)}: {[d.name for d in acquisition_dirs]}.")
+        return None
+
+    return acquisition_dirs[0]
+
+
+def download_campaign_datasets(output_dir: Path, subject_prefix: str = "UCAN") -> None:
+    tracking_csv = ConfigPath.resources_path / "ecan.csv"
+    df = pd.read_csv(tracking_csv, dtype=str)
+
+    rows = df[df["subject_name"].fillna("").str.upper().str.startswith(subject_prefix.upper())]
+    if rows.empty:
+        logger.error(f"No {subject_prefix}* subject found in {tracking_csv}.")
+        return
+    if not output_dir.is_dir():
+        logger.error(f"Target directory {output_dir} does not exist; nothing to move the datasets into.")
+        return
+    logger.info(f"Found {len(rows)} {subject_prefix}* dataset(s) in {tracking_csv}.")
+
+    downloaded, skipped, unmatched, failed = 0, 0, 0, 0
+    for _, row in rows.iterrows():
+        dataset_id = str(row["dataset_id"])
+        acquisition_dir = _find_acquisition_dir(output_dir, str(row["subject_id"]), str(row["examination_id"]))
+        if acquisition_dir is None:
+            logger.warning(f"No existing directory for dataset {dataset_id} ({row['subject_name']}); skipping.")
+            unmatched += 1
+            continue
+
+        try:
+            dataset_name = get_dataset(dataset_id).get("name") or dataset_id
+        except Exception as e:
+            logger.error(f"Could not fetch the name of dataset {dataset_id}: {e}")
+            failed += 1
+            continue
+
+        target = acquisition_dir / (re.sub(r'[/\\]', "_", dataset_name).strip() + ".zip")
+        if target.exists():
+            logger.info(f"Dataset {dataset_id} already present at {target}; skipping.")
+            skipped += 1
+            continue
+
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                download_dataset(dataset_id, "dcm", Path(tmp), unzip=False)
+                produced = list(Path(tmp).iterdir())
+                if len(produced) != 1:
+                    raise RuntimeError(f"expected 1 downloaded file, got {[p.name for p in produced]}")
+                shutil.move(str(produced[0]), target)
+            downloaded += 1
+            logger.info(f"Downloaded dataset {dataset_id} -> {target}")
+        except Exception as e:
+            logger.error(f"Failed to download dataset {dataset_id} ({row['subject_name']}): {e}")
+            failed += 1
+
+    logger.info(
+        f"{subject_prefix} download complete: {downloaded} downloaded, {skipped} already present, "
+        f"{unmatched} without a matching directory, {failed} failed -> {output_dir}"
     )
 
 
