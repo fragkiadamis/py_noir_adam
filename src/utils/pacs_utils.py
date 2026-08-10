@@ -1,3 +1,4 @@
+import csv
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict
@@ -261,8 +262,13 @@ def log_mr_series_instance_counts() -> None:
     logger.info("------------------------------------ END ------------------------------------")
 
 
-def create_series_export() -> None:
-    output_csv = ConfigPath.input_path / "series_export_test.csv"
+def create_series_export(
+    output_csv: Path = None,
+    modalities: tuple[str, ...] = ("SR", "SEG"),
+    patient_prefix: str = None,
+    excluded_description: str = None,
+) -> None:
+    output_csv = output_csv or ConfigPath.input_path / "series_export_test.csv"
 
     all_series_ids = get_all_orthanc_series()
     if not all_series_ids:
@@ -271,6 +277,7 @@ def create_series_export() -> None:
 
     rows = []
     study_cache: Dict[str, Dict] = {}
+    skipped_description = 0
 
     for series_id in all_series_ids:
         series_meta = get_orthanc_series_metadata(series_id)
@@ -279,7 +286,7 @@ def create_series_export() -> None:
 
         tags = series_meta.get("MainDicomTags", {})
         modality = tags.get("Modality", "")
-        if modality not in ("SR", "SEG"):
+        if modalities and modality not in modalities:
             continue
 
         parent_study_id = series_meta.get("ParentStudy", "")
@@ -290,25 +297,38 @@ def create_series_export() -> None:
         study_tags = study_meta.get("MainDicomTags", {})
         patient_tags = study_meta.get("PatientMainDicomTags", {})
 
+        patient_name = patient_tags.get("PatientName", "")
+        if patient_prefix and not patient_name.upper().startswith(patient_prefix.upper()):
+            continue
+
+        series_description = tags.get("SeriesDescription", "")
+        study_description = study_tags.get("StudyDescription", "")
+        if excluded_description and excluded_description.upper() in (series_description + study_description).upper():
+            logger.info(f"Skipping series {series_id} ({patient_name}): description matches '{excluded_description}'")
+            skipped_description += 1
+            continue
+
         rows.append({
             "ID": series_id,
             "ParentStudy": parent_study_id,
             "Modality": modality,
-            "PatientName": patient_tags.get("PatientName", ""),
-            "StudyDescription": study_tags.get("StudyDescription", ""),
+            "PatientName": patient_name,
+            "StudyDescription": study_description,
             "StudyInstanceUID": study_tags.get("StudyInstanceUID", ""),
             "LastUpdate": series_meta.get("LastUpdate", ""),
             "SeriesInstanceUID": tags.get("SeriesInstanceUID", ""),
-            "SeriesDescription": tags.get("SeriesDescription", ""),
+            "SeriesDescription": series_description,
             "SeriesNumber": tags.get("SeriesNumber", ""),
         })
-        logger.info(f"Found {modality} series {series_id} for patient {patient_tags.get('PatientName', '')}")
+        logger.info(f"Found {modality} series {series_id} for patient {patient_name}")
 
     df = pd.DataFrame(rows, columns=[
         "ID", "ParentStudy", "Modality", "PatientName", "StudyDescription",
         "StudyInstanceUID", "LastUpdate", "SeriesInstanceUID", "SeriesDescription", "SeriesNumber",
     ])
-    df.to_csv(output_csv, index=False)
+    df.to_csv(output_csv, index=False, sep=";", quoting=csv.QUOTE_ALL)
+    if skipped_description:
+        logger.info(f"Skipped {skipped_description} series matching '{excluded_description}'")
     logger.info(f"Wrote {len(rows)} series to {output_csv}")
 
 

@@ -20,9 +20,9 @@ from src.utils.file_utils import get_items_from_input_file
 logger = get_logger()
 
 SOURCES = [
-    {"label": "ICAN", "source": "subject_names", "file": "ican_subset.txt", "study_name": "ICAN"},
-    {"label": "ANGPTL6", "source": "subject_names", "file": "angptl6_subset.txt", "study_name": "ICAN"},
-    {"label": "UCAN", "source": "subject_names", "file": "ucan_subset.txt", "study_name": "UCAN"},
+    # {"label": "ICAN", "source": "subject_names", "file": "ican_subset.txt", "study_name": "ICAN"},
+    # {"label": "ANGPTL6", "source": "subject_names", "file": "angptl6_subset.txt", "study_name": "ICAN"},
+    # {"label": "UCAN", "source": "subject_names", "file": "ucan_subset.txt", "study_name": "UCAN"},
     {"label": "RCAN", "source": "dataset_csv", "file": "rcan_tof_sans_aic_subset.csv", "study_name": "RCAN"},
 ]
 
