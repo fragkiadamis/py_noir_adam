@@ -26,7 +26,7 @@ import projects.shanoir_tools.dicom_metadata_download as dicom_metadata_download
 import projects.miscellaneous_tools.csv_tools.sql_select_return_to_csv as sql_to_csv
 import projects.miscellaneous_tools.csv_tools.rcan_csv as stripe_rcan_csv
 
-app = typer.Typer()
+app = typer.Typer(pretty_exceptions_show_locals=False)
 
 # Execution serializers
 app.add_typer(sims.app, name="sims")
