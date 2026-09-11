@@ -108,7 +108,9 @@ def thread_execution(partition: list[Dict], part_id: int) -> None:
     try:
         execution = create_execution(partition)
         start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if execution["id"] is not None:
+        if execution.get("id") is None:
+            logger.warning(f"Execution {part_id}: no execution id returned by API, skipping. Response: {execution}")
+        if execution.get("id") is not None:
             tracking_json = ConfigPath.tracking_file_path.parent / f"{part_id}.json"
             monitoring = get_execution_monitoring(execution["id"])
             status = '"Running"'
@@ -155,11 +157,13 @@ def thread_execution(partition: list[Dict], part_id: int) -> None:
                 json.dump({"identifiers": partition_identifiers, "meta": meta}, json_file)
     except:
         with monitoring_lock:
-            logger.error("Exception for execution " + str(part_id) + ", " + str(monitoring['identifier']))
+            monitoring_id = monitoring.get('identifier', 'unknown')
+            logger.error(f"Exception for execution {part_id}, {monitoring_id}: {e}")
             meta["execution_status"] = "PyNoir_exception"
             meta["execution_end_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            with open(tracking_json, 'w') as json_file:
-                json.dump({"identifiers": partition_identifiers, "meta": meta}, json_file)
+            if tracking_json != Path():
+                with open(tracking_json, 'w') as json_file:
+                    json.dump({"identifiers": partition_identifiers, "meta": meta}, json_file)
 
     item_processed_increment(partition)
     logger.info("%s out of %s items processed." % (nb_processed_items, total_items_to_process))

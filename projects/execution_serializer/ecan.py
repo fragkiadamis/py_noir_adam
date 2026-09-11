@@ -4,7 +4,7 @@ from src.utils.config_utils import ConfigPath
 from src.utils.dicom_utils import run_compliance_fixes, inspect_and_fix_study_tags, check_dicom_consistency
 from src.utils.pacs_utils import upload_to_pacs_rest, assign_label_to_pacs_study, \
     download_from_pacs_rest, delete_mip_first_instances, get_orthanc_study_details, \
-    log_mr_series_instance_counts, update_tracking_ids
+    log_mr_series_instance_counts, update_tracking_ids, create_series_export
 from src.utils.log_utils import get_logger
 from src.utils.file_utils import initiate_working_files
 from src.utils.serializer_utils import init_serialization
@@ -26,14 +26,15 @@ def explain() -> None:
     eCAN pipeline CLI.
 
     Commands:
-      download           — resolve all sources (subject-name lists via Solr, dataset CSVs directly), download DICOMs, write download manifest (no QC)
-      validate           — read the manifest, apply DICOM QC + keep-oldest-exam/one-acquisition, flag non-conforming rows (non-destructive)
-      execute            — query TOF datasets, filter (oldest exam, oldest acquisition, >=50 slices, <10mm), launch VIP executions
-      populate-orthanc   — download VIP output, remove MIP slices, fix DICOM tags, upload to Orthanc, assign Orthanc label
-      delete-mip-orthanc — delete MIP instances from already-uploaded Orthanc studies
-      import-shanoir     — sync UIDs, download from Orthanc, check DICOM consistency, upload SEG/SR to Shanoir
-      debug-orthanc      — log patients, study details, MR series instance counts
-      backfill-tracking  — reconcile ecan.csv by registering already-run processings (last N days) from the manifest
+      download                — resolve all sources (subject-name lists via Solr, dataset CSVs directly), download DICOMs, write download manifest (no QC)
+      validate                — read the manifest, apply DICOM QC + keep-oldest-exam/one-acquisition, flag non-conforming rows (non-destructive)
+      execute                 — query TOF datasets, filter (oldest exam, oldest acquisition, >=50 slices, <10mm), launch VIP executions
+      populate-orthanc        — download VIP output, remove MIP slices, fix DICOM tags, upload to Orthanc, assign Orthanc label
+      delete-mip-orthanc      — delete MIP instances from already-uploaded Orthanc studies
+      import-shanoir          — sync UIDs, download from Orthanc, check DICOM consistency, upload SEG/SR to Shanoir
+      debug-orthanc           — log patients, study details, MR series instance counts
+      backfill-tracking       — reconcile ecan.csv by registering already-run processings (last N days) from the manifest
+      create-campaign-results — export all Orthanc series of UCAN* subjects (excluding MILVUE) to input/result_campaign_ucan.csv
 
     Usage:
       uv run main.py ecan download
@@ -44,6 +45,7 @@ def explain() -> None:
       uv run main.py ecan import-shanoir
       uv run main.py ecan debug-orthanc
       uv run main.py ecan backfill-tracking
+      uv run main.py ecan create-campaign-results
     """
 
 
@@ -102,7 +104,6 @@ def backfill_tracking(
     days: int = typer.Option(14, help="Only keep processings run within the last N days."),
     pipeline: str = typer.Option("landmarkDetection", help="Substring the processing/pipeline name must contain."),
 ) -> None:
-    """Reconcile the tracking file by registering already-run processings from the download manifest."""
     initiate_working_files("ecan")
     backfill_tracking_from_processings(days=days, pipeline_filter=pipeline)
 
@@ -121,11 +122,24 @@ def orthanc_remove_mips() -> None:
 
 
 @app.command()
+def create_campaign_results(
+    modalities: str = typer.Option("SR,SEG", help="Comma-separated modalities to keep, or 'all' for every series."),
+) -> None:
+    initiate_working_files("ecan")
+    kept = () if modalities.lower() == "all" else tuple(m.strip().upper() for m in modalities.split(",") if m.strip())
+    create_series_export(
+        output_csv=ConfigPath.input_path / "result_campaign_ucan.csv",
+        modalities=kept,
+        patient_prefix="UCAN",
+        excluded_description="MILVUE",
+    )
+
+
+@app.command()
 def debug_orthanc() -> None:
     initiate_working_files("ecan")
     get_orthanc_study_details(from_tracking=True)
     log_mr_series_instance_counts()
-    # create_series_export()
 
 
 # ------------------- DANGER ZONE -------------------
