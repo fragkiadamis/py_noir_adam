@@ -4,7 +4,8 @@ from src.utils.config_utils import ConfigPath
 from src.utils.dicom_utils import run_compliance_fixes, inspect_and_fix_study_tags, check_dicom_consistency
 from src.utils.pacs_utils import upload_to_pacs_rest, assign_label_to_pacs_study, \
     download_from_pacs_rest, delete_mip_first_instances, get_orthanc_study_details, \
-    log_mr_series_instance_counts, update_tracking_ids, create_series_export
+    log_mr_series_instance_counts, update_tracking_ids, create_series_export, delete_studies_from_pacs, \
+    update_tracking_series_uids
 from src.utils.log_utils import get_logger
 from src.utils.file_utils import initiate_working_files
 from src.utils.serializer_utils import init_serialization
@@ -30,6 +31,7 @@ def explain() -> None:
       validate                — read the manifest, apply DICOM QC + keep-oldest-exam/one-acquisition, flag non-conforming rows (non-destructive)
       execute                 — query TOF datasets, filter (oldest exam, oldest acquisition, >=50 slices, <10mm), launch VIP executions
       populate-orthanc        — download VIP output, remove MIP slices, fix DICOM tags, upload to Orthanc, assign Orthanc label
+      sync-series-uids        — for each orthanc_study_id in ecan.csv, store the volume/SEG/SR SeriesInstanceUIDs found in Orthanc
       delete-mip-orthanc      — delete MIP instances from already-uploaded Orthanc studies
       import-shanoir          — sync UIDs, download from Orthanc, check DICOM consistency, upload SEG/SR to Shanoir
       debug-orthanc           — log patients, study details, MR series instance counts
@@ -43,6 +45,7 @@ def explain() -> None:
       uv run main.py ecan validate
       uv run main.py ecan execute
       uv run main.py ecan populate-orthanc
+      uv run main.py ecan sync-series-uids
       uv run main.py ecan delete-mip-orthanc
       uv run main.py ecan import-shanoir
       uv run main.py ecan debug-orthanc
@@ -91,6 +94,12 @@ def populate_orthanc() -> None:
     upload_to_pacs_rest(vip_output) # for REST API
     # upload_to_pacs_dicom(vip_output) # For dicom web store
     assign_label_to_pacs_study()
+
+
+@app.command()
+def sync_series_uids() -> None:
+    initiate_working_files("ecan")
+    update_tracking_series_uids()
 
 
 @app.command()

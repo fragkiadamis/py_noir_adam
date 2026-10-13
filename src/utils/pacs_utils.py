@@ -397,3 +397,44 @@ def update_tracking_ids(vip_output: Path) -> None:
         logger.info(f"{path_patient_name} — orthanc_study_id={orthanc_study_id}, study_instance_uid={study_instance_uid}, series_instance_uid={series_instance_uid}")
 
     df.to_csv(ConfigPath.tracking_file_path, index=False)
+
+
+def update_tracking_series_uids() -> None:
+    df = pd.read_csv(ConfigPath.tracking_file_path, dtype=str)
+    columns = {"volume": "volume_series_instance_uid", "SEG": "seg_series_instance_uid", "SR": "sr_series_instance_uid"}
+    for column in columns.values():
+        if column not in df.columns:
+            df[column] = None
+
+    for idx, row in df.iterrows():
+        orthanc_study_id = row.get("orthanc_study_id")
+        if pd.isna(orthanc_study_id) or not orthanc_study_id:
+            logger.warning(f"{row['subject_name']} — no orthanc_study_id in the tracking file, skipping")
+            continue
+
+        study = get_orthanc_study_metadata(orthanc_study_id)
+        if study is None:
+            logger.warning(f"{row['subject_name']} — Orthanc study {orthanc_study_id} not found")
+            continue
+
+        found: Dict[str, List[str]] = {key: [] for key in columns}
+        for series_id in study.get("Series", []):
+            series = get_orthanc_series_metadata(series_id)
+            if series is None:
+                continue
+            tags = series.get("MainDicomTags", {})
+            modality = tags.get("Modality", "")
+            found[modality if modality in ("SEG", "SR") else "volume"].append(tags.get("SeriesInstanceUID", ""))
+
+        for key, column in columns.items():
+            uids = found[key]
+            if not uids:
+                logger.warning(f"{row['subject_name']} — no {key} series in Orthanc study {orthanc_study_id}")
+                continue
+            if len(uids) > 1:
+                logger.warning(f"{row['subject_name']} — {len(uids)} {key} series in Orthanc study {orthanc_study_id}, keeping the first")
+            df.at[idx, column] = uids[0]
+
+        logger.info(f"{row['subject_name']} — volume={df.at[idx, columns['volume']]}, SEG={df.at[idx, columns['SEG']]}, SR={df.at[idx, columns['SR']]}")
+
+    df.to_csv(ConfigPath.tracking_file_path, index=False)
